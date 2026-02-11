@@ -222,29 +222,29 @@
 
 ### 7. Execution Engine and Handlers
 
-- [ ] Implement node handlers
-    - [ ] Create `src/orchestra/handlers/base.py`:
+- [x] Implement node handlers
+    - [x] Create `src/orchestra/handlers/base.py`:
         - `NodeHandler` Protocol: `handle(node: Node, context: Context, graph: PipelineGraph) -> Outcome`
-    - [ ] Create `src/orchestra/handlers/start.py`:
+    - [x] Create `src/orchestra/handlers/start.py`:
         - `StartHandler`: no-op, returns SUCCESS outcome
-    - [ ] Create `src/orchestra/handlers/exit.py`:
+    - [x] Create `src/orchestra/handlers/exit.py`:
         - `ExitHandler`: no-op, returns SUCCESS outcome
-    - [ ] Create `src/orchestra/handlers/codergen.py`:
+    - [x] Create `src/orchestra/handlers/codergen.py`:
         - `SimulationCodergenHandler`: returns `Outcome(status=SUCCESS, notes="[Simulated] Response for stage: {node_id}")` with the response text also set in `context_updates`
         - Uses the node's expanded prompt (after variable expansion)
-    - [ ] Create `src/orchestra/handlers/registry.py`:
+    - [x] Create `src/orchestra/handlers/registry.py`:
         - `HandlerRegistry` class: maps shape → handler instance
         - Default registry: `Mdiamond → StartHandler`, `Msquare → ExitHandler`, `box → SimulationCodergenHandler`
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement the core execution engine
-    - [ ] Create `src/orchestra/engine/edge_selection.py`:
+- [x] Implement the core execution engine
+    - [x] Create `src/orchestra/engine/edge_selection.py`:
         - `select_edge(node_id, outcome, context, graph) -> Edge | None` — partial implementation of attractor Section 3.3:
             - **Stage 1 implements steps 4+5 only** (weight + lexical tiebreak among unconditional edges). This is forward-compatible with Stage 2a which adds condition evaluation (step 1), preferred label (step 2), and suggested next IDs (step 3).
             - Among all outgoing edges from `node_id`, select the one with the highest `weight` (default 0)
             - If weights are equal, select the edge whose `to_node` comes first lexicographically
             - If no outgoing edges, return `None`
-    - [ ] Create `src/orchestra/engine/runner.py`:
+    - [x] Create `src/orchestra/engine/runner.py`:
         - `PipelineRunner` class:
             - `__init__(graph, handler_registry, event_dispatcher, cxdb_client, context_id)`
             - `run() -> Outcome` — core traversal loop per attractor Section 3.2:
@@ -262,12 +262,12 @@
                 12. Advance to next node
                 13. On pipeline completion, emit PipelineCompleted
             - **Failure handling:** if a handler returns `FAIL` or `RETRY` and no outgoing edge is selected, the runner emits `PipelineFailed` with the failure details and returns the failure outcome. Retry logic (re-executing the node) is deferred to Stage 2a — in Stage 1, `RETRY` is treated as `FAIL`.
-    - [ ] Write unit tests for the execution engine (mock handlers, mock CXDB):
+    - [x] Write unit tests for the execution engine (mock handlers, mock CXDB):
         - 3-node linear pipeline executes in order
         - 5-node linear pipeline executes sequentially
         - Context propagation between nodes
         - Handler returning FAIL → PipelineFailed emitted, run returns failure outcome
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 8. Event System
 
