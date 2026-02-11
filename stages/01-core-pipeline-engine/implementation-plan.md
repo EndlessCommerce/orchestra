@@ -162,12 +162,12 @@
 
 ### 5. Graph Validation
 
-- [ ] Implement validation lint rules
-    - [ ] Create `src/orchestra/models/diagnostics.py`:
+- [x] Implement validation lint rules
+    - [x] Create `src/orchestra/models/diagnostics.py`:
         - `Severity` enum: `ERROR`, `WARNING`, `INFO`
         - `Diagnostic` model: `rule: str`, `severity: Severity`, `message: str`, `node_id: str | None`, `edge: tuple[str, str] | None`, `suggestion: str`
         - `DiagnosticCollection` model with `errors`, `warnings`, `has_errors` helpers
-    - [ ] Create `src/orchestra/validation/rules.py`:
+    - [x] Create `src/orchestra/validation/rules.py`:
         - Each rule is a function: `(graph: PipelineGraph) -> list[Diagnostic]`
         - Implement rules:
             - `start_node` — exactly one `shape=Mdiamond` node
@@ -179,13 +179,13 @@
             - `condition_syntax` — edge conditions parse correctly (basic syntax check — full condition evaluator is Stage 2a, but catch obvious syntax errors now)
             - `stylesheet_syntax` — `model_stylesheet` / `model_spec` value parses correctly (basic syntax check)
             - `prompt_on_llm_nodes` — codergen nodes (`shape=box`) should have `prompt` or `label`
-    - [ ] Create `src/orchestra/validation/validator.py`:
+    - [x] Create `src/orchestra/validation/validator.py`:
         - `validate(graph: PipelineGraph) -> DiagnosticCollection` — runs all rules
         - `validate_or_raise(graph: PipelineGraph) -> DiagnosticCollection` — raises if any ERROR diagnostics
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write validation tests
-    - [ ] Create `tests/test_validation.py` implementing all 8 validation tests from the plan:
+- [x] Write validation tests
+    - [x] Create `tests/test_validation.py` implementing all 8 validation tests from the plan:
         - Missing start node → ERROR
         - Missing exit node → ERROR
         - Start node has incoming edges → ERROR
@@ -195,8 +195,8 @@
         - Missing prompt on codergen node → WARNING
         - Valid pipeline passes — no ERROR diagnostics
         - Actionable error messages — each diagnostic includes rule, severity, node/edge ID, message, suggestion
-    - [ ] Run tests: `uv run pytest tests/test_validation.py -v`
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Run tests: `uv run pytest tests/test_validation.py -v`
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 6. Context, Outcome Model, and Variable Expansion
 
