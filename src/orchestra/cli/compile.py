@@ -4,7 +4,6 @@ from pathlib import Path
 
 import typer
 
-from orchestra.models.diagnostics import Severity
 from orchestra.parser.parser import DotParseError, parse_dot
 from orchestra.validation.validator import ValidationError, validate_or_raise
 

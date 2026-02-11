@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from lark import Token, Transformer, Tree
+from lark import Token, Transformer
 
 from orchestra.models.graph import Edge, Node, PipelineGraph
 
@@ -37,7 +36,6 @@ class DotTransformer(Transformer):
         self._graph_attributes: dict[str, Any] = {}
         self._node_defaults: dict[str, Any] = {}
         self._edge_defaults: dict[str, Any] = {}
-        self._default_stack: list[tuple[dict[str, Any], dict[str, Any]]] = []
 
     def start(self, items: list) -> PipelineGraph:
         return items[0]
@@ -78,27 +76,32 @@ class DotTransformer(Transformer):
         self._node_defaults = saved_node_defaults
         self._edge_defaults = saved_edge_defaults
 
-    def node_stmt(self, items: list) -> None:
-        node_id = str(items[0])
-        explicit_attrs: dict[str, Any] = {}
-        if len(items) > 1 and items[1] is not None:
-            explicit_attrs = items[1]
+    def _ensure_node(self, node_id: str, explicit_attrs: dict[str, Any] | None = None) -> None:
+        if node_id in self._nodes and explicit_attrs is None:
+            return
 
         merged = dict(self._node_defaults)
-        merged.update(explicit_attrs)
+        if explicit_attrs:
+            merged.update(explicit_attrs)
 
         shape = merged.pop("shape", "box")
         label = merged.pop("label", node_id)
         prompt = merged.pop("prompt", "")
 
-        node = Node(
+        self._nodes[node_id] = Node(
             id=node_id,
             label=label,
             shape=shape,
             prompt=prompt,
             attributes=merged,
         )
-        self._nodes[node_id] = node
+
+    def node_stmt(self, items: list) -> None:
+        node_id = str(items[0])
+        explicit_attrs: dict[str, Any] = {}
+        if len(items) > 1 and items[1] is not None:
+            explicit_attrs = items[1]
+        self._ensure_node(node_id, explicit_attrs)
 
     def edge_stmt(self, items: list) -> None:
         identifiers = []
@@ -119,20 +122,8 @@ class DotTransformer(Transformer):
             weight = int(weight)
 
         for i in range(len(identifiers) - 1):
-            # Ensure nodes exist (may be implicitly declared)
-            for nid in (identifiers[i], identifiers[i + 1]):
-                if nid not in self._nodes:
-                    node_defaults = dict(self._node_defaults)
-                    shape = node_defaults.pop("shape", "box")
-                    node_label = node_defaults.pop("label", nid)
-                    prompt = node_defaults.pop("prompt", "")
-                    self._nodes[nid] = Node(
-                        id=nid,
-                        label=node_label,
-                        shape=shape,
-                        prompt=prompt,
-                        attributes=node_defaults,
-                    )
+            self._ensure_node(identifiers[i])
+            self._ensure_node(identifiers[i + 1])
 
             edge = Edge(
                 from_node=identifiers[i],

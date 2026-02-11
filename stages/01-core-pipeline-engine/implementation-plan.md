@@ -423,12 +423,12 @@
 
 ### 15. Review and Cleanup
 
-- [ ] Identify any code that is unused or could be cleaned up
-    - [ ] Look at all previous TODOs and changes in git to identify changes
-    - [ ] Identify any code that is no longer used, and remove it
-    - [ ] Identify any unnecessary comments, and remove them (these are comments that explain "what" for a single line of code)
-    - [ ] If there are any obvious code smells of redundant code, add TODOs below to address them (for example, multiple new classes include private methods that perform similar functions, or are large with many private methods that could be extracted into private classes or public classes)
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Identify any code that is unused or could be cleaned up
+    - [x] Look at all previous TODOs and changes in git to identify changes
+    - [x] Identify any code that is no longer used, and remove it
+    - [x] Identify any unnecessary comments, and remove them (these are comments that explain "what" for a single line of code)
+    - [x] If there are any obvious code smells of redundant code, add TODOs below to address them (for example, multiple new classes include private methods that perform similar functions, or are large with many private methods that could be extracted into private classes or public classes)
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 16. Identify and Run All Specs
 

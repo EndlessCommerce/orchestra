@@ -51,19 +51,16 @@ class PipelineRunner:
             if node is None:
                 raise RuntimeError(f"Node '{current_node.id}' not found in graph")
 
-            # Check for terminal node
             if node.shape == "Msquare":
                 handler = self._registry.get(node.shape)
                 if handler:
                     handler.handle(node, context, self._graph)
                 break
 
-            # Resolve handler
             handler = self._registry.get(node.shape)
             if handler is None:
                 raise RuntimeError(f"No handler for shape '{node.shape}' on node '{node.id}'")
 
-            # Execute handler
             self._emitter.emit(
                 "StageStarted",
                 node_id=node.id,
@@ -74,10 +71,8 @@ class PipelineRunner:
             outcome = handler.handle(node, context, self._graph)
             stage_duration_ms = int((time.monotonic() - stage_start) * 1000)
 
-            # Record completion
             completed_nodes.append(node.id)
 
-            # Apply context updates
             for key, value in outcome.context_updates.items():
                 context.set(key, value)
             context.set("outcome", outcome.status.value)
@@ -103,7 +98,6 @@ class PipelineRunner:
                     error=outcome.failure_reason or outcome.notes,
                 )
 
-            # Emit checkpoint
             self._emitter.emit(
                 "CheckpointSaved",
                 node_id=node.id,
@@ -114,7 +108,6 @@ class PipelineRunner:
 
             last_outcome = outcome
 
-            # Select next edge
             next_edge = select_edge(node.id, outcome, context, self._graph)
             if next_edge is None:
                 if outcome.status in (OutcomeStatus.FAIL, OutcomeStatus.RETRY):
@@ -128,7 +121,6 @@ class PipelineRunner:
                     return outcome
                 break
 
-            # Advance to next node
             next_node = self._graph.get_node(next_edge.to_node)
             if next_node is None:
                 raise RuntimeError(f"Edge target node '{next_edge.to_node}' not found")
