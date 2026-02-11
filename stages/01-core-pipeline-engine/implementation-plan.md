@@ -200,25 +200,25 @@
 
 ### 6. Context, Outcome Model, and Variable Expansion
 
-- [ ] Implement the Context and Outcome models
-    - [ ] Create `src/orchestra/models/context.py`:
+- [x] Implement the Context and Outcome models
+    - [x] Create `src/orchestra/models/context.py`:
         - `Context` class: key-value store with `get(key, default=None)`, `set(key, value)`, `snapshot() -> dict`
         - Built-in keys set by the engine: `outcome`, `graph.goal`, `current_node`, `last_stage`, `last_response`
-    - [ ] Create `src/orchestra/models/outcome.py`:
+    - [x] Create `src/orchestra/models/outcome.py`:
         - `OutcomeStatus` enum: `SUCCESS`, `FAIL`, `PARTIAL_SUCCESS`, `RETRY`
         - `Outcome` model: `status: OutcomeStatus`, `preferred_label: str`, `suggested_next_ids: list[str]`, `context_updates: dict[str, Any]`, `notes: str`, `failure_reason: str`
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement variable expansion transform
-    - [ ] Create `src/orchestra/transforms/variable_expansion.py`:
+- [x] Implement variable expansion transform
+    - [x] Create `src/orchestra/transforms/variable_expansion.py`:
         - `expand_variables(graph: PipelineGraph) -> PipelineGraph` function
         - Expand `$goal` in node `prompt` attributes to the graph-level `goal` attribute value
         - Return a new graph with expanded prompts (or mutate in place — decide during implementation)
-    - [ ] Write tests for variable expansion:
+    - [x] Write tests for variable expansion:
         - `$goal` in prompt is replaced with `graph [goal="..."]` value
         - Nodes without `$goal` in prompt are unchanged
         - Missing graph `goal` attribute → `$goal` replaced with empty string
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 7. Execution Engine and Handlers
 
