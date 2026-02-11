@@ -368,21 +368,21 @@
 
 ### 11. Execution Tests
 
-- [ ] Write execution-focused tests
-    - [ ] Create `tests/test_execution.py` implementing all 6 execution tests from the plan:
+- [x] Write execution-focused tests
+    - [x] Create `tests/test_execution.py` implementing all 6 execution tests from the plan:
         - Execute 3-node linear pipeline: `start → plan → exit`, all nodes execute in order, final outcome SUCCESS
         - Execute 5-node linear pipeline: all nodes execute sequentially, context updates visible to next node
         - Simulation mode output: codergen handler returns `[Simulated] Response for stage: {node_id}`
         - Variable expansion: `prompt="Implement: $goal"` with `graph [goal="build widget"]` → `"Implement: build widget"`
         - Context propagation: Node A's context_updates visible to Node B
         - Events emitted: PipelineStarted, StageStarted/StageCompleted per node, CheckpointSaved per node, PipelineCompleted in correct order
-    - [ ] Run tests: `uv run pytest tests/test_execution.py -v`
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Run tests: `uv run pytest tests/test_execution.py -v`
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 12. CXDB Storage Integration Tests
 
-- [ ] Write CXDB storage integration tests
-    - [ ] Create `tests/test_cxdb_storage.py` implementing all 9 CXDB storage tests from the plan (marked `@pytest.mark.integration`):
+- [x] Write CXDB storage integration tests
+    - [x] Create `tests/test_cxdb_storage.py` implementing all 9 CXDB storage tests from the plan (marked `@pytest.mark.integration`):
         - Context created: `orchestra run` creates a CXDB context
         - Turns appended: each event and checkpoint appended as typed turn
         - Turn types correct: PipelineStarted → `dev.orchestra.PipelineLifecycle`, etc.
@@ -392,21 +392,21 @@
         - Type bundle registered: Orchestra's type bundle published to CXDB
         - CXDB health check: `orchestra doctor` reports status correctly
         - Context isolation: running same pipeline twice creates two separate CXDB contexts
-    - [ ] Run tests: `uv run pytest tests/test_cxdb_storage.py -v` (requires CXDB running)
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Run tests: `uv run pytest tests/test_cxdb_storage.py -v` (requires CXDB running)
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 13. End-to-End CLI Tests
 
-- [ ] Write end-to-end CLI tests
-    - [ ] Create `tests/test_cli.py` implementing all 6 CLI tests from the plan:
+- [x] Write end-to-end CLI tests
+    - [x] Create `tests/test_cli.py` implementing all 6 CLI tests from the plan:
         - `orchestra compile` valid pipeline → exit 0, prints graph structure
         - `orchestra compile` invalid pipeline → exit non-zero, prints diagnostics
         - `orchestra run` linear pipeline → end-to-end execution, events printed, persisted to CXDB
         - `orchestra run` invalid pipeline → exit non-zero with validation errors
         - `orchestra run` without CXDB → exit non-zero with clear error
         - `orchestra doctor` → reports CXDB connectivity and type registry status
-    - [ ] Run full test suite: `uv run pytest tests/ -v`
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Run full test suite: `uv run pytest tests/ -v`
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 14. Test Fixtures and Manual Testing
 
