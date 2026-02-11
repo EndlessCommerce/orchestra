@@ -53,8 +53,8 @@
 
 ### 2. Configuration Discovery and Parsing
 
-- [ ] Implement `orchestra.yaml` configuration loading with env var overrides
-    - [ ] Create `src/orchestra/config/settings.py`:
+- [x] Implement `orchestra.yaml` configuration loading with env var overrides
+    - [x] Create `src/orchestra/config/settings.py`:
         - `CxdbConfig` Pydantic model: `url: str = "http://localhost:9010"`
         - `OrchestraConfig` Pydantic model: `cxdb: CxdbConfig`
         - `load_config()` function with precedence: **env vars > orchestra.yaml > defaults**
@@ -63,14 +63,14 @@
             3. If no `orchestra.yaml` found, use defaults (`cxdb.url = http://localhost:9010`)
             4. Apply environment variable overrides: `ORCHESTRA_CXDB_URL` overrides `cxdb.url`
         - Env var override is applied last, so it always wins regardless of orchestra.yaml contents
-    - [ ] Write tests for config loading:
+    - [x] Write tests for config loading:
         - Loads from CWD
         - Walks parent directories
         - Falls back to defaults when no file found
         - Validates the Pydantic model
         - `ORCHESTRA_CXDB_URL` env var overrides orchestra.yaml value
         - `ORCHESTRA_CXDB_URL` env var overrides default value
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 3. CXDB Client and Doctor Command
 
