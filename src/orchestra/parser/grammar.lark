@@ -1,0 +1,43 @@
+start: graph
+
+graph: "digraph" IDENTIFIER "{" statement* "}"
+
+?statement: graph_attr_stmt
+          | node_defaults
+          | edge_defaults
+          | subgraph_stmt
+          | edge_stmt
+          | node_stmt
+          | graph_attr_decl
+
+graph_attr_stmt: "graph" attr_block ";"?
+node_defaults: "node" attr_block ";"?
+edge_defaults: "edge" attr_block ";"?
+graph_attr_decl: IDENTIFIER "=" value ";"?
+
+subgraph_stmt: "subgraph" IDENTIFIER? "{" statement* "}"
+
+edge_stmt: IDENTIFIER ("->" IDENTIFIER)+ attr_block? ";"?
+node_stmt: IDENTIFIER attr_block? ";"?
+
+attr_block: "[" attr ("," attr)* "]"
+attr: key "=" value
+
+key: QUALIFIED_ID | IDENTIFIER
+QUALIFIED_ID: /[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+/
+
+value: STRING | DURATION | FLOAT | INTEGER | BOOLEAN | IDENTIFIER
+
+IDENTIFIER: /[A-Za-z_][A-Za-z0-9_]*/
+STRING: /\"([^\"\\]|\\[\"nrt\\])*\"/
+INTEGER: /\-?[0-9]+/
+FLOAT: /\-?[0-9]*\.[0-9]+/
+BOOLEAN: /true|false/
+DURATION: /\-?[0-9]+(ms|s|m|h|d)/
+
+LINE_COMMENT: /\/\/[^\n]*/
+BLOCK_COMMENT: /\/\*[\s\S]*?\*\//
+
+%ignore /[\s]+/
+%ignore LINE_COMMENT
+%ignore BLOCK_COMMENT

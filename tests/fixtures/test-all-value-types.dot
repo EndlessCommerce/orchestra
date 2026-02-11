@@ -1,0 +1,7 @@
+digraph test_values {
+    graph [goal="test values", default_max_retry=50]
+    start [shape=Mdiamond]
+    exit [shape=Msquare]
+    a [shape=box, label="Test", prompt="hello\nworld", max_retries=3, goal_gate=true, timeout="900s"]
+    start -> a -> exit [weight=5]
+}

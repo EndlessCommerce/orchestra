@@ -1,0 +1,10 @@
+// This is a line comment
+digraph test_comments {
+    /* This is a
+       block comment */
+    graph [goal="comments test"]
+    start [shape=Mdiamond] // inline comment
+    exit [shape=Msquare]
+    a [shape=box]
+    start -> a -> exit
+}

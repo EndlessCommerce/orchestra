@@ -105,36 +105,36 @@
 
 ### 4. DOT Parser
 
-- [ ] Define the graph model (Pydantic) — **must be done first; the transformer depends on these models**
-    - [ ] Create `src/orchestra/models/graph.py`:
+- [x] Define the graph model (Pydantic) — **must be done first; the transformer depends on these models**
+    - [x] Create `src/orchestra/models/graph.py`:
         - `Node` model: `id: str`, `label: str`, `shape: str`, `prompt: str`, `attributes: dict[str, Any]` (remaining attributes like `goal_gate`, `max_retries`, `timeout`, `class`, etc.)
         - `Edge` model: `from_node: str`, `to_node: str`, `label: str`, `condition: str`, `weight: int`, `attributes: dict[str, Any]`
         - `PipelineGraph` model: `name: str`, `nodes: dict[str, Node]`, `edges: list[Edge]`, `graph_attributes: dict[str, Any]`
         - Helper methods: `get_outgoing_edges(node_id)`, `get_node(node_id)`, `get_start_node()`, `get_exit_nodes()`, `goal` property (from graph_attributes)
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement the Lark grammar and transformer
-    - [ ] Create `src/orchestra/parser/grammar.lark`:
+- [x] Implement the Lark grammar and transformer
+    - [x] Create `src/orchestra/parser/grammar.lark`:
         - Translate attractor BNF (Section 2.2) to Lark EBNF
         - Support: `digraph`, `graph`/`node`/`edge` attribute blocks, node statements, edge statements (including chained `A -> B -> C`), subgraphs, comments (`//` and `/* */`), all value types (String, Integer, Float, Boolean, Duration), qualified IDs (`agent.role`), optional semicolons
         - Support `GraphAttrDecl` production: top-level `key = value` declarations (e.g., `rankdir = LR`) outside of `graph [...]` blocks — merge these into `graph_attributes`
         - Reject: undirected graphs (`graph { ... }` or `--` edges), multiple digraph blocks
         - **Grammar strictness:** follow attractor BNF strictly — commas are required between attributes in `AttrBlock` (per Section 2.3). Do not relax to accept semicolons or bare whitespace as separators, even though standard Graphviz DOT allows them.
-    - [ ] Create `src/orchestra/parser/transformer.py`:
+    - [x] Create `src/orchestra/parser/transformer.py`:
         - Lark `Transformer` subclass that converts the parse tree to the in-memory graph model
         - Handle chained edges: `A -> B -> C [attrs]` → two edges with shared attributes
         - Handle node/edge default blocks: accumulate defaults, apply to subsequent nodes/edges within scope
         - Handle subgraphs: flatten contents into parent graph, scope defaults to subgraph
         - Handle all value type conversions: String (strip quotes, unescape), Integer, Float, Boolean, Duration (to seconds or raw string)
         - Handle `GraphAttrDecl`: merge top-level `key = value` into graph attributes
-    - [ ] Create `src/orchestra/parser/parser.py`:
+    - [x] Create `src/orchestra/parser/parser.py`:
         - `parse_dot(source: str) -> PipelineGraph` function
         - Load Lark grammar, parse source, transform to graph model
         - Wrap Lark parse errors in user-friendly error messages
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write DOT parsing tests
-    - [ ] Create `tests/fixtures/` DOT files for all test cases:
+- [x] Write DOT parsing tests
+    - [x] Create `tests/fixtures/` DOT files for all test cases:
         - `test-linear.dot` — simple 5-node linear pipeline (from Manual Testing Guide)
         - `test-invalid-no-start-exit.dot` — no start or exit node
         - `test-chained-edges.dot` — `A -> B -> C [label="x"]`
@@ -145,7 +145,7 @@
         - `test-graph-attributes.dot` — `goal`, `label`, `model_stylesheet`/`model_spec`
         - `test-undirected.dot` — `graph { A -- B }` (should be rejected)
         - `test-multiple-graphs.dot` — two `digraph` blocks (should be rejected)
-    - [ ] Create `tests/test_dot_parsing.py` implementing all 10 DOT parsing tests from the plan:
+    - [x] Create `tests/test_dot_parsing.py` implementing all 10 DOT parsing tests from the plan:
         - Parse simple linear pipeline
         - Parse graph-level attributes (including `model_spec` alias)
         - Parse node attributes
@@ -157,8 +157,8 @@
         - Parse all value types
         - Reject undirected graph
         - Reject multiple graphs
-    - [ ] Run tests: `uv run pytest tests/test_dot_parsing.py -v`
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Run tests: `uv run pytest tests/test_dot_parsing.py -v`
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 5. Graph Validation
 

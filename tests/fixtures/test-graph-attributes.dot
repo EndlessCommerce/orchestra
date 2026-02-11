@@ -1,0 +1,9 @@
+digraph test_graph_attrs {
+    graph [goal="build the widget", label="My Pipeline", model_stylesheet="node { model: gpt-4 }"]
+    rankdir = LR
+
+    start [shape=Mdiamond]
+    exit [shape=Msquare]
+    a [shape=box]
+    start -> a -> exit
+}

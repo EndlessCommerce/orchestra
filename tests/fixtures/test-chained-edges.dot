@@ -1,0 +1,9 @@
+digraph test_chained {
+    start [shape=Mdiamond]
+    exit [shape=Msquare]
+    A [shape=box]
+    B [shape=box]
+    C [shape=box]
+    start -> A -> B -> C [label="chain"]
+    C -> exit
+}

@@ -1,0 +1,11 @@
+digraph test_defaults {
+    node [shape=box, timeout="900s"]
+    edge [weight=0]
+
+    start [shape=Mdiamond]
+    exit [shape=Msquare]
+    a [label="A"]
+    b [label="B"]
+
+    start -> a -> b -> exit
+}

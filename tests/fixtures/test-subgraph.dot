@@ -1,0 +1,12 @@
+digraph test_subgraph {
+    start [shape=Mdiamond]
+    exit [shape=Msquare]
+
+    subgraph cluster_loop {
+        node [shape=box, timeout="900s"]
+        plan [label="Plan"]
+        implement [label="Implement", timeout="1800s"]
+    }
+
+    start -> plan -> implement -> exit
+}
