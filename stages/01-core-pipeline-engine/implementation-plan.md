@@ -28,13 +28,13 @@
 
 ### 1. Project Scaffolding
 
-- [ ] Set up project structure and tooling
-    - [ ] Create `pyproject.toml` with `uv` as package manager
+- [x] Set up project structure and tooling
+    - [x] Create `pyproject.toml` with `uv` as package manager
         - Dependencies: `lark`, `typer`, `httpx`, `pydantic`, `pyyaml`, `pytest`
         - Entry point: `orchestra` CLI command pointing to `src/orchestra/cli/main.py`
         - Python 3.11+ required
-    - [ ] Create `src/orchestra/__init__.py` (package root)
-    - [ ] Create package directories:
+    - [x] Create `src/orchestra/__init__.py` (package root)
+    - [x] Create package directories:
         - `src/orchestra/cli/` — CLI commands (Typer)
         - `src/orchestra/parser/` — DOT parser (Lark grammar + transformer)
         - `src/orchestra/models/` — Pydantic models (graph, config, events, outcomes)
@@ -45,11 +45,11 @@
         - `src/orchestra/events/` — Event system (observer pattern)
         - `src/orchestra/config/` — Configuration discovery and parsing
         - `src/orchestra/transforms/` — AST transforms (variable expansion)
-    - [ ] Create `tests/` directory with `conftest.py`
-    - [ ] Create `tests/fixtures/` directory for test DOT files
-    - [ ] Run `uv sync` to verify the project builds
-    - [ ] Run `uv run orchestra --help` to verify CLI entry point works
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Create `tests/` directory with `conftest.py`
+    - [x] Create `tests/fixtures/` directory for test DOT files
+    - [x] Run `uv sync` to verify the project builds
+    - [x] Run `uv run orchestra --help` to verify CLI entry point works
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 2. Configuration Discovery and Parsing
 
