@@ -20,7 +20,7 @@ Add the workspace layer that makes Orchestra a software development tool: multi-
 ## Prerequisites
 
 - Stage 5 complete (parallel execution — worktree-per-agent depends on fan-out/fan-in)
-- Stage 2 complete (checkpoint/resume — workspace snapshots extend checkpoints)
+- Stage 2b complete (checkpoint/resume — workspace snapshots extend checkpoints)
 
 ## Scope
 

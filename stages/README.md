@@ -16,7 +16,8 @@ Orchestra is implemented in seven stages. Each stage produces a vertically-slice
 | Stage | Delivers | Human Can... |
 |-------|----------|-------------|
 | [1. Core Pipeline Engine](./01-core-pipeline-engine/plan.md) | DOT parsing, validation, linear execution in simulation mode, CXDB storage, CLI | Write a `.dot` file, compile it, run it, inspect the execution trace in CXDB UI |
-| [2. Control Flow and Persistence](./02-control-flow-and-persistence/plan.md) | Conditional routing, edge selection, retries, goal gates, checkpoint/resume via CXDB, sessions | Build branching pipelines, observe retry behavior, pause and resume runs |
+| [2a. Control Flow](./02a-control-flow/plan.md) | Conditional routing, 5-step edge selection, condition expressions, retries with backoff, goal gates, failure routing | Build branching pipelines, observe retry behavior, see goal gate enforcement |
+| [2b. Persistence and Sessions](./02b-persistence-and-sessions/plan.md) | Checkpoint resume, session management via CXDB contexts, replay via CXDB fork, session CLI commands | Pause and resume runs, list sessions, replay from any checkpoint |
 | [3. LLM Integration and Agents](./03-llm-integration-and-agents/plan.md) | CodergenBackend implementations, provider/model resolution, prompt composition, tool registry | Run AI-powered pipelines with real LLM calls and rich agent configuration |
 | [4. Human-in-the-Loop](./04-human-in-the-loop/plan.md) | Interviewer pattern, wait.human handler, interactive mode | Participate in pipeline decisions and collaborate with agents interactively |
 | [5. Parallel Execution](./05-parallel-execution/plan.md) | Parallel fan-out/fan-in, join policies, context isolation | Run multiple agents concurrently with result consolidation |
@@ -26,13 +27,14 @@ Orchestra is implemented in seven stages. Each stage produces a vertically-slice
 ## Dependencies
 
 ```
-Stage 1 ──→ Stage 2 ──→ Stage 3 ──→ Stage 4
-                │                       │
-                └──→ (Stage 3) ──→ Stage 5 ──→ Stage 6 ──→ Stage 7
+Stage 1 ──→ Stage 2a ──→ Stage 2b ──→ Stage 3 ──→ Stage 4
+                                         │                │
+                                         └──→ Stage 5 ──→ Stage 6 ──→ Stage 7
 ```
 
-- Stage 2 depends on Stage 1 (execution engine exists)
-- Stage 3 depends on Stage 2 (full control flow for LLM pipelines)
+- Stage 2a depends on Stage 1 (execution engine exists)
+- Stage 2b depends on Stage 2a (resume needs control flow; sessions need the full execution model)
+- Stage 3 depends on Stage 2b (LLM pipelines need full control flow and persistence)
 - Stage 4 depends on Stage 3 (human interaction needs working LLM nodes for context)
 - Stage 5 depends on Stage 3 (parallel branches need working codergen nodes)
 - Stage 6 depends on Stage 5 (worktree-per-agent depends on parallel execution)

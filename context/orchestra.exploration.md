@@ -151,6 +151,8 @@ In addition to the attractor spec's standard attributes (Section 2.6), Orchestra
 
 ### Example: Adversarial PR Review Pipeline
 
+> **Note:** This example uses `model_spec` as a shorthand alias for the attractor spec's `model_stylesheet` attribute. Orchestra's parser accepts both names.
+
 ```dot
 digraph pr_review {
     graph [
@@ -472,7 +474,7 @@ providers:
       cheap: claude-haiku-3-20250514
 ```
 
-**Model stylesheet** (attractor Section 8) provides CSS-like per-node overrides in the DOT file:
+**Model stylesheet** (attractor Section 8) provides CSS-like per-node overrides in the DOT file. The attribute is named `model_stylesheet` in the attractor spec; Orchestra also accepts `model_spec` as an alias:
 
 ```
 model_spec="

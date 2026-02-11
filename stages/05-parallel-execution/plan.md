@@ -16,7 +16,7 @@ Add concurrent multi-branch execution to the pipeline engine. Implement the para
 ## Prerequisites
 
 - Stage 3 complete (LLM integration — parallel branches need working codergen nodes)
-- Stage 2 complete (control flow — fan-in may use conditional routing)
+- Stage 2a complete (control flow — fan-in may use conditional routing)
 
 ## Scope
 

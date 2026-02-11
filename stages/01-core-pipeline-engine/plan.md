@@ -13,28 +13,58 @@ Deliver the foundational pipeline runner: parse a DOT file, validate the graph, 
 5. Open the CXDB UI to inspect the execution trace: typed turns for each event and node completion, with prompts, responses, and outcomes as structured payloads
 6. Run `orchestra doctor` to verify CXDB connectivity
 
+## Prerequisites
+
+Before implementation begins:
+
+- **CXDB API Verification.** Verify the CXDB HTTP API surface against the actual [CXDB project](https://github.com/strongdm/cxdb). Run the Docker container, exercise the API endpoints (create context, append turn, get turns, list contexts, type registry, health), and document any differences from the assumed API. Adjust the `CxdbClient` design if needed. This is a prerequisite for the CXDB client implementation — estimated 1-2 hours.
+
 ## Scope
+
+### Project Setup
+
+- **Package layout.** `src/orchestra/` package (src layout), `tests/` at project root. Entry point registered in `pyproject.toml` for `orchestra` CLI command.
+- **Dependency management.** `pyproject.toml` with `uv` as package manager. Key dependencies: `lark` (DOT parser), `typer` (CLI), `httpx` (CXDB HTTP client), `pyyaml` (config), `pytest` (testing).
+- **Configuration discovery.** `orchestra.yaml` is discovered by searching: (1) current working directory, (2) parent directories up to filesystem root. The first `orchestra.yaml` found is used. If none found, defaults apply (CXDB at `http://localhost:9010`).
+- **CI test infrastructure.** Tests require a CXDB Docker container. CI provisions this as a service container (`docker run -p 9009:9009 -p 9010:9010 cxdb/cxdb:latest`). Tests create fresh CXDB contexts per test case for isolation.
 
 ### Included
 
-- **DOT Parser.** Parse the attractor spec's DOT subset into an in-memory graph model: `digraph`, graph/node/edge attributes, chained edges (`A -> B -> C`), node/edge default blocks, subgraphs, comments, all value types (String, Integer, Float, Boolean, Duration). Reject unsupported features (undirected graphs, multiple graphs per file, HTML labels).
-- **Graph Validation.** Lint rules per attractor Section 7: `start_node`, `terminal_node`, `reachability`, `edge_target_exists`, `start_no_incoming`, `exit_no_outgoing`, `condition_syntax`, `stylesheet_syntax`, `prompt_on_llm_nodes`. Diagnostic model with ERROR/WARNING/INFO severity. `validate_or_raise()` rejects pipelines with errors.
+- **DOT Parser (using lark).** Parse the attractor spec's DOT subset into an in-memory graph model using the [lark](https://github.com/lark-parser/lark) parser toolkit. The attractor BNF grammar (Section 2.2) is translated to Lark EBNF, giving direct spec correspondence and clear parse error messages. Supports: `digraph`, graph/node/edge attributes, chained edges (`A -> B -> C`), node/edge default blocks, subgraphs, comments, all value types (String, Integer, Float, Boolean, Duration). Rejects unsupported features (undirected graphs, multiple graphs per file, HTML labels). Accepts both `model_stylesheet` and `model_spec` as graph-level attribute names (aliases for the same feature).
+- **Graph Validation.** Lint rules per attractor Section 7: `start_node`, `terminal_node`, `reachability`, `edge_target_exists`, `start_no_incoming`, `exit_no_outgoing`, `condition_syntax`, `stylesheet_syntax`, `prompt_on_llm_nodes`. Diagnostic model with ERROR/WARNING/INFO severity. `validate_or_raise()` rejects pipelines with errors. The `condition_syntax` and `stylesheet_syntax` rules are included even though conditions and stylesheets are not exercised until Stages 2-3 — the parser handles these attributes, and early syntax validation catches errors before they matter.
 - **Pipeline Execution Engine (linear only).** Core traversal loop per attractor Section 3.2: execute handler → record outcome → select next edge → advance. Single-threaded. For this stage, edge selection is simplified: follow the single outgoing edge (no branching logic yet).
 - **Node Handlers.** Start (no-op), Exit (no-op), Codergen (simulation mode: returns `[Simulated] Response for stage: {node_id}` without calling any LLM).
 - **Context and Outcome Model.** Key-value Context store. Structured Outcome (status, preferred_label, suggested_next_ids, context_updates, notes, failure_reason). Context updates applied after each node. Built-in context keys set by the engine (`outcome`, `graph.goal`, `current_node`, `last_stage`, `last_response`).
 - **Variable Expansion Transform.** Expand `$goal` in node prompts to the graph-level `goal` attribute.
-- **CXDB Client.** Thin Python HTTP wrapper (`orchestra.storage.cxdb_client`) for CXDB's HTTP API. Supports: create context, append turn, get turns, list contexts, publish type bundle, health check.
+- **CXDB Client.** Thin Python HTTP wrapper (`orchestra.storage.cxdb_client`) for CXDB's HTTP API. Uses `httpx` for HTTP calls. Supports: create context, append turn, get turns, list contexts, publish type bundle, health check. The client design is finalized after the CXDB API verification prerequisite.
 - **CXDB Type Bundle.** Register Orchestra's turn types with the CXDB type registry: `dev.orchestra.PipelineLifecycle` (start/complete/fail), `dev.orchestra.NodeExecution` (node start/complete with prompt, response, outcome), `dev.orchestra.Checkpoint` (full checkpoint state for resume).
 - **Event System.** Typed events emitted during execution: PipelineStarted, PipelineCompleted, PipelineFailed, StageStarted, StageCompleted, StageFailed, CheckpointSaved. Events are both printed to stdout (observer pattern for real-time display) AND appended as typed CXDB turns (persistent queryable event log).
-- **Checkpoint (save only).** After each node, a `dev.orchestra.Checkpoint` turn is appended to the CXDB context (current_node, completed_nodes, context snapshot). The CXDB context's head pointer advances. Resume is Stage 2.
-- **CLI.** `orchestra compile <pipeline.dot>` — validate, resolve references, print graph structure. `orchestra run <pipeline.dot>` — compile and execute, print events to stdout, persist to CXDB. `orchestra doctor` — verify CXDB connectivity and type registry.
+- **Checkpoint (save only).** After each node, a `dev.orchestra.Checkpoint` turn is appended to the CXDB context (current_node, completed_nodes, context snapshot). The CXDB context's head pointer advances. Resume is Stage 2b.
+- **CLI.** `orchestra compile <pipeline.dot>` — validate, resolve references, print graph structure. `orchestra run <pipeline.dot>` — compile and execute, print events to stdout, persist to CXDB. `orchestra doctor` — verify CXDB connectivity and type registry. When CXDB is unavailable, `orchestra doctor` prints clear setup instructions (Docker command, expected ports).
 - **orchestra.yaml CXDB config.** `cxdb.url` setting for the CXDB endpoint (default: `http://localhost:9010`).
+
+### Implementation Sequence
+
+Build components in this order within Stage 1:
+
+1. **Project scaffolding.** `pyproject.toml`, `src/orchestra/` package, `tests/`, CLI entry point, `uv` setup.
+2. **CXDB client + doctor CLI.** Implement `CxdbClient` (based on verified API), `orchestra doctor` command. This validates the CXDB integration first.
+3. **DOT parser.** Lark grammar from attractor BNF, transformer to in-memory graph model.
+4. **Graph validation.** Diagnostic model, lint rules, `validate_or_raise()`.
+5. **Context and Outcome model.** Key-value store, structured outcome, built-in context keys.
+6. **Execution engine + handlers.** Core traversal loop, handler registry, Start/Exit/Codergen handlers.
+7. **Variable expansion transform.** `$goal` expansion in prompts.
+8. **Event system.** Typed events, observer pattern for stdout, CXDB turn appending.
+9. **CXDB type bundle + storage integration.** Register turn types, persist events and checkpoints as typed turns.
+10. **Checkpoint saves.** Append `dev.orchestra.Checkpoint` turns after each node.
+11. **CLI commands.** `orchestra compile` and `orchestra run` wiring.
+12. **Integration tests.** End-to-end tests against real CXDB instance.
 
 ### Excluded (deferred to later stages)
 
-- Conditional routing and edge selection (Stage 2)
-- Retries, goal gates, failure routing (Stage 2)
-- Checkpoint resume, session lifecycle, and CXDB context forking (Stage 2)
+- Conditional routing and edge selection (Stage 2a)
+- Retries, goal gates, failure routing (Stage 2a)
+- Checkpoint resume, session lifecycle, and CXDB context forking (Stage 2b)
 - LLM calls and CodergenBackend implementations (Stage 3)
 - Agent configuration and prompt composition (Stage 3)
 - Model stylesheet application (Stage 3)
@@ -51,7 +81,7 @@ All tests use simulation mode (no LLM). External dependency: CXDB instance (Dock
 | Test | Description |
 |------|-------------|
 | Parse simple linear pipeline | `digraph { start [shape=Mdiamond]; exit [shape=Msquare]; a [shape=box]; start -> a -> exit }` parses into correct graph model |
-| Parse graph-level attributes | `goal`, `label`, `model_stylesheet` extracted from `graph [...]` block |
+| Parse graph-level attributes | `goal`, `label`, `model_stylesheet` (and its alias `model_spec`) extracted from `graph [...]` block |
 | Parse node attributes | `label`, `shape`, `prompt`, `goal_gate`, `max_retries`, `timeout`, `class` extracted correctly |
 | Parse edge attributes | `label`, `condition`, `weight` extracted correctly |
 | Parse chained edges | `A -> B -> C [label="x"]` produces two edges, both with label "x" |
@@ -99,7 +129,7 @@ All tests use simulation mode (no LLM). External dependency: CXDB instance (Dock
 | Turn order | Turns retrieved from CXDB are in correct execution order |
 | Type bundle registered | Orchestra's type bundle is published to CXDB before first run |
 | CXDB health check | `orchestra doctor` reports CXDB status correctly |
-| Content deduplication | Identical prompts across pipeline runs stored only once (verify via CXDB stats) |
+| Context isolation across runs | Running the same pipeline twice creates two separate CXDB contexts, each with their own complete turn chains |
 
 ### CLI Tests
 

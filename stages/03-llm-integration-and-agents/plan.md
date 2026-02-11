@@ -16,7 +16,7 @@ Replace simulation mode with real LLM execution. Implement the CodergenBackend i
 
 ## Prerequisites
 
-- Stage 2 complete (full execution engine with control flow and persistence)
+- Stage 2b complete (full execution engine with control flow and persistence)
 
 ## Scope
 
@@ -147,7 +147,7 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 ## Manual Testing Guide
 
 ### Prerequisites
-- Stage 2 complete and passing
+- Stage 2b complete and passing
 - At least one LLM API key available (e.g., `ANTHROPIC_API_KEY`)
 - `orchestra.yaml` configured with provider credentials
 
