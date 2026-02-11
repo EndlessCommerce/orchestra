@@ -442,14 +442,14 @@
 
 ### 17. Missing Specs (identified in Section 16)
 
-- [ ] Add direct tests for edge selection weight and lexical tiebreak
-    - [ ] Test: multiple outgoing edges with different weights → highest weight selected
-    - [ ] Test: multiple outgoing edges with equal weights → lexical tiebreak (lowest to_node)
-    - [ ] Test: conditional edges skipped in Stage 1, unconditional edges preferred
-    - [ ] Test: no outgoing edges → returns None
-- [ ] Add direct tests for PipelineGraph helper methods
-    - [ ] Test: `get_incoming_edges()` returns correct edges
-    - [ ] Test: `get_exit_nodes()` returns all Msquare nodes
+- [x] Add direct tests for edge selection weight and lexical tiebreak
+    - [x] Test: multiple outgoing edges with different weights → highest weight selected
+    - [x] Test: multiple outgoing edges with equal weights → lexical tiebreak (lowest to_node)
+    - [x] Test: conditional edges skipped in Stage 1, unconditional edges preferred
+    - [x] Test: no outgoing edges → returns None
+- [x] Add direct tests for PipelineGraph helper methods
+    - [x] Test: `get_incoming_edges()` returns correct edges
+    - [x] Test: `get_exit_nodes()` returns all Msquare nodes
 
 ## Decisions Made (from plan.evaluation.md + implementation plan review)
 
