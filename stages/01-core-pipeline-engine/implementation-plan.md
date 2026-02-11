@@ -410,16 +410,16 @@
 
 ### 14. Test Fixtures and Manual Testing
 
-- [ ] Create test fixtures and verify manual testing
-    - [ ] Ensure `tests/fixtures/test-linear.dot` matches the Manual Testing Guide's `test-linear.dot`
-    - [ ] Ensure `tests/fixtures/test-invalid.dot` matches the Manual Testing Guide's `test-invalid.dot`
-    - [ ] Walk through Manual Testing Guide steps 1-5 and verify:
+- [x] Create test fixtures and verify manual testing
+    - [x] Ensure `tests/fixtures/test-linear.dot` matches the Manual Testing Guide's `test-linear.dot`
+    - [x] Ensure `tests/fixtures/test-invalid.dot` matches the Manual Testing Guide's `test-invalid.dot`
+    - [x] Walk through Manual Testing Guide steps 1-5 and verify:
         - `orchestra compile test-linear.dot` → 5 nodes, 4 edges, exit 0
         - `orchestra compile test-invalid.dot` → ERROR diagnostics, exit non-zero
         - `orchestra run test-linear.dot` → events printed, session ID shown
         - CXDB UI at `http://localhost:9010` shows the execution trace
         - `orchestra doctor` → reports healthy
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 15. Review and Cleanup
 

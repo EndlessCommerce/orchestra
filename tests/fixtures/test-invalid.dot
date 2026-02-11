@@ -1,0 +1,5 @@
+digraph test_invalid {
+    a [shape=box, label="No start or exit node"]
+    b [shape=box]
+    a -> b
+}
