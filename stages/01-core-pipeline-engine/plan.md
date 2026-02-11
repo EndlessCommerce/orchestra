@@ -18,13 +18,28 @@ Deliver the foundational pipeline runner: parse a DOT file, validate the graph, 
 Before implementation begins:
 
 - **CXDB API Verification.** Verify the CXDB HTTP API surface against the actual [CXDB project](https://github.com/strongdm/cxdb). Run the Docker container, exercise the API endpoints (create context, append turn, get turns, list contexts, type registry, health), and document any differences from the assumed API. Adjust the `CxdbClient` design if needed. This is a prerequisite for the CXDB client implementation — estimated 1-2 hours.
+- **CXDB Docker Image.** Verify that `cxdb/cxdb:latest` is pullable from Docker Hub. If unavailable, build from source using the Dockerfile in the CXDB repo.
+
+**Verified CXDB HTTP API Mapping** (from [CXDB HTTP API docs](https://github.com/strongdm/cxdb/blob/main/docs/http-api.md)):
+
+| CxdbClient Method | HTTP Endpoint | Notes |
+|-------------------|--------------|-------|
+| `create_context(base_turn_id)` | `POST /v1/contexts/create` | Body: `{"base_turn_id": "0"}` |
+| `fork_context(base_turn_id)` | `POST /v1/contexts/fork` | Body: `{"base_turn_id": "42"}` |
+| `append_turn(context_id, ...)` | `POST /v1/contexts/:id/append` | Body: `{"type_id": "...", "type_version": 1, "data": {...}}` |
+| `get_turns(context_id, limit)` | `GET /v1/contexts/:id/turns` | Query: `?limit=64&view=typed` |
+| `list_contexts()` | `GET /v1/contexts` | Query: `?limit=100&offset=0` |
+| `publish_type_bundle(bundle_id, bundle)` | `PUT /v1/registry/bundles/:bundle_id` | Body: registry bundle JSON with numeric field tags |
+| `health_check()` | `GET /health` | Response: `{"status": "ok", ...}` |
+
+**Note:** CXDB context IDs are server-assigned monotonic integers (u64), not UUIDs. Orchestra generates a short display ID (first 6 chars of a UUID) stored in the `PipelineLifecycle` start turn for human-friendly CLI output, and uses CXDB's context_id as the canonical session identifier internally.
 
 ## Scope
 
 ### Project Setup
 
 - **Package layout.** `src/orchestra/` package (src layout), `tests/` at project root. Entry point registered in `pyproject.toml` for `orchestra` CLI command.
-- **Dependency management.** `pyproject.toml` with `uv` as package manager. Key dependencies: `lark` (DOT parser), `typer` (CLI), `httpx` (CXDB HTTP client), `pyyaml` (config), `pytest` (testing).
+- **Dependency management.** `pyproject.toml` with `uv` as package manager. Key dependencies: `lark` (DOT parser), `typer` (CLI), `httpx` (CXDB HTTP client), `pydantic` (graph model, config, event types), `pyyaml` (config file parsing), `pytest` (testing).
 - **Configuration discovery.** `orchestra.yaml` is discovered by searching: (1) current working directory, (2) parent directories up to filesystem root. The first `orchestra.yaml` found is used. If none found, defaults apply (CXDB at `http://localhost:9010`).
 - **CI test infrastructure.** Tests require a CXDB Docker container. CI provisions this as a service container (`docker run -p 9009:9009 -p 9010:9010 cxdb/cxdb:latest`). Tests create fresh CXDB contexts per test case for isolation.
 
@@ -36,8 +51,8 @@ Before implementation begins:
 - **Node Handlers.** Start (no-op), Exit (no-op), Codergen (simulation mode: returns `[Simulated] Response for stage: {node_id}` without calling any LLM).
 - **Context and Outcome Model.** Key-value Context store. Structured Outcome (status, preferred_label, suggested_next_ids, context_updates, notes, failure_reason). Context updates applied after each node. Built-in context keys set by the engine (`outcome`, `graph.goal`, `current_node`, `last_stage`, `last_response`).
 - **Variable Expansion Transform.** Expand `$goal` in node prompts to the graph-level `goal` attribute.
-- **CXDB Client.** Thin Python HTTP wrapper (`orchestra.storage.cxdb_client`) for CXDB's HTTP API. Uses `httpx` for HTTP calls. Supports: create context, append turn, get turns, list contexts, publish type bundle, health check. The client design is finalized after the CXDB API verification prerequisite.
-- **CXDB Type Bundle.** Register Orchestra's turn types with the CXDB type registry: `dev.orchestra.PipelineLifecycle` (start/complete/fail), `dev.orchestra.NodeExecution` (node start/complete with prompt, response, outcome), `dev.orchestra.Checkpoint` (full checkpoint state for resume).
+- **CXDB Client.** Thin Python HTTP wrapper (`orchestra.storage.cxdb_client`) for CXDB's HTTP API. Uses `httpx` for HTTP calls. Endpoint mapping: `POST /v1/contexts/create` (create context), `POST /v1/contexts/:id/append` (append turn), `GET /v1/contexts/:id/turns` (get turns), `GET /v1/contexts` (list contexts), `PUT /v1/registry/bundles/:id` (publish type bundle), `GET /health` (health check). See Prerequisites for the full verified API mapping.
+- **CXDB Type Bundle.** Register Orchestra's turn types with the CXDB type registry using numeric field tags per CXDB's bundle format: `dev.orchestra.PipelineLifecycle` (start/complete/fail — fields: pipeline_name, goal, status, duration_ms, error, session_display_id), `dev.orchestra.NodeExecution` (node start/complete — fields: node_id, handler_type, status, prompt, response, outcome, duration_ms), `dev.orchestra.Checkpoint` (full checkpoint state — fields: current_node, completed_nodes, context_snapshot, retry_counters). The HTTP API accepts named JSON fields in the `data` object and maps them via the registry.
 - **Event System.** Typed events emitted during execution: PipelineStarted, PipelineCompleted, PipelineFailed, StageStarted, StageCompleted, StageFailed, CheckpointSaved. Events are both printed to stdout (observer pattern for real-time display) AND appended as typed CXDB turns (persistent queryable event log).
 - **Checkpoint (save only).** After each node, a `dev.orchestra.Checkpoint` turn is appended to the CXDB context (current_node, completed_nodes, context snapshot). The CXDB context's head pointer advances. Resume is Stage 2b.
 - **CLI.** `orchestra compile <pipeline.dot>` — validate, resolve references, print graph structure. `orchestra run <pipeline.dot>` — compile and execute, print events to stdout, persist to CXDB. `orchestra doctor` — verify CXDB connectivity and type registry. When CXDB is unavailable, `orchestra doctor` prints clear setup instructions (Docker command, expected ports).
@@ -121,7 +136,7 @@ All tests use simulation mode (no LLM). External dependency: CXDB instance (Dock
 
 | Test | Description |
 |------|-------------|
-| Context created | `orchestra run` creates a CXDB context; context_id matches session_id |
+| Context created | `orchestra run` creates a CXDB context; CXDB context_id used as canonical session ID; short display ID stored in PipelineLifecycle start turn |
 | Turns appended | Each event and checkpoint appended as a typed turn to the context |
 | Turn types correct | PipelineStarted turns use `dev.orchestra.PipelineLifecycle`, node completions use `dev.orchestra.NodeExecution` |
 | Checkpoint turns | `dev.orchestra.Checkpoint` turns contain current_node, completed_nodes, context snapshot |
