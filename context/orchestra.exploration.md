@@ -1,112 +1,236 @@
-# Orchestra: Declarative Agent Orchestration on LangGraph
+# Orchestra: Attractor-Based Pipeline Orchestration for Software Development
 
 ## Summary
 
-Orchestra is a framework that provides declarative configuration, prompt management, tool registration, and runtime management on top of LangGraph. It targets software development workflows — enabling users to define multi-agent pipelines (e.g., PR review, goal-driven development) as data, compile them to LangGraph execution graphs, and interact with running pipelines through CLI and web interfaces with full observability and git-tracked agent output.
+Orchestra is an implementation of the [Attractor specification](../attractor/attractor-spec.md) extended for software development workflows. It provides a DOT-based pipeline execution engine with pluggable LLM backends, layered prompt composition, multi-repo workspace management, and git-tracked execution state.
 
-## Problem Context
+The core pipeline engine follows the attractor spec directly: DOT-defined directed graphs, handler-typed nodes, deterministic edge selection, checkpoint/resume, and a structured event system. Orchestra extends this foundation with capabilities specific to software development: rich agent configuration (role/persona/personality/task prompt composition), multi-repo git workspace integration (session branches, worktree-per-agent isolation, workspace snapshots linking checkpoints to git SHAs), and a pluggable `CodergenBackend` interface whose primary implementation uses LangGraph/LangChain for within-node agentic execution.
 
-### The Core Problem: Agent Pipeline Configuration Gap
+LangGraph and LangChain appear in the stack exclusively behind the `CodergenBackend` interface -- not as the pipeline execution engine. The pipeline engine is Orchestra's own implementation of the attractor spec.
 
-LangGraph provides excellent low-level primitives — `StateGraph`, `add_node`, `add_edge`, conditional routing, checkpointing, human-in-the-loop — but requires imperative Python code to define every graph. For teams that want to:
+## Relationship to Attractor Spec
 
-1. **Compose agents from reusable building blocks** (prompts, tools, personas)
-2. **Define workflows declaratively** without writing graph construction code
-3. **Manage execution with full observability** and the ability to resume, replay, and attach to running sessions
-4. **Track agent outputs in git** alongside the code being worked on
+Orchestra's relationship to the attractor spec falls into three categories:
 
-...there is no integrated solution. Existing frameworks either operate at a different level of abstraction (CrewAI's role metaphor, AutoGen's conversation model) or require buying into a managed platform (LangGraph Platform, which is enterprise-licensed).
+### Adopted Directly (Follow the Spec)
 
-### Related Well-Known Problems
+These features are implemented as specified in the attractor spec with no modifications.
 
-1. **Workflow-as-Code vs Workflow-as-Data**: The Airflow/Prefect/Temporal pattern — defining DAGs declaratively vs imperatively. Orchestra applies this to agent pipelines.
-2. **Configuration-Driven Architecture**: The Kubernetes/Terraform pattern — separating "what" from "how" via declarative specs that are compiled into runtime behavior.
-3. **Tool/Plugin Registry**: The VS Code extension / Terraform provider pattern — a registry of capabilities that can be composed into configurations.
-4. **Prompt Engineering Management**: Managing prompt variants, composition, and versioning as a first-class concern.
-5. **Execution Observability & Time Travel**: The debugger/replay pattern applied to non-deterministic LLM execution, linking execution state to code state.
+| Feature | Attractor Reference | Notes |
+|---------|-------------------|-------|
+| Pipeline definition format (DOT) | Sections 2.1-2.13 | Graphviz DOT syntax with attractor's supported subset |
+| Pipeline execution engine | Section 3 | Single-threaded traversal with handler dispatch |
+| Handler-typed nodes | Section 4 | Shape-to-handler mapping (codergen, wait.human, conditional, parallel, fan_in, tool, manager_loop, start, exit) |
+| Edge selection algorithm | Section 3.3 | 5-step deterministic: condition match > preferred label > suggested IDs > weight > lexical |
+| Condition expression language | Section 10 | Boolean expressions on edges (`outcome=success`, `context.key=value`, `&&` conjunction) |
+| Context and Outcome model | Section 5.1-5.2 | Key-value Context store + structured Outcome |
+| Context fidelity | Section 5.4 | full, truncate, compact, summary:low/medium/high modes |
+| Goal gates | Section 3.4 | Nodes with `goal_gate=true` must succeed before pipeline exit |
+| Retry system | Sections 3.5-3.6 | Per-node `max_retries`, backoff policies, retry targets |
+| Run directory / artifact store | Sections 5.5-5.6 | Structured directory per execution with per-node artifacts |
+| Event system | Section 9.6 | Typed events for pipeline/stage/parallel/human/checkpoint lifecycle |
+| Graph validation / lint rules | Section 7 | Diagnostic model with error/warning/info severity |
+| AST transforms | Section 9.1 | Graph modification between parsing and validation |
+| Tool handler nodes | Section 4.10 | Non-LLM tool execution as pipeline nodes |
+| Manager/supervisor loop | Section 4.11 | Handler for supervising child pipelines |
+| Interviewer pattern | Section 6 | Structured human-in-the-loop with Question/Answer model |
+| Checkpoint/resume | Section 5.3 | JSON checkpoint after each node |
 
-## System Architecture
+### Extended by Orchestra
 
-### Layer Model
+These features adopt the attractor spec's foundation but add capabilities on top.
+
+| Feature | Attractor Base | Orchestra Extension |
+|---------|---------------|-------------------|
+| CodergenBackend | Simple `run(node, prompt, context) -> String | Outcome` interface | Primary implementation uses LangGraph ReAct agent for within-node agentic execution; also supports CLI agent wrappers and direct API calls |
+| Model/provider config | CSS-like model stylesheet (Section 8) | Adds provider aliases (smart/worker/cheap semantic tiers) alongside the stylesheet; aliases defined in config, referenceable from stylesheets |
+| Checkpoints | JSON checkpoint per node (Section 5.3) | Extends each checkpoint with workspace snapshots: `{repo_name: git_sha}` for all workspace repos |
+| Human interaction | Interviewer pattern for `wait.human` nodes (Section 6) | Adds chat-style interactive mode as an option for codergen nodes needing human input mid-task |
+| Node prompts | Simple `prompt` attribute with `$goal` expansion | Layered prompt composition: role + persona + personality + task from separate YAML files |
+
+### Added by Orchestra (Not in Attractor)
+
+These are entirely new capabilities that the attractor spec does not address.
+
+| Feature | Description |
+|---------|-------------|
+| Multi-repo workspace | Named repo workspaces with repo-qualified tool names (`backend:run-tests`) |
+| Git integration | Session branches, worktree-per-agent for parallel writes, auto-commit |
+| Workspace snapshots | Bidirectional checkpoint-to-git-SHA linking across repos |
+| Agent configuration | Rich per-node agent config (prompt layers, model/provider, tool sets) |
+| Agent-level tool registry | Decorator-based tool registration, repo-scoped tools, hybrid base+additions model |
+| Session management | Named pipeline runs with lifecycle tracking, CLI commands |
+| File discovery | Prompt/tool resolution: pipeline-relative > project config > `~/.orchestra/` |
+
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  Layer 5: Interfaces (CLI, Web UI, API)             │
-├─────────────────────────────────────────────────────┤
-│  Layer 4: Runtime Management                        │
-│  (session mgmt, observability, git integration)     │
-├─────────────────────────────────────────────────────┤
-│  Layer 3: Graph Compiler                            │
-│  (declarative config → LangGraph StateGraph)        │
-├─────────────────────────────────────────────────────┤
-│  Layer 2: Agent Building Blocks                     │
-│  (prompt composer, tool registry, agent harness)    │
-├─────────────────────────────────────────────────────┤
-│  Layer 1: LangGraph Runtime                         │
-│  (StateGraph, checkpointing, execution)             │
-└─────────────────────────────────────────────────────┘
+Pipeline Definition (.dot files)
+        |
+   [DOT Parser + Transforms + Validation]
+        |
+   Pipeline Execution Engine (attractor spec)
+   - Handler dispatch (codergen, human, conditional, parallel, ...)
+   - Edge selection (5-step deterministic)
+   - Checkpoint/resume
+   - Context + Outcome model
+   - Context fidelity
+   - Goal gates + retry system
+   - Event system
+        |
+        +-- codergen nodes --> Agent Config (Orchestra layer)
+        |                       - Prompt composition (role + persona + personality + task)
+        |                       - Model/provider resolution (aliases + stylesheet)
+        |                       - Tool configuration (base + additions + restrictions)
+        |                           |
+        |                       CodergenBackend interface
+        |                           |
+        |                       +-- LangGraphBackend (LangGraph ReAct agent + tools)
+        |                       +-- CLIAgentBackend (Claude Code, Codex subprocess)
+        |                       +-- DirectLLMBackend (single API call, no tools)
+        |
+        +-- wait.human nodes --> Interviewer (Console, Callback, Queue, AutoApprove)
+        +-- tool nodes --> Shell/API execution
+        +-- parallel/fan_in --> Concurrent branch execution
+        +-- conditional --> Edge condition evaluation
+        +-- manager_loop --> Child pipeline supervision
+        |
+   Workspace Layer (Orchestra extension)
+   - Multi-repo workspace management
+   - Session branches + worktree-per-agent
+   - Workspace snapshots (checkpoint <-> git SHA linking)
+   - Session lifecycle (named runs, status, cleanup)
+        |
+   Interfaces
+   - CLI (run, compile, status, attach, replay, cleanup)
+   - Event stream consumers (TUI, web UI, logging)
+   - HTTP server (future, per attractor Section 9.5)
 ```
 
-## Potential Solutions
+### Layer Responsibilities
 
-### Solution 1: Monolithic Python Package
+**DOT Parser + Transforms + Validation.** Reads `.dot` pipeline files, applies AST transforms (variable expansion, model stylesheet, custom transforms), and validates the graph using the lint rule system. This is the attractor spec's parse-validate-initialize pipeline (Section 3.1) with no modifications.
 
-A single Python package (`orchestra`) with submodules for each layer:
+**Pipeline Execution Engine.** The core traversal loop from attractor Section 3.2. Executes handlers, records outcomes, selects edges, saves checkpoints, and emits events. Orchestra implements this engine directly -- it is not LangGraph. The engine is single-threaded; parallelism exists only within the `parallel` handler.
 
+**Agent Config (Orchestra Layer).** For codergen nodes, Orchestra resolves agent configuration before calling the backend. This includes composing prompts from layered YAML files, resolving model/provider through aliases and stylesheets, and assembling the tool set. The output is a fully resolved prompt + model + tools, which is passed to the `CodergenBackend`.
+
+**CodergenBackend.** The pluggable interface for LLM execution. The pipeline engine calls `backend.run(node, prompt, context)` and receives a `String` or `Outcome` back. What happens inside is opaque. The primary implementation uses LangGraph's ReAct agent for tool-using agentic execution. This is the ONLY place LangGraph/LangChain appear in the stack.
+
+**Workspace Layer.** Orchestra's software development extension. Listens to pipeline events and manages git state: creates session branches at pipeline start, provisions worktrees for parallel agents, records workspace snapshots at each checkpoint, and merges worktrees at fan-in. This layer sits above the pipeline engine and does not affect its execution logic.
+
+**Interfaces.** CLI commands, event stream consumers (TUI, web UI), and an HTTP server (future). The pipeline engine is headless; presentation is separate (attractor Section 9.5-9.6).
+
+## Pipeline Definition
+
+Pipelines are defined in Graphviz DOT syntax per the attractor spec (Section 2). Orchestra adds custom node attributes for agent configuration.
+
+### Orchestra-Specific Node Attributes
+
+In addition to the attractor spec's standard attributes (Section 2.6), Orchestra recognizes:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `agent` | String | `""` | References an agent configuration by name (resolved from `orchestra.yaml`) |
+| `agent.role` | String | `""` | Inline role prompt layer (alternative to `agent` reference) |
+| `agent.persona` | String | `""` | Inline persona prompt layer |
+| `agent.personality` | String | `""` | Inline personality prompt layer |
+| `agent.task` | String | `""` | Inline task prompt template |
+| `agent.tools` | String | `""` | Comma-separated tool names available to the LLM inside this node |
+| `agent.mode` | String | `"autonomous"` | `autonomous` (no human interaction) or `interactive` (chat-style within node) |
+
+### Example: Adversarial PR Review Pipeline
+
+```dot
+digraph pr_review {
+    graph [
+        goal="Review the pull request from multiple perspectives and produce a synthesized review",
+        label="Adversarial PR Review",
+        model_spec="
+            * { llm_model: smart; llm_provider: anthropic; }
+            .critic { llm_model: worker; llm_provider: openrouter; }
+            #synthesizer { llm_model: smart; }
+        "
+    ]
+
+    node [shape=box, timeout="900s"]
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    // Parallel reviewers -- each references an agent config
+    security_reviewer [
+        label="Security Review",
+        agent="security-reviewer",
+        goal_gate=true
+    ]
+
+    architecture_reviewer [
+        label="Architecture Review",
+        agent="architecture-reviewer",
+        goal_gate=true
+    ]
+
+    // Fan-out to parallel reviewers
+    fan_out [shape=component, label="Fan Out"]
+
+    // Fan-in to collect results
+    fan_in [shape=tripleoctagon, label="Collect Reviews"]
+
+    // Critic with inline agent config
+    critic [
+        label="Adversarial Critique",
+        class="critic",
+        agent.role="adversarial-critic",
+        agent.persona="devils-advocate",
+        agent.personality="contrarian-precise",
+        agent.task="critique-reviews",
+        max_retries=2
+    ]
+
+    // Conditional routing after critic
+    gate [shape=diamond, label="Critique Sufficient?"]
+
+    // Synthesizer with interactive mode
+    synthesizer [
+        label="Synthesize Review",
+        agent="synthesizer",
+        agent.mode="interactive"
+    ]
+
+    // Graph edges
+    start -> fan_out
+    fan_out -> security_reviewer
+    fan_out -> architecture_reviewer
+    security_reviewer -> fan_in
+    architecture_reviewer -> fan_in
+    fan_in -> critic
+    critic -> gate
+    gate -> fan_out [label="Retry", condition="outcome!=success", weight=0]
+    gate -> synthesizer [label="Proceed", condition="outcome=success", weight=1]
+    synthesizer -> exit
+}
 ```
-orchestra/
-├── prompts/          # Prompt composition engine
-│   ├── composer.py   # Builds system prompts from role + persona + task + personality
-│   ├── templates/    # Built-in prompt templates
-│   └── registry.py   # Prompt template registry
-├── tools/            # Tool registry
-│   ├── registry.py   # Tool registration and discovery
-│   ├── builtins/     # Built-in tools (git, shell, etc.)
-│   └── loaders.py    # Load user-defined tools from config
-├── agents/           # Agent harness
-│   ├── harness.py    # Agent configuration (model, tools, prompts, mode)
-│   └── providers.py  # LLM provider configuration
-├── graph/            # Graph compiler
-│   ├── schema.py     # Declarative graph schema (Pydantic models)
-│   ├── compiler.py   # Schema → LangGraph StateGraph
-│   └── validators.py # Schema validation
-├── runtime/          # Execution management
-│   ├── session.py    # Session lifecycle (start, pause, resume, attach)
-│   ├── git.py        # Git integration (commit tracking, worktrees)
-│   ├── checkpoint.py # Checkpoint ↔ git commit linking
-│   └── store.py      # Execution state database
-├── cli/              # CLI interface
-│   └── main.py       # Click/Typer CLI
-└── server/           # Web/API interface (deferred)
-    ├── api.py        # FastAPI endpoints
-    └── ui/           # Web dashboard
-```
 
-**Declarative Graph Schema (YAML example):**
+### Orchestra Configuration File
+
+Non-graph configuration (providers, workspaces, agent definitions, tool registrations) lives in `orchestra.yaml`, separate from the DOT pipeline file. This keeps the DOT file focused on graph structure while the YAML handles project-specific configuration.
 
 ```yaml
-# pipeline: pr-review.yaml
-name: adversarial-pr-review
-description: Multi-perspective PR review with adversarial critique
-
+# orchestra.yaml -- project configuration
 providers:
-  # Default provider for all agents (can be overridden per-agent)
   default: anthropic
-
   anthropic:
     models:
       smart: claude-opus-4-20250514
       worker: claude-sonnet-4-20250514
       cheap: claude-haiku-3-20250514
-    # Provider-specific config
     max_tokens: 8192
-
   openai:
     models:
       smart: gpt-4o
       worker: gpt-4o-mini
       cheap: gpt-4o-mini
-
   openrouter:
     models:
       smart: anthropic/claude-opus-4
@@ -117,16 +241,11 @@ providers:
 workspace:
   repos:
     backend:
-      path: ../backend         # relative to workspace root, or absolute
-      branch_prefix: orchestra/ # session branches created under this prefix
+      path: ../backend
+      branch_prefix: orchestra/
     frontend:
       path: ../frontend
       branch_prefix: orchestra/
-    # Single-repo projects just have one entry:
-    # app:
-    #   path: .
-
-  # Project-level tool defaults (per-repo)
   tools:
     backend:
       run-tests:
@@ -141,21 +260,18 @@ workspace:
 
 agents:
   security-reviewer:
-    model: smart                 # resolves via default provider (anthropic) → claude-opus-4
     role: security-engineer
     persona: senior-security-engineer
     personality: thorough-skeptical
     task: review-pr-security
     tools:
-      - backend:read-file        # repo-qualified tool names
+      - backend:read-file
       - backend:search-code
       - backend:run-tests
       - frontend:read-file
       - frontend:search-code
-    mode: autonomous
 
   architecture-reviewer:
-    model: smart                 # same alias, same resolved model
     role: software-architect
     persona: principal-engineer
     personality: pragmatic-opinionated
@@ -165,54 +281,110 @@ agents:
       - backend:search-code
       - frontend:read-file
       - frontend:search-code
-    mode: autonomous
-
-  critic:
-    model: worker                # cheaper model for iterative critique
-    provider: openrouter         # override: use openrouter instead of default anthropic
-    role: adversarial-critic
-    persona: devils-advocate
-    personality: contrarian-precise
-    task: critique-reviews
-    tools: []
-    mode: autonomous
 
   synthesizer:
-    model: smart                 # back to default provider (anthropic)
     role: review-synthesizer
     persona: tech-lead
     personality: balanced-decisive
     task: synthesize-review
     tools: []
-    mode: interactive            # chat-style human interaction (multi-turn)
-
-  # You can also pin to a specific model string, bypassing aliases:
-  # fast-triage:
-  #   model: claude-haiku-3-20250514   # literal model name
-  #   provider: anthropic              # required when using literal model name
-
-graph:
-  # Parallel fan-out to reviewers
-  - from: START
-    to: [security-reviewer, architecture-reviewer]
-
-  # Both reviews feed into critic
-  - from: [security-reviewer, architecture-reviewer]
-    to: critic
-    join: all  # wait for all
-
-  # Critic can send back to reviewers or forward to synthesis
-  - from: critic
-    to: [security-reviewer, architecture-reviewer, synthesizer]
-    condition: critic-routing  # references a registered condition function
-    max_loops: 2
-
-  # Final synthesis
-  - from: synthesizer
-    to: END
 ```
 
-**Prompt Composition Model:**
+### Separation of Concerns
+
+The DOT file defines **what** the pipeline does (graph structure, flow control, node types). The YAML file defines **how** it is configured (providers, workspaces, agent prompts, tools). This separation means:
+
+- The same DOT pipeline can be used with different provider configurations
+- Agent definitions are reusable across pipelines
+- Graph structure is visualizable with standard Graphviz tooling
+- DOT files remain clean and focused on flow
+
+## Execution Engine
+
+Orchestra implements the attractor spec's execution engine (Section 3) with no modifications. The following subsections summarize the key behaviors; the attractor spec is the authoritative reference.
+
+### Core Execution Loop
+
+The engine traverses the graph from the start node (shape=Mdiamond) using a simple loop: execute handler, record outcome, select next edge, advance. Attractor Section 3.2 defines this in full pseudocode.
+
+### Edge Selection (5-Step Deterministic Algorithm)
+
+After a node completes, the engine selects the next edge deterministically (attractor Section 3.3):
+
+1. **Condition match.** Evaluate boolean expressions on edges against context and outcome. Condition-matched edges are eligible.
+2. **Preferred label match.** If the outcome includes a `preferred_label`, match it against edge labels (normalized: lowercase, trimmed, accelerator prefixes stripped).
+3. **Suggested next IDs.** If the outcome includes `suggested_next_ids`, match against edge targets.
+4. **Highest weight.** Among remaining eligible unconditional edges, highest `weight` wins.
+5. **Lexical tiebreak.** Equal weights are broken by alphabetical target node ID.
+
+The LLM's role in routing is limited: it returns an outcome status (SUCCESS/FAIL/RETRY) and optionally suggests a preferred label or next IDs. Conditions (step 1) always have highest priority. The engine -- not the LLM -- decides which edge to follow.
+
+### Goal Gate Enforcement
+
+Nodes with `goal_gate=true` must reach SUCCESS or PARTIAL_SUCCESS before the pipeline can exit. When the engine reaches a terminal node (shape=Msquare), it checks all visited goal gate nodes. If any are unsatisfied, the engine reroutes to the `retry_target` (node-level, then graph-level) instead of exiting. See attractor Section 3.4.
+
+### Retry System
+
+Each node has a retry policy (attractor Sections 3.5-3.6):
+
+- `max_retries` specifies additional attempts beyond the initial execution (so `max_retries=3` means up to 4 total)
+- Backoff policies: `standard` (200ms, 2x), `aggressive` (500ms, 2x), `linear` (500ms, 1x), `patient` (2000ms, 3x)
+- Jitter is applied by default to prevent thundering herd
+- When retries are exhausted: `retry_target` for rerouting, `allow_partial` for accepting PARTIAL_SUCCESS, or FAIL
+
+### Context Fidelity
+
+Controls how much prior context carries to each node's LLM session (attractor Section 5.4):
+
+| Mode | Session | Context Carried | Approximate Token Budget |
+|------|---------|-----------------|-------------------------|
+| `full` | Reused (same thread) | Full conversation history | Unbounded (uses compaction) |
+| `truncate` | Fresh | Minimal: goal and run ID | Minimal |
+| `compact` | Fresh | Structured bullet-point summary | Moderate |
+| `summary:low` | Fresh | Brief textual summary | ~600 tokens |
+| `summary:medium` | Fresh | Moderate detail: recent outcomes, context values | ~1500 tokens |
+| `summary:high` | Fresh | Detailed: recent events, tool summaries, comprehensive context | ~3000 tokens |
+
+Resolution precedence: edge `fidelity` attribute > target node `fidelity` > graph `default_fidelity` > `compact`.
+
+### Event System
+
+The engine emits typed events for every significant action (attractor Section 9.6):
+
+- **Pipeline lifecycle:** PipelineStarted, PipelineCompleted, PipelineFailed
+- **Stage lifecycle:** StageStarted, StageCompleted, StageFailed, StageRetrying
+- **Parallel execution:** ParallelStarted, ParallelBranchStarted/Completed, ParallelCompleted
+- **Human interaction:** InterviewStarted, InterviewCompleted, InterviewTimeout
+- **Checkpoint:** CheckpointSaved
+
+Events are consumed via observer/callback pattern or async stream. The pipeline engine is headless; all UI (CLI, web, TUI) consumes events.
+
+### Graph Validation
+
+Before execution, the engine validates the graph (attractor Section 7). Built-in lint rules include:
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `start_node` | ERROR | Exactly one start node (shape=Mdiamond) required |
+| `terminal_node` | ERROR | At least one exit node (shape=Msquare) required |
+| `reachability` | ERROR | All nodes reachable from start |
+| `edge_target_exists` | ERROR | All edge targets reference existing nodes |
+| `start_no_incoming` | ERROR | Start node has no incoming edges |
+| `exit_no_outgoing` | ERROR | Exit node has no outgoing edges |
+| `condition_syntax` | ERROR | Edge conditions parse correctly |
+| `stylesheet_syntax` | ERROR | Model stylesheet parses correctly |
+| `prompt_on_llm_nodes` | WARNING | Codergen nodes should have a `prompt` or `label` |
+| `goal_gate_has_retry` | WARNING | Goal gate nodes should have a retry target |
+
+`orchestra compile pipeline.dot` runs validation without execution -- a dry-run that resolves all references and reports diagnostics.
+
+## Agent Configuration
+
+Orchestra layers agent configuration on top of attractor's codergen nodes. When the pipeline engine dispatches to the codergen handler, Orchestra's agent config layer resolves the prompt, model, and tools before calling the `CodergenBackend`.
+
+### Prompt Composition
+
+Prompts are assembled from four layers, each a separate YAML file:
 
 ```yaml
 # prompts/roles/security-engineer.yaml
@@ -230,7 +402,7 @@ persona:
   extends: security-engineer
   modifiers: |
     You have 15 years of experience. You've seen every class of
-    vulnerability. You don't raise false alarms — when you flag
+    vulnerability. You don't raise false alarms -- when you flag
     something, it matters. You provide specific remediation steps.
 
 # prompts/personalities/thorough-skeptical.yaml
@@ -246,9 +418,9 @@ task:
   name: review-pr-security
   template: |
     Review the following pull request for security concerns.
-    
+
     {{pr_diff}}
-    
+
     Provide your review as structured findings with:
     - Severity (critical/high/medium/low/info)
     - Location (file:line)
@@ -256,466 +428,453 @@ task:
     - Remediation
 ```
 
-The composed system prompt would be assembled from `role + persona + personality + task`, each layer additive.
+The composed system prompt is assembled as `role + persona + personality + task`, each layer additive. The task layer uses Jinja2 for variable interpolation (`{{pr_diff}}`). The other layers are plain text blocks.
 
-**Tool Registry Model (Multi-Repo Aware):**
+This layered approach is an Orchestra extension -- the attractor spec only supports simple `prompt` attributes with `$goal` expansion. The composed prompt is what gets passed to `CodergenBackend.run()`.
 
-Tools are scoped to repos via a `{repo}:{tool}` naming convention. Built-in tools (read-file, search-code, git operations) are automatically generated per-repo in the workspace. Project-specific tools are defined per-repo in the workspace config.
+### File Discovery
+
+Prompt files, agent definitions, and tool configurations are resolved via a discovery chain:
+
+1. **Pipeline-relative**: relative to the `.dot` file's directory
+2. **Project config**: paths specified in `orchestra.yaml`
+3. **Global fallback**: `~/.orchestra/`
+
+Resolution stops at the first match. This supports shared prompts/tools across projects via the global directory, with project-level overrides.
+
+### Model and Provider Resolution
+
+Orchestra combines attractor's model stylesheet with a provider alias system:
+
+**Provider aliases** (Orchestra extension) define semantic model tiers in `orchestra.yaml`:
+
+```yaml
+providers:
+  default: anthropic
+  anthropic:
+    models:
+      smart: claude-opus-4-20250514
+      worker: claude-sonnet-4-20250514
+      cheap: claude-haiku-3-20250514
+```
+
+**Model stylesheet** (attractor Section 8) provides CSS-like per-node overrides in the DOT file:
+
+```
+model_spec="
+    * { llm_model: smart; llm_provider: anthropic; }
+    .code { llm_model: worker; }
+    #critical_review { llm_model: gpt-4o; llm_provider: openai; reasoning_effort: high; }
+"
+```
+
+**Resolution order** (highest to lowest precedence):
+
+1. Explicit node attribute (`llm_model="gpt-4o"` on the node)
+2. Stylesheet rule by specificity (ID > class > universal)
+3. Agent config model setting
+4. Graph-level default
+5. Provider default
+
+Alias resolution: if the resolved model string matches a key in `providers.{provider}.models`, it resolves to the mapped model string. If not found, it is treated as a literal model identifier. This means `llm_model: smart` resolves to `claude-opus-4-20250514` when the provider is `anthropic`, but `llm_model: gpt-4o` passes through unchanged.
+
+**Key design property:** Changing `providers.default: openai` in `orchestra.yaml` switches all agents (that don't override) from Anthropic to OpenAI in one line, while preserving the smart/worker/cheap tier semantics.
+
+### Agent-Level Tool Configuration
+
+Tools available to the LLM inside codergen nodes operate on a hybrid model:
+
+1. **Backend base toolset**: The `CodergenBackend` implementation provides a default set of tools (e.g., LangGraph backend provides read_file, edit_file, shell, grep, glob)
+2. **Agent additions**: The agent config in `orchestra.yaml` can add tools (e.g., `backend:run-tests`, `frontend:run-lint`)
+3. **Agent restrictions**: An agent config can restrict to a subset of available tools
+
+Repo-scoped tools use a `{repo}:{tool}` naming convention. Built-in tools (read-file, write-file, search-code) are automatically generated per-repo in the workspace. Project-specific tools are defined per-repo in `orchestra.yaml`.
 
 ```python
-# Built-in tools are repo-aware — the registry auto-generates
-# scoped versions for each repo in the workspace:
-#   backend:read-file, frontend:read-file
-#   backend:write-file, frontend:write-file
-#   backend:git-commit, frontend:git-commit
-#   backend:search-code, frontend:search-code
-
-# The underlying implementation receives the repo context:
 from orchestra.tools import tool_registry, RepoContext
 
+# Decorator-based registration for custom tools
 @tool_registry.register_builtin("read-file")
 def read_file(path: str, repo: RepoContext) -> str:
     """Read a file from the repo's working directory."""
     full_path = repo.resolve_path(path)
     return full_path.read_text()
 
-# User-defined tools can also be repo-scoped:
+# User-defined tools can also be repo-scoped
 @tool_registry.register("run-migration", repo="backend")
 def run_migration() -> str:
     """Run database migrations."""
     ...
 
-# Shell command tools from YAML config are auto-scoped to their repo:
-# workspace.tools.backend.run-tests → becomes "backend:run-tests"
-
-# Cross-repo tools (not scoped to any single repo) are also possible:
+# Cross-repo tools (not scoped to any single repo)
 @tool_registry.register("run-integration-tests")
 def run_integration_tests() -> str:
     """Run integration tests spanning frontend and backend."""
     ...
 ```
 
-When an agent is configured with `backend:run-tests`, the tool receives the backend repo's `RepoContext` automatically — including its path, git state, and environment.
+Note: this is distinct from attractor's tool handler nodes (Section 4.10), which are pipeline-level non-LLM tool execution. Agent-level tools are available to the LLM inside codergen nodes; tool handler nodes are standalone pipeline nodes that run shell commands or API calls without an LLM.
 
-**Git Integration Model (Multi-Repo, Worktree-per-Agent):**
+## CodergenBackend
 
-Each graph execution session operates across a workspace of one or more git repos. Parallel agents with write access to the same repo get isolated git worktrees; sequential agents share the session branch directly.
+The `CodergenBackend` is the interface between Orchestra's pipeline engine and LLM execution. It follows the attractor spec's design (Section 4.5) with Orchestra providing specific implementations.
 
-**Session lifecycle:**
+### Interface
 
-1. Session starts → create session branch `{prefix}{pipeline}/{session-id}` in EACH repo; record base commit SHAs
-2. Graph compiler identifies parallel fan-out segments where multiple agents have write access to the same repo → creates a worktree per agent for those repos
-3. Agent makes code changes → auto-commit to its worktree (parallel) or the session branch (sequential)
-4. At fan-in (join point) → merge agent worktrees back into the session branch; surface conflicts to the downstream agent or human
-5. Each LangGraph checkpoint stores a **workspace snapshot**: `{checkpoint_id, repos: {name: sha, ...}, timestamp}`
-6. Resuming from a checkpoint → `git checkout` each repo to its corresponding SHA + restore LangGraph state
-7. Session state stored in a local SQLite database (or Postgres for shared/remote)
+```python
+class CodergenBackend(Protocol):
+    def run(self, node: Node, prompt: str, context: Context) -> str | Outcome:
+        """Execute an LLM task for the given node.
+
+        Args:
+            node: The parsed Node with all its attributes (including agent config).
+            prompt: The fully composed prompt (after Orchestra's prompt composition).
+            context: The pipeline's shared key-value context.
+
+        Returns:
+            A string response (converted to SUCCESS Outcome by the handler),
+            or an Outcome with explicit status, context_updates, etc.
+        """
+        ...
+```
+
+The pipeline engine calls `backend.run()` and does not know or care what happens inside. This is the ONLY integration point between the pipeline orchestration layer and LLM execution.
+
+### LangGraphBackend (Primary Implementation)
+
+Uses LangGraph's ReAct agent for within-node agentic execution:
+
+```python
+class LangGraphBackend(CodergenBackend):
+    """Uses LangGraph's create_react_agent for tool-using LLM execution.
+
+    This backend gives the LLM access to tools (read_file, edit_file,
+    shell, grep, glob, plus any agent-configured additions) and runs
+    an agentic loop: LLM -> tool calls -> LLM -> ... until done.
+    """
+
+    def run(self, node: Node, prompt: str, context: Context) -> str | Outcome:
+        # Resolve model/provider from agent config + stylesheet + aliases
+        model = resolve_model(node)
+        tools = resolve_tools(node)
+
+        # Create LangGraph ReAct agent
+        agent = create_react_agent(model, tools)
+
+        # Run the agent with the composed prompt
+        result = agent.invoke({"messages": [("user", prompt)]})
+
+        # Extract response and build Outcome
+        return build_outcome(result)
+```
+
+This is the right level for LangGraph -- it manages the inner agentic loop (tool use, multi-turn LLM interaction) within a single pipeline node. LangGraph's checkpointing, streaming, and tool infrastructure add real value here.
+
+### CLIAgentBackend
+
+Wraps CLI coding agents (Claude Code, Codex, Gemini CLI) as subprocesses:
+
+```python
+class CLIAgentBackend(CodergenBackend):
+    """Spawns a CLI agent as a subprocess.
+
+    Pragmatic shortcut: get a full agentic loop for free.
+    Tradeoff: no programmatic control over the inner loop (no steering,
+    no mid-task observation, no event stream from inside the agent).
+    """
+
+    def run(self, node: Node, prompt: str, context: Context) -> str | Outcome:
+        result = subprocess.run(
+            ["claude", "--print", "--model", "sonnet", prompt],
+            capture_output=True, text=True
+        )
+        return result.stdout
+```
+
+### DirectLLMBackend
+
+Single LLM API call with no tool use. Suitable for analysis, review, and synthesis nodes that don't need to interact with the filesystem:
+
+```python
+class DirectLLMBackend(CodergenBackend):
+    """Direct LLM API call. No tools, no agentic loop.
+
+    Good for nodes that analyze, summarize, or review --
+    not for nodes that need to read/write files or run commands.
+    """
+
+    def run(self, node: Node, prompt: str, context: Context) -> str | Outcome:
+        model = resolve_model(node)
+        response = model.invoke([("system", prompt)])
+        return response.content
+```
+
+### Backend Selection
+
+The backend can be configured at multiple levels:
+
+1. **Global default** in `orchestra.yaml`: `backend: langgraph`
+2. **Per-pipeline** in `orchestra.yaml` under the pipeline key
+3. **Per-node** via a `backend` attribute on the node (future extension)
+
+Most pipelines will use a single backend. The interface exists to support diverse deployment scenarios: local development (LangGraphBackend), CI/CD (DirectLLMBackend for speed), and quick prototyping (CLIAgentBackend).
+
+## Workspace and Git Integration
+
+Orchestra adds multi-repo workspace management and git integration as a layer above the pipeline engine. The engine emits events; the workspace layer reacts. This is entirely an Orchestra extension -- the attractor spec has no workspace or git concept.
+
+### Multi-Repo Workspace
+
+Workspaces are defined in `orchestra.yaml`:
+
+```yaml
+workspace:
+  repos:
+    backend:
+      path: ../backend
+      branch_prefix: orchestra/
+    frontend:
+      path: ../frontend
+      branch_prefix: orchestra/
+```
+
+Each repo has its own git context, tools, and paths. Tools are repo-qualified (`backend:run-tests`). Single-repo projects are the degenerate case with one entry.
+
+### Session Branches
+
+When a pipeline run starts, Orchestra creates a session branch in each workspace repo:
+
+- Branch name: `{branch_prefix}{pipeline-name}/{session-short-id}` (e.g., `orchestra/pr-review/a1b2c3`)
+- Base commit SHA is recorded for each repo
+- On completion, branches are left in place -- the user merges or deletes them
+- `orchestra cleanup` handles stale session branches
+
+### Worktree-Per-Agent Isolation
+
+When the parallel handler fans out to multiple codergen nodes that have write access to the same repo, each parallel branch gets its own git worktree for that repo:
+
+- Worktrees are created in `.orchestra/worktrees/{session-id}/{agent-name}`
+- Each agent commits to its own worktree independently
+- At fan-in, worktrees are merged back into the session branch
+- Merge conflicts are surfaced to the downstream agent or human (via the Interviewer)
+- Sequential agents (after fan-in) work directly on the session branch -- no worktree overhead
 
 ```
 Execution Timeline (2-repo workspace, parallel agents with worktrees):
-  
-  checkpoint_0 ──── checkpoint_1a/1b ──── checkpoint_2 (fan-in) ──── checkpoint_3
-       │                  │                       │                        │
+
+  checkpoint_0 ---- checkpoint_1a/1b ---- checkpoint_2 (fan-in) ---- checkpoint_3
+       |                  |                       |                        |
    workspace:         agent worktrees:         merged workspace:        workspace:
    backend: abc123    security: wt_sec/def     backend: merged_sha     backend: jkl012
    frontend: 111aaa   arch: wt_arch/ghi        frontend: 111aaa        frontend: 333ccc
    (both at base)    (parallel, isolated)     (worktrees merged)      (sequential)
 ```
 
-The workspace snapshot model means:
-- **Resuming** from checkpoint_2 restores the merged state of all repos after the fan-in
-- **Not every checkpoint touches every repo** — only repos with changes get new SHAs
-- **Parallel agents** in separate worktrees commit independently; the fan-in merge produces a single SHA per repo
-- **Sequential agents** (after fan-in) work directly on the session branch — no worktree overhead
+### Workspace Snapshots
 
-**Worktree management:**
-- Worktrees are created in a `.orchestra/worktrees/` directory relative to the repo
-- Named `{session-id}/{agent-name}` for debuggability
-- Cleaned up after fan-in merge completes successfully
-- On session failure/abort, worktrees are preserved for inspection and cleaned up by `orchestra cleanup`
+Each attractor checkpoint is extended with a workspace snapshot mapping repos to git SHAs:
 
-**Workspace Snapshot Schema (SQLite):**
-
-```sql
-CREATE TABLE workspace_snapshots (
-    checkpoint_id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL,
-    timestamp DATETIME NOT NULL,
-    FOREIGN KEY (session_id) REFERENCES sessions(id)
-);
-
-CREATE TABLE repo_states (
-    checkpoint_id TEXT NOT NULL,
-    repo_name TEXT NOT NULL,
-    git_sha TEXT NOT NULL,
-    branch TEXT NOT NULL,
-    worktree_path TEXT,          -- NULL for session branch, path for agent worktree
-    agent_name TEXT,             -- NULL for merged state, agent name for per-agent state
-    PRIMARY KEY (checkpoint_id, repo_name, COALESCE(agent_name, '')),
-    FOREIGN KEY (checkpoint_id) REFERENCES workspace_snapshots(checkpoint_id)
-);
+```json
+{
+    "checkpoint_id": "cp_abc123",
+    "session_id": "sess_def456",
+    "timestamp": "2025-02-11T10:30:00Z",
+    "current_node": "critic",
+    "completed_nodes": ["start", "fan_out", "security_reviewer", "architecture_reviewer", "fan_in"],
+    "context": { "...": "..." },
+    "workspace_snapshot": {
+        "backend": {
+            "git_sha": "abc123def",
+            "branch": "orchestra/pr-review/a1b2c3"
+        },
+        "frontend": {
+            "git_sha": "111aaabbb",
+            "branch": "orchestra/pr-review/a1b2c3"
+        }
+    }
+}
 ```
 
-### Solution 2: Layered Packages (Monorepo)
+Workspace snapshots are only recorded when a repo's git state has actually changed since the last checkpoint -- read-only nodes incur no snapshot overhead.
 
-Same architecture as Solution 1, but split into installable packages:
+Resuming from a checkpoint restores both pipeline state (from the attractor checkpoint) AND git state (from the workspace snapshot) by checking out each repo to its corresponding SHA.
 
-```
-orchestra-core      # prompts, tools, agents, graph compiler
-orchestra-runtime   # session management, git integration, checkpointing
-orchestra-cli       # CLI interface
-orchestra-server    # web API + UI (deferred)
-```
+## Session Management
 
-**Pros:** Cleaner dependency boundaries, users can install only what they need.
-**Cons:** More packaging overhead, premature for initial development.
+A session is a named pipeline run with a checkpoint chain and workspace snapshot chain.
 
-### Solution 3: Configuration-Only Layer (Thin Wrapper)
+### Session Lifecycle
 
-Minimal Python — mostly YAML/JSON configuration that gets interpreted into LangGraph at runtime. The framework is primarily a schema + compiler + CLI, with most logic living in LangGraph itself.
+1. **Start**: `orchestra run pipeline.dot` creates a session (ID, status, timestamps), creates session branches in workspace repos, initializes the pipeline engine
+2. **Execute**: The engine traverses the graph, saving checkpoints and workspace snapshots after each node
+3. **Pause**: The engine can be interrupted (Ctrl-C or API signal); state is saved in the last checkpoint
+4. **Resume**: `orchestra resume <session_id>` loads the last checkpoint, restores git state, and continues from the next node
+5. **Replay**: `orchestra replay <session_id> --checkpoint <id>` restores a specific checkpoint and re-executes from that point
+6. **Complete**: Pipeline reaches the exit node; session status is updated; branches are left for user to merge/delete
 
-**Pros:** Less code to maintain, closer to LangGraph's native patterns.
-**Cons:** Less flexibility for custom runtime management (git integration, session attachment, observability).
+### Session Storage
 
-## Tradeoff Analysis
+Session metadata is stored in a local SQLite database (separate from checkpoints):
 
-### Declarative Format: YAML vs Python DSL vs JSON
+- Session ID, pipeline name, status (running/paused/completed/failed), timestamps
+- Token usage and cost tracking per node
+- Tool invocation counts and timing
 
-| Factor | YAML | Python DSL | JSON |
-|--------|------|-----------|------|
-| Readability | High | Medium-High | Low |
-| Validation | Via schema | Native types | Via schema |
-| Expressiveness | Low (no logic) | High | Lowest |
-| LLM-friendliness | High | Medium | High |
-| Editor support | Basic | Full IDE | Basic |
-| Conditional logic | Requires references to code | Inline | Requires references |
+Checkpoints are stored as JSON files in the run directory (attractor Section 5.6). This dual storage means checkpoint resume is filesystem-based (portable), while session queries are database-backed (fast).
 
-**Recommendation:** YAML as the primary format, with Python DSL as an escape hatch for complex conditional logic. Conditions/routing functions can be registered in Python and referenced by name in YAML.
+### CLI Commands
 
-### Prompt Composition: Layered Assembly vs Template Engine vs Prompt Objects
+| Command | Description |
+|---------|-------------|
+| `orchestra run <pipeline.dot>` | Compile and execute a pipeline |
+| `orchestra compile <pipeline.dot>` | Validate, resolve references, print graph structure (dry-run) |
+| `orchestra status` | List running/completed sessions with checkpoint counts and token usage |
+| `orchestra resume <session_id>` | Resume a paused or crashed session from last checkpoint |
+| `orchestra replay <session_id> --checkpoint <id>` | Restore a specific checkpoint and re-execute |
+| `orchestra attach <session_id>` | Connect to a running session's event stream (or interactive agent) |
+| `orchestra cleanup` | Remove stale session branches, worktrees, and old run directories |
 
-| Factor | Layered Assembly | Template Engine (Jinja2) | Prompt Objects |
-|--------|-----------------|-------------------------|----------------|
-| Composability | High (role + persona + ...) | Medium (includes/blocks) | High (OOP) |
-| Non-technical editing | Easy (edit one YAML file) | Moderate | Hard |
-| Runtime flexibility | Moderate | High (logic in templates) | High |
-| Testability | High (each layer testable) | Medium | High |
+## Human Interaction
 
-**Recommendation:** Layered assembly with Jinja2 for the task template layer. Roles, personas, and personalities are additive text blocks. Tasks use Jinja2 for variable interpolation (`{{pr_diff}}`).
+Orchestra supports two patterns for human-in-the-loop interaction.
 
-### Git Integration: Branch-per-session vs Worktree-per-session vs Commit-only
+### Interviewer Pattern (for `wait.human` Nodes)
 
-| Factor | Branch-per-session | Worktree-per-session | Commit-only |
-|--------|-------------------|---------------------|-------------|
-| Parallel execution | No (single working dir) | Yes | No |
-| Isolation | Low | High | N/A |
-| Complexity | Low | Medium | Lowest |
-| Resume/replay fidelity | High | High | Medium |
-| Disk usage | Low | Medium (full checkout) | Low |
+Follows the attractor spec (Section 6) directly. When the engine reaches a `wait.human` node (shape=hexagon), it derives choices from outgoing edge labels and presents them to a human via the Interviewer interface.
 
-**Recommendation:** Worktree-per-session for parallel pipelines, branch-per-session as default for single pipelines. The runtime should abstract this — users shouldn't need to think about worktrees vs branches.
+**Interviewer implementations:**
 
-### State Linking: Checkpoint ID in Git vs Git SHA in Checkpoint vs Dual-Write
+| Implementation | Use Case |
+|----------------|----------|
+| `ConsoleInterviewer` | CLI: reads from stdin, displays formatted prompts with option keys |
+| `CallbackInterviewer` | Integration: delegates to a provided function (web UI, Slack, API) |
+| `QueueInterviewer` | Testing: reads from a pre-filled answer queue for deterministic replay |
+| `AutoApproveInterviewer` | CI/CD: always selects YES / first option for automation |
+| `RecordingInterviewer` | Audit: wraps another interviewer and records all Q&A pairs |
 
-| Factor | Checkpoint ID in Git Commit | Git SHA in Checkpoint DB | Dual-Write (both) |
-|--------|---------------------------|------------------------|-------------------|
-| Simplicity | Medium | Medium | Lower |
-| Completeness | Partial (git → agent state) | Partial (agent state → git) | Full bidirectional |
-| Resumability | Need DB lookup from commit | Need git lookup from checkpoint | Either direction works |
-| Implementation | Custom git commit metadata | Custom checkpoint metadata | Both |
+### Chat-Style Interactive Mode (for Codergen Nodes)
 
-**Recommendation:** Dual-write approach with workspace snapshots. Store a workspace snapshot (map of repo→SHA) in the checkpoint metadata (LangGraph supports custom metadata on checkpoints), and store checkpoint_id in git commit trailers in each affected repo. A local SQLite database serves as the bidirectional index across all repos.
+An Orchestra extension for codergen nodes with `agent.mode="interactive"`. The agent streams output and the human can respond in a multi-turn conversation within that node:
 
-### Execution Store: SQLite vs PostgreSQL vs Filesystem
+- The agent and human exchange messages until the human signals completion (`/done`, `/approve`, `/reject`)
+- Each human turn is a checkpoint boundary, enabling resume from any point in the conversation
+- The CLI implements this via stdin/stdout; the interface is abstract to support future web UI
 
-| Factor | SQLite | PostgreSQL | Filesystem |
-|--------|--------|-----------|------------|
-| Zero-config | Yes | No | Yes |
-| Concurrent access | Limited | Excellent | Poor |
-| Remote deployment | No (local file) | Yes | No |
-| LangGraph native support | No | Yes (PostgresSaver) | No |
-| Query capability | Good | Excellent | None |
+This is distinct from the Interviewer pattern: the Interviewer is for structured decisions (approve/reject, select an option), while interactive mode is for open-ended collaboration within a task.
 
-**Recommendation:** SQLite for local/CLI usage (zero-config, embedded). PostgreSQL when deploying remotely (future). LangGraph's built-in `SqliteSaver` for checkpoints, with a parallel SQLite database for Orchestra's own session/execution metadata.
+## Implementation Scope
 
-### Provider/Model Configuration: Alias Resolution
+### Components
 
-The provider system uses a 3-level resolution chain:
+1. **DOT parser** -- Parse attractor's DOT subset into an in-memory graph model
+2. **AST transforms** -- Variable expansion, model stylesheet application, custom transforms
+3. **Graph validation** -- Lint rules with diagnostic model (error/warning/info)
+4. **Pipeline execution engine** -- Core traversal loop per attractor Section 3
+5. **Handler registry** -- Shape-to-handler mapping with custom handler support
+6. **Node handlers** -- start, exit, codergen, wait.human, conditional, parallel, fan_in, tool, manager_loop
+7. **Context and Outcome model** -- Key-value Context, structured Outcome, context fidelity
+8. **Checkpoint system** -- JSON checkpoint per node, extended with workspace snapshots
+9. **Edge selection** -- 5-step deterministic algorithm
+10. **Goal gate enforcement** -- Check at exit, reroute to retry targets
+11. **Retry system** -- Per-node retry policies with backoff
+12. **Event system** -- Typed events for all lifecycle phases
+13. **Condition expression evaluator** -- Parse and evaluate edge conditions
+14. **Agent configuration layer** -- Prompt composition, model/provider resolution, tool configuration
+15. **Prompt composition engine** -- Role + persona + personality + task from YAML files with Jinja2
+16. **File discovery system** -- Pipeline-relative > project config > `~/.orchestra/`
+17. **Model/provider resolution** -- Alias resolution + stylesheet application
+18. **Agent-level tool registry** -- Decorator-based registration, repo-scoped tools
+19. **CodergenBackend interface** -- Pluggable LLM execution
+20. **LangGraphBackend** -- Primary backend using LangGraph ReAct agent
+21. **DirectLLMBackend** -- Single API call backend for analysis nodes
+22. **CLIAgentBackend** -- CLI agent subprocess wrapper
+23. **Workspace management** -- Multi-repo workspace, repo-qualified tools
+24. **Git integration** -- Session branches, worktree-per-agent, auto-commit
+25. **Workspace snapshots** -- Checkpoint-to-git-SHA linking
+26. **Session management** -- Session lifecycle, SQLite metadata store
+27. **Interviewer system** -- Console, Callback, Queue, AutoApprove, Recording implementations
+28. **CLI interface** -- Typer-based: run, compile, status, resume, replay, attach, cleanup
+29. **Adversarial PR review pipeline** -- End-to-end validation pipeline
 
-```
-Agent config          Pipeline config           Resolved model
-─────────────        ─────────────────         ──────────────
-model: "smart"   →   provider (agent-level     →  actual model string
-                      or pipeline default)
-                  →   providers.{provider}
-                      .models.{alias}
-```
+### Success Criteria
 
-**Resolution rules:**
-1. Agent specifies `model:` (alias like "smart" or literal like "claude-opus-4-20250514")
-2. Agent optionally specifies `provider:` to override pipeline default
-3. If `model` is an alias (found in `providers.{provider}.models`), resolve to the mapped model string
-4. If `model` is a literal string (not found in aliases), use it directly with the specified provider (escape hatch for specific models)
+**Pipeline Definition and Parsing:**
+- DOT files parse correctly per attractor's supported subset (digraph, graph/node/edge attributes, chained edges, subgraphs, comments)
+- Orchestra-specific attributes (`agent`, `agent.role`, etc.) are recognized on codergen nodes
+- `orchestra compile pipeline.dot` validates the graph and reports diagnostics without executing
+- Invalid DOT or graph structure produces clear, actionable error messages
 
-**Recommended alias convention:** `smart`, `worker`, `cheap` — shipped as a convention for pipeline portability. Users can define any additional aliases. Providers don't need to implement all aliases — resolution fails with a clear error if an alias is missing for the resolved provider.
+**Execution Engine:**
+- Engine traverses the graph from start to exit, dispatching to handlers per shape-to-handler mapping
+- Edge selection follows the 5-step deterministic algorithm
+- Goal gates prevent exit when unsatisfied; engine reroutes to retry targets
+- Per-node retry policies with backoff work correctly
+- Context fidelity modes control how much context carries between nodes
+- Checkpoints are saved after every node; resume works from any checkpoint
+- Typed events are emitted for all lifecycle phases
 
-**Key design property:** Changing `providers.default: openai` in ONE place switches all agents (that don't override) from Anthropic to OpenAI, while preserving the smart/worker/cheap tier semantics. This makes A/B testing across providers trivial.
+**Agent Configuration:**
+- Prompt layers (role, persona, personality, task) load from YAML files and compose into a single system prompt
+- File discovery resolves files via pipeline-relative > project config > `~/.orchestra/`
+- Provider aliases resolve: `model: smart` + `provider: anthropic` -> `claude-opus-4-20250514`; literal model strings pass through
+- Model stylesheet applies overrides by specificity (ID > class > universal)
+- Agent-level tools resolve: backend base set + agent additions; repo-qualified names work
 
-| Factor | Alias System | Direct model strings | Provider-only (no aliases) |
-|--------|-------------|---------------------|--------------------------|
-| Provider switching | One-line change | Edit every agent | One-line change |
-| Semantic clarity | High ("smart" vs "worker") | Low (model string) | None |
-| Per-agent override | Supported | N/A (already direct) | Provider only, not tier |
-| Cost visibility | Implicit in alias | Explicit in model name | Implicit |
-| New provider onboarding | Define alias mappings once | N/A | Just set provider |
+**CodergenBackend:**
+- LangGraphBackend runs an agentic loop with tools (read, write, edit, shell, grep, glob)
+- DirectLLMBackend makes a single API call and returns the response
+- CLIAgentBackend spawns a CLI agent subprocess and captures output
+- All backends conform to the `run(node, prompt, context) -> str | Outcome` interface
 
-### Multi-Repo Workspace: Named Workspaces vs Repo-Param Tools vs Workspace Manifest
-
-| Factor | Named Workspaces (A) | Repo-Param Tool (B) | Workspace Manifest (C) |
-|--------|---------------------|---------------------|----------------------|
-| Type safety | High (`backend:run-tests` is explicit) | Low (string param) | Medium |
-| Agent clarity | High (agent declares exactly which repos) | Low (any agent can access any repo) | Medium |
-| Config ergonomics | Good (YAML is readable) | Simpler per-tool | More indirection |
-| Tool generation | Auto-generate per repo | Single tool, dynamic dispatch | Auto-discover from manifest |
-| Cross-repo tools | Supported (unscoped tools) | Natural (just pass repo param) | Supported |
-| Single-repo simplicity | Degenerate case (one entry) | No change needed | Overkill |
-
-**Recommendation:** Named workspaces (A). Repo-qualified tool names (`backend:run-tests`) make agent configurations explicit about which repos they touch. Single-repo projects are the degenerate case with one workspace entry. Cross-repo tools are unscoped.
-
-### Monolith vs Monorepo Packages
-
-| Factor | Monolith | Monorepo |
-|--------|----------|----------|
-| Initial velocity | Fast | Slower |
-| Dependency management | Simple | Complex |
-| User install flexibility | Lower | Higher |
-| Refactoring ease | Higher | Lower |
-
-**Recommendation:** Start as monolith, extract packages later if needed. The internal module boundaries (prompts, tools, agents, graph, runtime, cli) serve as future package boundaries.
-
-## Decision Points
-
-### Resolved Decisions
-
-1. **Condition Functions** → **Plugin directory with decorator-based discovery.** Orchestra scans a configurable directory (default: `conditions/` relative to the pipeline YAML) for Python files containing functions decorated with `@orchestra.condition("name")`. The function signature is `def condition_name(state: GraphState) -> str | list[str]`, returning target node name(s). The scan directory is configurable via pipeline YAML or project `orchestra.yaml`.
-
-2. **Agent State Schema** → **Base schema with structured output slots.** Base schema includes `messages` (LangGraph MessageState), `agent_outputs: dict[str, Any]` (keyed by agent name — each agent writes structured output here for downstream agents to read), and `metadata` (session info, timestamps). Pipeline-defined extensions are Pydantic models referenced by import path in YAML. The graph compiler merges base + extension into the full state type.
-
-3. **Interactive Mode UX** → **Chat-style back-and-forth.** When `mode: interactive`, the agent streams output and the human can respond in a multi-turn conversation within that node. The agent and human exchange messages until the human signals completion (e.g., `/done`, `/approve`, `/reject`). Each human turn is a checkpoint boundary, enabling resume from any point in the conversation. The CLI implements this via stdin/stdout; the interface is abstract to support future web UI.
-
-4. **Pipeline Input / Invocation Context** → **Tool-based input gathering.** Rather than a static `inputs:` schema, pipeline agents use tools to fetch their own context. For example, a PR review pipeline's first agent would use a `github:get-pr-diff` tool to retrieve the diff. This makes agents autonomous in context gathering and avoids a separate input declaration mechanism. Built-in tools for common inputs (GitHub PRs, local git diffs, file contents) are provided. Pipeline YAML can specify `context_tools:` at the top level to declare which input-gathering tools are available to all agents.
-
-5. **Session Branch Lifecycle** → **Create at session start, leave on completion.** Session branches are created when a session starts, named `{branch_prefix}{pipeline-name}/{session-short-id}` (e.g., `orchestra/pr-review/a1b2c3`). On completion, branches are left in place — the user merges or deletes them. `orchestra cleanup` command handles stale session branches (e.g., older than N days, or from completed sessions).
-
-6. **Checkpoint Granularity** → **After every node (LangGraph default).** Checkpoints are taken after every node completes, which is LangGraph's default behavior. Workspace snapshots (repo SHAs) are only recorded when a repo's git state has actually changed since the last checkpoint — read-only nodes incur no snapshot overhead. This gives maximum replay granularity with minimal cost.
-
-7. **Error Handling & Retries** → **Layered approach.** LLM call retries are handled by LangChain's built-in retry mechanism (exponential backoff for rate limits/timeouts). Tool execution failures are surfaced to the agent as error messages — the agent decides how to proceed (retry, skip, ask human). Pipeline-level circuit breaker: configurable `max_failures_per_session` before halting the entire pipeline. Token budgets and cost limits are deferred to post-MVP.
-
-8. **Observability** → **Structured SQLite logging + real-time streaming.** Log token usage, tool invocations, wall-clock timing, and agent reasoning per node into the session SQLite database. `orchestra attach` streams agent output in real-time. Optional LangSmith integration for detailed tracing (auto-detected if `LANGSMITH_API_KEY` is set). Custom web dashboard deferred.
-
-9. **Testing Architecture** → **FakeLLM + dry-run + prompt snapshots.** Unit and integration tests use a `FakeLLM` (canned responses configurable per test). `orchestra compile pipeline.yaml` validates YAML, resolves all references (prompts, tools, conditions, providers), and prints the compiled graph structure without executing — serves as a dry-run. Snapshot tests verify that composed prompts match expected output. Optional real LLM integration tests gated behind `ORCHESTRA_REAL_LLM=1`.
-
-10. **File Discovery & Layout** → **Relative to pipeline YAML + global fallback.** Prompt files, condition functions, and tool definitions are resolved relative to the pipeline YAML file's directory. A global `~/.orchestra/` directory provides shared prompts/tools across projects. Project-level `orchestra.yaml` can override search paths. Resolution order: pipeline-relative → project `orchestra.yaml` paths → `~/.orchestra/`.
-
-11. **Parallel Agent Repo Conflicts** → **Worktree-per-agent for full isolation.** Each parallel agent that has write access to a repo gets its own git worktree for that repo. After fan-in (when parallel agents converge), worktrees are merged back into the session branch. Merge conflicts are surfaced to the next downstream agent (or to the human in interactive mode). This enables true parallel writes at the cost of worktree management complexity. The graph compiler warns when parallel agents have write access to the same repo.
-
-## Recommendation
-
-**Confidence: 4/5** — Strong alignment between goals and proposed architecture. The main risk is scope — this is a large system, and disciplined scoping of the initial deliverable is critical.
-
-### Decisions Made
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **Implementation** | Python core + TypeScript web UI (deferred) | LangGraph is Python-native; web UI comes later |
-| **LangGraph coupling** | Tight — LangGraph IS the runtime | Avoids premature abstraction; leverage checkpoints, state, execution directly |
-| **Declarative format** | YAML primary, Python escape hatches | Readable, LLM-friendly, git-diffable; Python for routing conditions |
-| **Prompt composition** | Layered assembly (role + persona + personality + task) | Each layer is a composable, reusable YAML file; task layer uses Jinja2 for variable interpolation |
-| **Tool registry** | Code-registered tools (decorators) + declarative shell tools in YAML | Flexible for both simple commands and complex tool logic |
-| **Project tools** | Layered — `orchestra.project.yaml` in target repo + pipeline overrides | Projects define tools once; pipelines can extend/override |
-| **Multi-repo workspace** | Named repo workspaces with repo-qualified tool names (`repo:tool`) | Each repo has its own git context, tools, paths; agents explicitly declare which repos they access |
-| **Tool scoping** | Per-repo tool names (`backend:run-tests`, `frontend:run-tests`) | Unambiguous; agents declare exactly which repos/tools they need |
-| **Routing conditions** | Plugin directory with `@orchestra.condition()` decorator; configurable scan dir | Auto-discovery avoids manual registration; configurable directory supports flexible project layouts |
-| **Git integration** | Dual-write workspace snapshots (checkpoint↔{repo:SHA,...}); worktree-per-agent for parallel writes | Full bidirectional navigation between agent state and code state; true parallel isolation |
-| **Checkpoint linking** | Workspace snapshot object: `{checkpoint_id, repos: {name: sha, ...}}` | Single checkpoint maps to N repos; resume restores all repos to their corresponding SHAs |
-| **Checkpoint granularity** | After every node (LangGraph default); workspace snapshot only when repo state changed | Maximum replay granularity with minimal overhead for read-only nodes |
-| **State schema** | Base schema (`messages`, `agent_outputs: dict[str, Any]`, `metadata`) + Pydantic extensions | Structured inter-agent data passing via `agent_outputs`; pipeline extensions for domain-specific fields |
-| **Pipeline inputs** | Tool-based context gathering (agents use tools to fetch their own inputs) | Agents are autonomous in context gathering; no separate input declaration needed; aligns with tool-centric architecture |
-| **Execution store** | SQLite local (LangGraph SqliteSaver + Orchestra metadata DB) | Zero-config for CLI; PostgreSQL path available later for remote |
-| **Interactive mode** | Chat-style back-and-forth (multi-turn within node, CLI stdin/stdout) | Natural conversation flow; each human turn is a checkpoint boundary; abstract interface for future web UI |
-| **LLM providers** | LangChain provider abstraction | Inherits all LangChain-supported providers; natural fit with LangGraph |
-| **Model aliases** | Recommended convention (smart/worker/cheap) + custom aliases | Decouple agent capability intent from vendor/model; switch providers in one line; convention aids portability |
-| **Literal model fallback** | Unknown aliases treated as literal model strings | Escape hatch for specific models not in alias map |
-| **Provider scoping** | Pipeline-level default + per-agent override | Flexibility to mix providers (e.g., Anthropic for "smart", OpenRouter for "worker") |
-| **Error handling** | Layered: LangChain retries for LLM + tool errors surfaced to agent + pipeline circuit breaker | Agents handle tool failures intelligently; pipeline halts on repeated failures; token budgets deferred |
-| **Observability** | Structured SQLite logging (tokens, tools, timing) + real-time streaming + optional LangSmith | Rich local observability without external dependencies; LangSmith for detailed tracing when available |
-| **Testing** | FakeLLM + `orchestra compile` dry-run + prompt snapshot tests + optional real LLM tests | Fast CI with canned responses; dry-run validates config without execution; real LLM tests gated behind env var |
-| **File discovery** | Relative to pipeline YAML → project `orchestra.yaml` → `~/.orchestra/` | Predictable resolution order; shared prompts/tools across projects via global dir; project-level overrides |
-| **Session branches** | Create at start, named `{prefix}{pipeline}/{session-id}`, left on completion | User controls merge/delete; `orchestra cleanup` for stale branches |
-| **Parallel repo conflicts** | Worktree-per-agent for parallel agents with write access | Full isolation enables true parallel writes; merge conflicts surfaced at fan-in to downstream agent or human |
-| **Deployment** | Local CLI first; remote server deferred | Reduce scope; add FastAPI server later |
-| **Package structure** | Monolith with clean internal module boundaries | Fast initial development; extract packages later if needed |
-
-### Implementation Scope
-
-Build the full system in a single plan-and-execute pass, validated by an end-to-end PR review pipeline.
-
-**Components:**
-1. Prompt composition engine (role + persona + personality + task from YAML files)
-2. File discovery system (relative to pipeline YAML → project `orchestra.yaml` → `~/.orchestra/`)
-3. Tool registry (decorator-based registration + shell command tools, repo-scoped)
-4. Agent harness (wraps LangGraph node: prompt + tools + provider/model alias resolution)
-5. Base state schema (`messages`, `agent_outputs: dict[str, Any]`, `metadata`) + Pydantic extensions
-6. Declarative graph schema (Pydantic models validating the YAML structure)
-7. Graph compiler (YAML → LangGraph StateGraph with checkpointing)
-8. Condition function plugin directory (auto-discovery via `@orchestra.condition()` decorator)
-9. Session management (start, pause, resume, attach to running session)
-10. Git integration (session branches, worktree-per-agent for parallel writes, auto-commit, workspace snapshot checkpoint↔SHA linking)
-11. Worktree lifecycle management (create at fan-out, merge at fan-in, cleanup)
-12. Observability layer (structured SQLite logging: tokens, tools, timing per node)
-13. Error handling (LangChain retries, tool error surfacing, pipeline circuit breaker)
-14. CLI interface (Typer-based: `orchestra run`, `orchestra compile`, `orchestra attach`, `orchestra replay`, `orchestra status`, `orchestra cleanup`)
-15. Adversarial PR review pipeline (end-to-end validation with real LLMs)
-
-**Success Criteria:**
-- Can load YAML prompt layers (role, persona, personality, task) and compose them into a single system prompt string
-- Prompt files resolved via discovery chain: pipeline-relative → project config → global `~/.orchestra/`
-- Can register tools via `@tool_registry.register()` and via YAML shell commands
-- Tool names are repo-qualified (`backend:run-tests`) when workspace has multiple repos
-- Provider/model alias resolution works: `model: smart` + `provider: anthropic` → `claude-opus-4-20250514`; literal model strings pass through; per-agent provider override works
-- Agent harness produces a callable LangGraph node with composed prompt, resolved tools, and resolved model
-- Pydantic schema validates the full pipeline YAML (providers, workspace, agents, graph)
-- Invalid YAML produces clear, actionable error messages (not Pydantic internals)
-- Graph compiler produces a runnable LangGraph StateGraph from valid YAML
-- Fan-out (parallel agents), fan-in (join: all), conditional edges, and max_loops all compile correctly
-- Condition functions auto-discovered from configurable plugin directory via `@orchestra.condition()` decorator
-- `orchestra compile pipeline.yaml` validates YAML, resolves all references, and prints compiled graph structure without executing
-- Compiler warns when parallel agents have write access to the same repo
-- Pipeline-defined state extensions (Pydantic models) merge correctly with base schema
-- `orchestra run pipeline.yaml` compiles and executes a graph with LangGraph checkpointing (SqliteSaver)
+**Workspace and Git:**
 - Session branches created at start, named `{prefix}{pipeline}/{session-id}`
-- Session state (session ID, status, timestamps) persisted in SQLite
-- Agent code changes auto-committed to session branch (sequential) or agent worktree (parallel)
-- Worktrees created for parallel agents with write access to the same repo; merged at fan-in
-- Workspace snapshots recorded: each checkpoint maps to `{repo_name: git_sha}` for all workspace repos; snapshots only recorded when repo state changes
-- `orchestra replay <session_id> --checkpoint <id>` restores LangGraph state AND git working tree(s)
-- `orchestra status` shows running/completed sessions with checkpoint counts and token usage
-- `orchestra attach <session_id>` connects to a running session's interactive agent (chat-style stdin/stdout, multi-turn)
-- `orchestra cleanup` removes stale session branches and worktrees
-- Structured logging: token usage, tool invocations, wall-clock timing per node stored in SQLite
-- Pipeline circuit breaker: configurable `max_failures_per_session` halts on repeated failures
-- Tool execution failures surfaced to agent as error messages
-- Optional LangSmith integration auto-detected via `LANGSMITH_API_KEY`
-- PR review pipeline: 2+ reviewer agents fan-out (with worktree isolation if writing), critic loops back 0-2 times, synthesizer produces final review via chat-style interactive mode; all with real LLM calls
-- Agents use tools to gather context (e.g., `github:get-pr-diff`) — no static input declaration needed
-- Agents write structured output to `agent_outputs` for downstream consumption
-- Can replay the pipeline from any checkpoint (including mid-conversation checkpoints in interactive nodes)
-- Prompt snapshot tests: composed prompts match expected output
-- Unit tests for all layers (prompt, tools, schema, compiler, session, git, worktree, observability)
-- Integration tests (FakeLLM): compile and run graphs end-to-end, verify checkpoints and git commits are linked
-- Integration tests with cheap LLM (Haiku-tier) validate the full flow, gated behind `ORCHESTRA_REAL_LLM=1`
+- Worktrees provisioned for parallel codergen agents with write access to the same repo
+- Worktrees merged at fan-in; conflicts surfaced to downstream agent or human
+- Workspace snapshots recorded at each checkpoint (only when repo state changed)
+- Resume restores both pipeline state and git state
 
-**Testing strategy:** FakeLLM with canned responses for unit and integration tests in CI. `orchestra compile` dry-run validates pipeline configuration without execution. Prompt snapshot tests verify composed prompt output. Optional real LLM integration tests gated behind `ORCHESTRA_REAL_LLM=1` env var for full validation.
+**Human Interaction:**
+- Interviewer pattern works for `wait.human` nodes: presents choices, routes on selection
+- AutoApproveInterviewer works for automated testing
+- Chat-style interactive mode works for codergen nodes with `agent.mode="interactive"`
+- Each human turn in interactive mode is a checkpoint boundary
 
-### Architecture Diagram
+**End-to-End:**
+- Adversarial PR review pipeline runs end-to-end: parallel reviewers fan-out, critic loops, synthesizer produces final review in interactive mode
+- Pipeline can be resumed from any checkpoint
+- Session status, token usage, and timing are tracked
 
-```
-                    ┌─────────────────────────────────────────┐
-                    │             orchestra CLI                │
-                    │  run │ attach │ replay │ status │ cleanup│
-                    │  compile (dry-run)                       │
-                    └──────────────────┬──────────────────────┘
-                                       │
-                    ┌──────────────────▼──────────────────────┐
-                    │          Runtime Manager                 │
-                    │ ┌──────────┐ ┌──────────────┐           │
-                    │ │ Session  │ │  Workspace   │           │
-                    │ │ Manager  │ │  Git Tracker │           │
-                    │ └────┬─────┘ └──────┬───────┘           │
-                    │      │              │                   │
-                    │ ┌────▼──────────────▼───────┐           │
-                    │ │  Worktree Manager         │           │
-                    │ │  (per-agent isolation      │           │
-                    │ │   for parallel writes)     │           │
-                    │ └──────────────┬─────────────┘           │
-                    │                │                         │
-                    │ ┌──────────────▼─────────────┐           │
-                    │ │  Workspace Snapshot Index  │           │
-                    │ │  checkpoint_id ↔           │           │
-                    │ │  {repo: sha, agent: wt}    │           │
-                    │ │  (SQLite)                  │           │
-                    │ └────────────────────────────┘           │
-                    │                                         │
-                    │ ┌────────────────────────────┐           │
-                    │ │  Observability             │           │
-                    │ │  tokens │ tools │ timing   │           │
-                    │ │  (SQLite + optional         │           │
-                    │ │   LangSmith)               │           │
-                    │ └────────────────────────────┘           │
-                    └──────────────────┬──────────────────────┘
-                                       │
-                    ┌──────────────────▼──────────────────────┐
-                    │          Graph Compiler                  │
-                    │                                         │
-                    │  YAML ──► Pydantic ──►  LangGraph       │
-                    │           Schema        StateGraph       │
-                    │                                         │
-                    │  Condition plugin discovery              │
-                    │  (@orchestra.condition decorator)        │
-                    └──────────────────┬──────────────────────┘
-                                       │
-          ┌────────────────────────────┼────────────────────────────┐
-          │                            │                            │
- ┌────────▼──────┐           ┌────────▼──────┐           ┌─────────▼─────┐
- │ Prompt        │           │ Tool          │           │ Agent         │
- │ Composer      │           │ Registry      │           │ Harness       │
- │               │           │               │           │               │
- │ role          │           │ @register()   │           │ provider      │
- │ + persona     │           │ shell tools   │           │ + prompts     │
- │ + personality │           │ repo:tool     │           │ + tools       │
- │ + task        │           │ scoping       │           │ + mode        │
- │               │           │ context tools │           │ + agent_output│
- └───────────────┘           └───────┬───────┘           └───────────────┘
-                                     │
-                    ┌────────────────▼────────────────┐
-                    │   Workspace (Multi-Repo)         │
-                    │                                  │
-                    │  ┌─────────┐     ┌──────────┐    │
-                    │  │ repo_a  │     │ repo_b   │    │
-                    │  │ path    │     │ path     │    │
-                    │  │ git ctx │     │ git ctx  │    │
-                    │  │ tools   │     │ tools    │    │
-                    │  │ worktrees│     │ worktrees│    │
-                    │  └─────────┘     └──────────┘    │
-                    └────────────────┬────────────────┘
-                                     │
-                    ┌────────────────▼────────────────┐
-                    │      LangGraph Runtime           │
-                    │  StateGraph │ Checkpoint          │
-                    │  Execution  │ SqliteSaver         │
-                    │  Base state: messages,            │
-                    │    agent_outputs, metadata        │
-                    └──────────────────────────────────┘
-```
+### Testing Strategy
 
-**Note:** Single-repo projects are the degenerate case — a workspace with one repo entry. The same abstractions apply; tools are simply unqualified or use the single repo name.
+- **Simulation mode**: Attractor's codergen handler supports a backend=None simulation mode that returns `[Simulated] Response for stage: {node_id}`. This enables testing the full pipeline engine without LLM calls.
+- **QueueInterviewer**: Pre-filled answer queues enable deterministic testing of human-in-the-loop pipelines.
+- **Prompt snapshot tests**: Verify that composed prompts match expected output for given agent configurations.
+- **Graph validation tests**: Verify that lint rules catch invalid graphs and produce correct diagnostics.
+- **Real LLM integration tests**: Gated behind `ORCHESTRA_REAL_LLM=1` env var. Use cheap models (Haiku-tier) to validate the full flow.
 
-### Key Risks
+## Key Risks
 
-1. **LangGraph API stability**: v1.0 is recent; breaking changes are possible. Mitigation: pin versions, wrap critical APIs.
-2. **Scope creep**: The web UI, remote deployment, and advanced features could delay the core. Mitigation: strict phasing; Phase 1-3 must work before expanding.
-3. **State schema rigidity**: The `agent_outputs` dict provides flexibility but could become untyped soup. Mitigation: start with the PR review use case's actual output shapes; encourage Pydantic models for agent output types in pipeline extensions.
-4. **Git integration complexity**: Multi-repo workspace snapshots + worktree-per-agent + auto-commits + checkpoint linking has many edge cases (conflicts, dirty state, partial failures across repos). Worktree-per-agent adds worktree lifecycle management and merge-at-fan-in complexity. Mitigation: start with single-repo, single-worktree; add worktree-per-agent for parallel writes incrementally.
-5. **Multi-repo coordination**: Agents writing to multiple repos simultaneously creates atomicity challenges — what if a commit to repo_a succeeds but repo_b fails? Mitigation: treat workspace snapshots as best-effort (record whatever succeeded); add transactional semantics later if needed.
-6. **Worktree-per-agent merge conflicts**: Parallel agents writing to the same repo in separate worktrees may produce conflicting changes. The merge at fan-in is non-trivial — it requires 3-way merge logic and a strategy for surfacing unresolvable conflicts. Mitigation: implement basic `git merge` at fan-in; surface conflicts to the next agent or human; defer automatic conflict resolution.
-7. **Tool-based inputs lack static validation**: Because pipeline inputs are gathered by tools at runtime (not declared in YAML), there's no way to validate "this pipeline needs a GitHub PR" before execution starts. A misconfigured tool or missing credential fails at runtime, not at compile time. Mitigation: `orchestra compile` dry-run validates tool availability and credentials; `context_tools:` in YAML provides documentation of expected inputs even if not enforced.
-8. **Interactive mode complexity**: Chat-style multi-turn interaction within a node is more complex than review-and-approve. Managing conversation state, checkpoint boundaries per human turn, and eventual web UI streaming all add implementation surface. Mitigation: start with simple stdin/stdout chat loop; checkpoint after each human message; defer streaming protocol.
+1. **DOT parser complexity.** The attractor spec defines a specific DOT subset (Section 2.2) with typed attributes, duration values, and constraints beyond standard Graphviz. Implementing a correct parser for this subset requires care. Mitigation: use an existing DOT parser library and add validation on top; the attractor spec's BNF grammar is the reference.
+
+2. **Custom execution engine.** Building the pipeline engine from the attractor spec is significant work, though the spec is detailed enough to build from (Section 3 pseudocode is nearly implementable as-is). Mitigation: the engine is intentionally simple -- single-threaded traversal, no concurrency in the outer loop. Start with the linear pipeline case, add parallel/conditional/retry incrementally.
+
+3. **CodergenBackend abstraction leaks.** Different backends have different capabilities: LangGraphBackend supports multi-turn tool use, DirectLLMBackend does not. A pipeline that works with one backend may fail with another. Mitigation: document backend capabilities clearly; `orchestra compile` can warn about backend/node compatibility.
+
+4. **Context fidelity implementation.** The `full` fidelity mode requires LLM session reuse across nodes, which interacts with checkpoint/resume (in-memory sessions can't be serialized). The attractor spec addresses this (Section 5.3: degrade to `summary:high` on first resumed node), but the implementation is non-trivial. Mitigation: start with `compact` as default; add `full` fidelity incrementally.
+
+5. **Git integration complexity.** Multi-repo workspace snapshots + worktree-per-agent + auto-commits + checkpoint linking has many edge cases (conflicts, dirty state, partial failures across repos). Mitigation: start with single-repo, single-branch; add worktree-per-agent for parallel writes incrementally.
+
+6. **Multi-repo coordination atomicity.** Agents writing to multiple repos simultaneously creates atomicity challenges -- what if a commit to repo_a succeeds but repo_b fails? Mitigation: treat workspace snapshots as best-effort (record whatever succeeded); add transactional semantics later if needed.
+
+7. **Model stylesheet + alias interaction.** The combination of attractor's CSS-like stylesheet with Orchestra's alias system creates a 2D resolution space (specificity x alias resolution). The precedence rules must be clear and well-tested. Mitigation: define resolution order explicitly (as done above); snapshot test the resolution logic.
+
+8. **Scope.** This is a large system. Mitigation: the attractor spec is self-contained and well-specified -- implement it layer by layer (parser > validation > engine > handlers). Orchestra's extensions (workspace, git, prompt composition) layer cleanly on top and can be added incrementally.
 
 ### Open Questions (Deferred)
 
-- **Team vs individual use**: Shared pipeline definitions and tool registries can be addressed later. File discovery conventions (relative → project → global) are designed to support this when needed.
-- **Evaluation/metrics**: Structured evaluation output from pipeline runs — valuable but not required for MVP. The `agent_outputs` state field provides a natural place to emit structured results; a formal evaluation schema can be layered on top.
-- **External tool integrations**: GitHub CLI, Jira, Linear — leave to user-defined tools for now. The tool-based pipeline input model means GitHub PR fetching is already a tool (`github:get-pr-diff`), not a special integration.
-- **Token budgets / cost limits**: The layered error handling approach defers token budgets and cost guardrails to post-MVP. The observability layer (SQLite logging of token usage per node) provides the data needed to implement budgets later.
-- **Worktree merge conflict resolution**: When parallel agents edit the same file in different worktrees, the merge at fan-in may conflict. The current design surfaces conflicts to the downstream agent or human, but the exact UX and tooling for conflict resolution is deferred.
-- **Web UI for interactive mode**: Chat-style interactive mode is CLI-first. The abstract interface supports future web UI, but the real-time streaming protocol and web socket architecture are deferred.
+- **Coding agent loop spec implementation**: The attractor companion spec for a full coding agent loop (provider-aligned toolsets, steering, subagents) could eventually replace the LangGraphBackend as the primary CodergenBackend implementation. Deferred until the pipeline engine is stable.
+- **Unified LLM client spec implementation**: The attractor companion spec for a provider-agnostic LLM client could eventually replace LangChain as the LLM interface used by backends. Deferred.
+- **HTTP server mode**: Attractor Section 9.5 defines an HTTP server with SSE event streaming and web-based human interaction. Deferred to post-CLI.
+- **Token budgets / cost limits**: The event system and session metadata track token usage per node. Formal budgets and cost guardrails are deferred to post-MVP.
+- **Worktree merge conflict resolution UX**: When parallel agents edit the same file, the merge at fan-in may conflict. The current design surfaces conflicts but the exact UX is deferred.
+- **Team/shared use**: Shared pipeline definitions, tool registries, and remote execution. The file discovery conventions and HTTP server mode are designed to support this when needed.
