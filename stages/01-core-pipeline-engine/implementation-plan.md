@@ -432,13 +432,24 @@
 
 ### 16. Identify and Run All Specs
 
-- [ ] Identify all specs that need to be run and updated
-    - [ ] Look at all previous TODOs and changes in git to identify changes
-    - [ ] Identify any specs that cover these changes that need to be run, and run these specs
-    - [ ] Add any specs that failed to a new TODO to fix these
-    - [ ] Identify any missing specs that need to be added or updated
-    - [ ] Add these specs to a new TODO
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Identify all specs that need to be run and updated
+    - [x] Look at all previous TODOs and changes in git to identify changes
+    - [x] Identify any specs that cover these changes that need to be run, and run these specs
+    - [x] Add any specs that failed to a new TODO to fix these — none failed (68/68 pass)
+    - [x] Identify any missing specs that need to be added or updated
+    - [x] Add these specs to a new TODO
+    - [x] Mark TODO complete and commit the changes to git
+
+### 17. Missing Specs (identified in Section 16)
+
+- [ ] Add direct tests for edge selection weight and lexical tiebreak
+    - [ ] Test: multiple outgoing edges with different weights → highest weight selected
+    - [ ] Test: multiple outgoing edges with equal weights → lexical tiebreak (lowest to_node)
+    - [ ] Test: conditional edges skipped in Stage 1, unconditional edges preferred
+    - [ ] Test: no outgoing edges → returns None
+- [ ] Add direct tests for PipelineGraph helper methods
+    - [ ] Test: `get_incoming_edges()` returns correct edges
+    - [ ] Test: `get_exit_nodes()` returns all Msquare nodes
 
 ## Decisions Made (from plan.evaluation.md + implementation plan review)
 
