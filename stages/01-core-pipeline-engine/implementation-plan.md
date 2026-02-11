@@ -53,18 +53,23 @@
 
 ### 2. Configuration Discovery and Parsing
 
-- [ ] Implement `orchestra.yaml` configuration loading
+- [ ] Implement `orchestra.yaml` configuration loading with env var overrides
     - [ ] Create `src/orchestra/config/settings.py`:
         - `CxdbConfig` Pydantic model: `url: str = "http://localhost:9010"`
         - `OrchestraConfig` Pydantic model: `cxdb: CxdbConfig`
-        - `load_config()` function: search CWD → parent directories → filesystem root for `orchestra.yaml`
-        - If no `orchestra.yaml` found, return defaults (`cxdb.url = http://localhost:9010`)
-        - Use `pyyaml` to parse the YAML file, validate with Pydantic
+        - `load_config()` function with precedence: **env vars > orchestra.yaml > defaults**
+            1. Search CWD → parent directories → filesystem root for `orchestra.yaml`
+            2. If found, parse with `pyyaml` and validate with Pydantic
+            3. If no `orchestra.yaml` found, use defaults (`cxdb.url = http://localhost:9010`)
+            4. Apply environment variable overrides: `ORCHESTRA_CXDB_URL` overrides `cxdb.url`
+        - Env var override is applied last, so it always wins regardless of orchestra.yaml contents
     - [ ] Write tests for config loading:
         - Loads from CWD
         - Walks parent directories
         - Falls back to defaults when no file found
         - Validates the Pydantic model
+        - `ORCHESTRA_CXDB_URL` env var overrides orchestra.yaml value
+        - `ORCHESTRA_CXDB_URL` env var overrides default value
     - [ ] Mark TODO complete and commit the changes to git
 
 ### 3. CXDB Client and Doctor Command
@@ -85,7 +90,7 @@
             - `dev.orchestra.NodeExecution` (fields: node_id, handler_type, status, prompt, response, outcome, duration_ms)
             - `dev.orchestra.Checkpoint` (fields: current_node, completed_nodes, context_snapshot, retry_counters)
         - `publish_orchestra_types(client: CxdbClient) -> None` function
-    - [ ] Write unit tests for `CxdbClient` (mock HTTP responses with `httpx` mock transport or `respx`)
+    - [ ] Write unit tests for `CxdbClient` (mock HTTP responses with `httpx.MockTransport` — no extra dependency needed)
     - [ ] Write integration tests for `CxdbClient` (require CXDB Docker container, marked with `@pytest.mark.integration`)
     - [ ] Mark TODO complete and commit the changes to git
 
@@ -100,29 +105,32 @@
 
 ### 4. DOT Parser
 
+- [ ] Define the graph model (Pydantic) — **must be done first; the transformer depends on these models**
+    - [ ] Create `src/orchestra/models/graph.py`:
+        - `Node` model: `id: str`, `label: str`, `shape: str`, `prompt: str`, `attributes: dict[str, Any]` (remaining attributes like `goal_gate`, `max_retries`, `timeout`, `class`, etc.)
+        - `Edge` model: `from_node: str`, `to_node: str`, `label: str`, `condition: str`, `weight: int`, `attributes: dict[str, Any]`
+        - `PipelineGraph` model: `name: str`, `nodes: dict[str, Node]`, `edges: list[Edge]`, `graph_attributes: dict[str, Any]`
+        - Helper methods: `get_outgoing_edges(node_id)`, `get_node(node_id)`, `get_start_node()`, `get_exit_nodes()`, `goal` property (from graph_attributes)
+    - [ ] Mark TODO complete and commit the changes to git
+
 - [ ] Implement the Lark grammar and transformer
     - [ ] Create `src/orchestra/parser/grammar.lark`:
         - Translate attractor BNF (Section 2.2) to Lark EBNF
         - Support: `digraph`, `graph`/`node`/`edge` attribute blocks, node statements, edge statements (including chained `A -> B -> C`), subgraphs, comments (`//` and `/* */`), all value types (String, Integer, Float, Boolean, Duration), qualified IDs (`agent.role`), optional semicolons
+        - Support `GraphAttrDecl` production: top-level `key = value` declarations (e.g., `rankdir = LR`) outside of `graph [...]` blocks — merge these into `graph_attributes`
         - Reject: undirected graphs (`graph { ... }` or `--` edges), multiple digraph blocks
+        - **Grammar strictness:** follow attractor BNF strictly — commas are required between attributes in `AttrBlock` (per Section 2.3). Do not relax to accept semicolons or bare whitespace as separators, even though standard Graphviz DOT allows them.
     - [ ] Create `src/orchestra/parser/transformer.py`:
         - Lark `Transformer` subclass that converts the parse tree to the in-memory graph model
         - Handle chained edges: `A -> B -> C [attrs]` → two edges with shared attributes
         - Handle node/edge default blocks: accumulate defaults, apply to subsequent nodes/edges within scope
         - Handle subgraphs: flatten contents into parent graph, scope defaults to subgraph
         - Handle all value type conversions: String (strip quotes, unescape), Integer, Float, Boolean, Duration (to seconds or raw string)
+        - Handle `GraphAttrDecl`: merge top-level `key = value` into graph attributes
     - [ ] Create `src/orchestra/parser/parser.py`:
         - `parse_dot(source: str) -> PipelineGraph` function
         - Load Lark grammar, parse source, transform to graph model
         - Wrap Lark parse errors in user-friendly error messages
-    - [ ] Mark TODO complete and commit the changes to git
-
-- [ ] Define the graph model (Pydantic)
-    - [ ] Create `src/orchestra/models/graph.py`:
-        - `Node` model: `id: str`, `label: str`, `shape: str`, `prompt: str`, `attributes: dict[str, Any]` (remaining attributes like `goal_gate`, `max_retries`, `timeout`, `class`, etc.)
-        - `Edge` model: `from_node: str`, `to_node: str`, `label: str`, `condition: str`, `weight: int`, `attributes: dict[str, Any]`
-        - `PipelineGraph` model: `name: str`, `nodes: dict[str, Node]`, `edges: list[Edge]`, `graph_attributes: dict[str, Any]`
-        - Helper methods: `get_outgoing_edges(node_id)`, `get_node(node_id)`, `get_start_node()`, `get_exit_nodes()`, `goal` property (from graph_attributes)
     - [ ] Mark TODO complete and commit the changes to git
 
 - [ ] Write DOT parsing tests
@@ -230,9 +238,15 @@
     - [ ] Mark TODO complete and commit the changes to git
 
 - [ ] Implement the core execution engine
+    - [ ] Create `src/orchestra/engine/edge_selection.py`:
+        - `select_edge(node_id, outcome, context, graph) -> Edge | None` — partial implementation of attractor Section 3.3:
+            - **Stage 1 implements steps 4+5 only** (weight + lexical tiebreak among unconditional edges). This is forward-compatible with Stage 2a which adds condition evaluation (step 1), preferred label (step 2), and suggested next IDs (step 3).
+            - Among all outgoing edges from `node_id`, select the one with the highest `weight` (default 0)
+            - If weights are equal, select the edge whose `to_node` comes first lexicographically
+            - If no outgoing edges, return `None`
     - [ ] Create `src/orchestra/engine/runner.py`:
         - `PipelineRunner` class:
-            - `__init__(graph, handler_registry, event_observers, cxdb_client, context_id)`
+            - `__init__(graph, handler_registry, event_dispatcher, cxdb_client, context_id)`
             - `run() -> Outcome` — core traversal loop per attractor Section 3.2:
                 1. Start at the start node
                 2. Check if current node is terminal → break
@@ -240,15 +254,19 @@
                 4. Execute handler → get Outcome
                 5. Record completion, apply context updates
                 6. Set built-in context keys (`outcome`, `current_node`, `last_stage`, `last_response`)
-                7. Emit events (StageStarted, StageCompleted/StageFailed)
-                8. Save checkpoint (append CXDB turn)
-                9. Select next edge (simplified for Stage 1: follow the single outgoing edge — no branching logic)
-                10. Advance to next node
-                11. On pipeline completion, emit PipelineCompleted
+                7. Emit events (StageStarted, StageCompleted or StageFailed)
+                8. Emit `CheckpointSaved` event with full state (CxdbObserver handles the CXDB turn append — see Step 8)
+                9. Select next edge using `select_edge()` (weight + lexical tiebreak)
+                10. If no edge selected and outcome is FAIL → emit PipelineFailed and return failure outcome
+                11. If no edge selected and outcome is SUCCESS → break (reached terminal state)
+                12. Advance to next node
+                13. On pipeline completion, emit PipelineCompleted
+            - **Failure handling:** if a handler returns `FAIL` or `RETRY` and no outgoing edge is selected, the runner emits `PipelineFailed` with the failure details and returns the failure outcome. Retry logic (re-executing the node) is deferred to Stage 2a — in Stage 1, `RETRY` is treated as `FAIL`.
     - [ ] Write unit tests for the execution engine (mock handlers, mock CXDB):
         - 3-node linear pipeline executes in order
         - 5-node linear pipeline executes sequentially
         - Context propagation between nodes
+        - Handler returning FAIL → PipelineFailed emitted, run returns failure outcome
     - [ ] Mark TODO complete and commit the changes to git
 
 ### 8. Event System
@@ -271,6 +289,7 @@
                 - `PipelineStarted/Completed/Failed` → `dev.orchestra.PipelineLifecycle`
                 - `StageStarted/Completed/Failed` → `dev.orchestra.NodeExecution`
                 - `CheckpointSaved` → `dev.orchestra.Checkpoint`
+            - **CXDB write boundary:** CxdbObserver is the *sole* writer of CXDB turns. The runner emits events (including `CheckpointSaved` with full state), and the CxdbObserver translates them to CXDB append calls. The runner does NOT call `cxdb_client.append_turn()` directly — all CXDB writes flow through the observer. This keeps the write path unified and testable.
     - [ ] Create `src/orchestra/events/dispatcher.py`:
         - `EventDispatcher` class: holds list of observers, dispatches events to all
     - [ ] Write tests for the event system:
@@ -283,16 +302,18 @@
 
 - [ ] Wire CXDB storage into the execution engine
     - [ ] Update `PipelineRunner` to:
-        - Create a CXDB context at pipeline start
-        - Generate a short display ID (first 6 chars of UUID) and store in PipelineLifecycle start turn
+        - Create a CXDB context at pipeline start (via `cxdb_client.create_context()`)
+        - Generate a short display ID (first 6 chars of UUID) and include in the `PipelineStarted` event
         - Use CXDB context_id as canonical session identifier
         - Publish the Orchestra type bundle before the first run (idempotent)
-    - [ ] Implement checkpoint saves:
-        - After each node completion, append a `dev.orchestra.Checkpoint` turn:
+        - Pass `cxdb_client` and `context_id` to the `CxdbObserver` so it can append turns
+    - [ ] Implement checkpoint events:
+        - After each node completion, the runner emits a `CheckpointSaved` event containing:
             - `current_node`: current node ID
             - `completed_nodes`: list of completed node IDs
             - `context_snapshot`: full context key-value dump
             - `retry_counters`: empty dict for Stage 1
+        - The `CxdbObserver` receives this event and appends a `dev.orchestra.Checkpoint` turn (all CXDB writes flow through the observer — the runner does not call `append_turn()` directly)
     - [ ] Verify turn types in CXDB:
         - PipelineStarted → `dev.orchestra.PipelineLifecycle` with status="started"
         - StageStarted/Completed → `dev.orchestra.NodeExecution` with appropriate status
@@ -419,7 +440,7 @@
     - [ ] Add these specs to a new TODO
     - [ ] Mark TODO complete and commit the changes to git
 
-## Decisions Made (from plan.evaluation.md)
+## Decisions Made (from plan.evaluation.md + implementation plan review)
 
 These decisions are resolved and should be followed during implementation:
 
@@ -430,9 +451,15 @@ These decisions are resolved and should be followed during implementation:
 | CXDB type registry | Use HTTP API with named JSON fields; CXDB handles msgpack encoding via registry |
 | CXDB unavailability | Fail fast — `orchestra run` exits non-zero with clear error |
 | Lark grammar | Translate full attractor BNF upfront; test against all DOT parsing test cases |
+| Grammar strictness | Follow attractor BNF strictly — commas required between attributes (per Section 2.3), do not relax to standard DOT |
 | Event observer pattern | Use `typing.Protocol` with `on_event(event: Event)` method; StdoutObserver + CxdbObserver |
+| CXDB write boundary | CxdbObserver is the sole writer of CXDB turns; the runner emits events, the observer translates them to CXDB appends |
 | Graph model | Use Pydantic models (PipelineGraph, Node, Edge) for validation and serialization |
 | Config model | Use Pydantic for config (consistent with graph model) |
+| Config env var override | `ORCHESTRA_CXDB_URL` env var overrides orchestra.yaml and defaults (highest precedence) |
+| Edge selection (Stage 1) | Implement attractor Section 3.3 steps 4+5 (weight + lexical tiebreak). Skip condition eval, preferred label, and suggested IDs (Stage 2a) |
+| Runner failure handling | On FAIL/RETRY with no applicable edge, emit PipelineFailed and return failure outcome. RETRY treated as FAIL in Stage 1 |
+| HTTP mocking | Use `httpx.MockTransport` for CxdbClient unit tests (no extra dependency) |
 
 ## Unresolved (to verify during Investigation)
 
