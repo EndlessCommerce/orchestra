@@ -300,38 +300,38 @@
 
 ### 9. CXDB Storage Integration and Checkpoints
 
-- [ ] Wire CXDB storage into the execution engine
-    - [ ] Update `PipelineRunner` to:
+- [x] Wire CXDB storage into the execution engine
+    - [x] Update `PipelineRunner` to:
         - Create a CXDB context at pipeline start (via `cxdb_client.create_context()`)
         - Generate a short display ID (first 6 chars of UUID) and include in the `PipelineStarted` event
         - Use CXDB context_id as canonical session identifier
         - Publish the Orchestra type bundle before the first run (idempotent)
         - Pass `cxdb_client` and `context_id` to the `CxdbObserver` so it can append turns
-    - [ ] Implement checkpoint events:
+    - [x] Implement checkpoint events:
         - After each node completion, the runner emits a `CheckpointSaved` event containing:
             - `current_node`: current node ID
             - `completed_nodes`: list of completed node IDs
             - `context_snapshot`: full context key-value dump
             - `retry_counters`: empty dict for Stage 1
         - The `CxdbObserver` receives this event and appends a `dev.orchestra.Checkpoint` turn (all CXDB writes flow through the observer — the runner does not call `append_turn()` directly)
-    - [ ] Verify turn types in CXDB:
+    - [x] Verify turn types in CXDB:
         - PipelineStarted → `dev.orchestra.PipelineLifecycle` with status="started"
         - StageStarted/Completed → `dev.orchestra.NodeExecution` with appropriate status
         - CheckpointSaved → `dev.orchestra.Checkpoint` with full state
         - PipelineCompleted → `dev.orchestra.PipelineLifecycle` with status="completed"
-    - [ ] Write integration tests against real CXDB (marked `@pytest.mark.integration`):
+    - [x] Write integration tests against real CXDB (marked `@pytest.mark.integration`):
         - Context created on pipeline start
         - Turns appended in correct order
         - Turn types match expected CXDB types
         - Checkpoint turns contain correct state
         - NodeExecution payloads include prompt, response, outcome
         - Context isolation: two runs create two separate contexts
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 10. CLI Commands — Compile and Run
 
-- [ ] Implement `orchestra compile` command
-    - [ ] Create `src/orchestra/cli/compile.py`:
+- [x] Implement `orchestra compile` command
+    - [x] Create `src/orchestra/cli/compile.py`:
         - `compile(pipeline: Path)` command:
             1. Read the DOT file
             2. Parse with `parse_dot()`
@@ -339,13 +339,13 @@
             4. Print graph structure summary: node count, edge count, goal, node list with shapes
             5. Print any WARNING diagnostics
             6. Exit 0 on success, non-zero on validation errors
-    - [ ] Write CLI tests:
+    - [x] Write CLI tests:
         - Valid pipeline → exit 0, prints graph summary
         - Invalid pipeline → exit non-zero, prints ERROR diagnostics with rule names and suggestions
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement `orchestra run` command
-    - [ ] Create `src/orchestra/cli/run.py`:
+- [x] Implement `orchestra run` command
+    - [x] Create `src/orchestra/cli/run.py`:
         - `run(pipeline: Path)` command:
             1. Load config (orchestra.yaml)
             2. Read and parse the DOT file
@@ -359,12 +359,12 @@
             10. Create PipelineRunner and execute
             11. Print session ID (CXDB context_id + display ID)
             12. Exit 0 on success, non-zero on failure
-    - [ ] Handle CXDB unavailability: exit non-zero with clear error message, suggest `orchestra doctor`
-    - [ ] Write CLI tests:
+    - [x] Handle CXDB unavailability: exit non-zero with clear error message, suggest `orchestra doctor`
+    - [x] Write CLI tests:
         - `orchestra run` on valid pipeline → exit 0, events printed, session ID shown
         - `orchestra run` on invalid pipeline → exit non-zero with validation errors
         - `orchestra run` without CXDB → exit non-zero with clear error
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 11. Execution Tests
 
