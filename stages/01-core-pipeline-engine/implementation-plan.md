@@ -271,8 +271,8 @@
 
 ### 8. Event System
 
-- [ ] Implement the typed event system
-    - [ ] Create `src/orchestra/events/types.py`:
+- [x] Implement the typed event system
+    - [x] Create `src/orchestra/events/types.py`:
         - Event base class (Pydantic): `timestamp: datetime`, `event_type: str`
         - `PipelineStarted`: `pipeline_name`, `goal`, `session_display_id`
         - `PipelineCompleted`: `pipeline_name`, `duration_ms`, `session_display_id`
@@ -281,7 +281,7 @@
         - `StageCompleted`: `node_id`, `handler_type`, `status`, `duration_ms`
         - `StageFailed`: `node_id`, `handler_type`, `error`
         - `CheckpointSaved`: `node_id`, `context_snapshot`
-    - [ ] Create `src/orchestra/events/observer.py`:
+    - [x] Create `src/orchestra/events/observer.py`:
         - `EventObserver` Protocol: `on_event(event: Event) -> None`
         - `StdoutObserver`: prints formatted events to stdout
         - `CxdbObserver`: appends typed CXDB turns for each event
@@ -290,13 +290,13 @@
                 - `StageStarted/Completed/Failed` → `dev.orchestra.NodeExecution`
                 - `CheckpointSaved` → `dev.orchestra.Checkpoint`
             - **CXDB write boundary:** CxdbObserver is the *sole* writer of CXDB turns. The runner emits events (including `CheckpointSaved` with full state), and the CxdbObserver translates them to CXDB append calls. The runner does NOT call `cxdb_client.append_turn()` directly — all CXDB writes flow through the observer. This keeps the write path unified and testable.
-    - [ ] Create `src/orchestra/events/dispatcher.py`:
+    - [x] Create `src/orchestra/events/dispatcher.py`:
         - `EventDispatcher` class: holds list of observers, dispatches events to all
-    - [ ] Write tests for the event system:
+    - [x] Write tests for the event system:
         - Events dispatched to all registered observers
         - StdoutObserver formats events correctly
         - CxdbObserver maps events to correct CXDB turn types
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 9. CXDB Storage Integration and Checkpoints
 
