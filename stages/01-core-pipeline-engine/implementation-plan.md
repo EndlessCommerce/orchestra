@@ -74,8 +74,8 @@
 
 ### 3. CXDB Client and Doctor Command
 
-- [ ] Implement the CXDB HTTP client
-    - [ ] Create `src/orchestra/storage/cxdb_client.py`:
+- [x] Implement the CXDB HTTP client
+    - [x] Create `src/orchestra/storage/cxdb_client.py`:
         - `CxdbClient` class with `httpx.Client` for HTTP calls
         - `health_check() -> dict` — `GET /health`
         - `create_context(base_turn_id: str = "0") -> dict` — `POST /v1/contexts/create`
@@ -84,24 +84,24 @@
         - `list_contexts(limit: int = 100, offset: int = 0) -> list[dict]` — `GET /v1/contexts?limit={limit}&offset={offset}`
         - `publish_type_bundle(bundle_id: str, bundle: dict) -> None` — `PUT /v1/registry/bundles/:bundle_id`
         - Error handling: raise descriptive exceptions on connection failure, HTTP errors
-    - [ ] Create `src/orchestra/storage/type_bundle.py`:
+    - [x] Create `src/orchestra/storage/type_bundle.py`:
         - `ORCHESTRA_TYPE_BUNDLE` constant with the full type bundle JSON (from plan.evaluation.md):
             - `dev.orchestra.PipelineLifecycle` (fields: pipeline_name, goal, status, duration_ms, error, session_display_id)
             - `dev.orchestra.NodeExecution` (fields: node_id, handler_type, status, prompt, response, outcome, duration_ms)
             - `dev.orchestra.Checkpoint` (fields: current_node, completed_nodes, context_snapshot, retry_counters)
         - `publish_orchestra_types(client: CxdbClient) -> None` function
-    - [ ] Write unit tests for `CxdbClient` (mock HTTP responses with `httpx.MockTransport` — no extra dependency needed)
-    - [ ] Write integration tests for `CxdbClient` (require CXDB Docker container, marked with `@pytest.mark.integration`)
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Write unit tests for `CxdbClient` (mock HTTP responses with `httpx.MockTransport` — no extra dependency needed)
+    - [x] Write integration tests for `CxdbClient` (require CXDB Docker container, marked with `@pytest.mark.integration`)
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement `orchestra doctor` CLI command
-    - [ ] Create `src/orchestra/cli/main.py` with Typer app
-    - [ ] Create `src/orchestra/cli/doctor.py`:
+- [x] Implement `orchestra doctor` CLI command
+    - [x] Create `src/orchestra/cli/main.py` with Typer app
+    - [x] Create `src/orchestra/cli/doctor.py`:
         - `doctor()` command: load config → create `CxdbClient` → call `health_check()` → print status
         - Check CXDB connectivity: print OK or print clear error with Docker setup instructions
         - Check type bundle registration: attempt `publish_orchestra_types()`, report status
-    - [ ] Write CLI tests for `orchestra doctor` (using Typer's `CliRunner`)
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Write CLI tests for `orchestra doctor` (using Typer's `CliRunner`)
+    - [x] Mark TODO complete and commit the changes to git
 
 ### 4. DOT Parser
 

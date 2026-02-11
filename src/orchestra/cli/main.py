@@ -1,6 +1,9 @@
 import typer
 
+from orchestra.cli.doctor import doctor as doctor_command
+
 app = typer.Typer(name="orchestra", help="Pipeline execution engine")
+app.command()(doctor_command)
 
 
 @app.callback(invoke_without_command=True)
