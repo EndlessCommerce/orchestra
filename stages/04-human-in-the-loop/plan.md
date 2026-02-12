@@ -205,33 +205,33 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 2: Interviewer Implementations
 
-- [ ] Create `src/orchestra/interviewer/auto_approve.py` — AutoApproveInterviewer
+- [x] Create `src/orchestra/interviewer/auto_approve.py` — AutoApproveInterviewer
     - `YES_NO` / `CONFIRMATION` → `Answer(value=AnswerValue.YES)`
     - `MULTIPLE_CHOICE` → `Answer(value=options[0].key, selected_option=options[0])`
     - `FREEFORM` → `Answer(value="auto-approved", text="auto-approved")`
     - Per attractor spec Section 6.4
     - Mark TODO complete and commit the changes to git
 
-- [ ] Create `src/orchestra/interviewer/queue.py` — QueueInterviewer
+- [x] Create `src/orchestra/interviewer/queue.py` — QueueInterviewer
     - Constructor takes `answers: list[Answer]`, stores as `collections.deque`
     - `ask()` dequeues next answer, returns `Answer(value=AnswerValue.SKIPPED)` when empty
     - Per attractor spec Section 6.4
     - Mark TODO complete and commit the changes to git
 
-- [ ] Create `src/orchestra/interviewer/callback.py` — CallbackInterviewer
+- [x] Create `src/orchestra/interviewer/callback.py` — CallbackInterviewer
     - Constructor takes `callback: Callable[[Question], Answer]`
     - `ask()` delegates to callback
     - Per attractor spec Section 6.4
     - Mark TODO complete and commit the changes to git
 
-- [ ] Create `src/orchestra/interviewer/recording.py` — RecordingInterviewer
+- [x] Create `src/orchestra/interviewer/recording.py` — RecordingInterviewer
     - Constructor takes `inner: Interviewer`
     - `ask()` delegates to inner, appends `(question, answer)` to `recordings: list[tuple[Question, Answer]]`
     - `recordings` property for programmatic access
     - Per attractor spec Section 6.4
     - Mark TODO complete and commit the changes to git
 
-- [ ] Create `src/orchestra/interviewer/console.py` — ConsoleInterviewer
+- [x] Create `src/orchestra/interviewer/console.py` — ConsoleInterviewer
     - `ask()` formats prompt: `[?] {question.text}` with options as `  [{key}] {label}`
     - Reads stdin via `input()` for `MULTIPLE_CHOICE`, `YES_NO`, `FREEFORM`
     - Timeout support via `threading.Event` + daemon thread for stdin read
@@ -239,7 +239,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
     - `inform()` prints `[i] {message}` to stdout
     - Mark TODO complete and commit the changes to git
 
-- [ ] Create `src/orchestra/interviewer/__init__.py` re-exporting all public types
+- [x] Create `src/orchestra/interviewer/__init__.py` re-exporting all public types
     - Mark TODO complete and commit the changes to git
 
 ### Phase 3: Accelerator Key Parsing

@@ -1,0 +1,109 @@
+from __future__ import annotations
+
+import sys
+import threading
+
+from orchestra.interviewer.models import Answer, AnswerValue, Option, Question, QuestionType
+
+
+class ConsoleInterviewer:
+    def ask(self, question: Question) -> Answer:
+        if question.type == QuestionType.MULTIPLE_CHOICE:
+            return self._ask_multiple_choice(question)
+        if question.type == QuestionType.YES_NO:
+            return self._ask_yes_no(question)
+        if question.type == QuestionType.CONFIRMATION:
+            return self._ask_confirmation(question)
+        return self._ask_freeform(question)
+
+    def inform(self, message: str, stage: str = "") -> None:
+        prefix = f"[{stage}] " if stage else ""
+        print(f"[i] {prefix}{message}", flush=True)
+
+    def _ask_multiple_choice(self, question: Question) -> Answer:
+        print(f"[?] {question.text}", flush=True)
+        for option in question.options:
+            print(f"  [{option.key}] {option.label}", flush=True)
+
+        response = self._read_input("Select: ", question.timeout_seconds)
+        if response is None:
+            return self._handle_timeout(question)
+
+        response = response.strip().upper()
+        matched = self._find_option(response, question.options)
+        if matched is not None:
+            return Answer(value=matched.key, selected_option=matched)
+
+        # Fallback to first option
+        if question.options:
+            first = question.options[0]
+            return Answer(value=first.key, selected_option=first)
+        return Answer(value=AnswerValue.SKIPPED)
+
+    def _ask_yes_no(self, question: Question) -> Answer:
+        print(f"[?] {question.text}", flush=True)
+        response = self._read_input("[Y/N]: ", question.timeout_seconds)
+        if response is None:
+            return self._handle_timeout(question)
+
+        response = response.strip().upper()
+        if response in ("Y", "YES"):
+            return Answer(value=AnswerValue.YES)
+        return Answer(value=AnswerValue.NO)
+
+    def _ask_confirmation(self, question: Question) -> Answer:
+        print(f"[?] {question.text}", flush=True)
+        response = self._read_input("[Y/N]: ", question.timeout_seconds)
+        if response is None:
+            return self._handle_timeout(question)
+
+        response = response.strip().upper()
+        if response in ("Y", "YES"):
+            return Answer(value=AnswerValue.YES)
+        return Answer(value=AnswerValue.NO)
+
+    def _ask_freeform(self, question: Question) -> Answer:
+        print(f"[?] {question.text}", flush=True)
+        response = self._read_input("> ", question.timeout_seconds)
+        if response is None:
+            return self._handle_timeout(question)
+        return Answer(text=response.strip(), value=response.strip())
+
+    def _find_option(self, response: str, options: list[Option]) -> Option | None:
+        for option in options:
+            if response == option.key.upper():
+                return option
+        for option in options:
+            if response == option.label.upper():
+                return option
+        return None
+
+    def _handle_timeout(self, question: Question) -> Answer:
+        if question.default is not None:
+            return question.default
+        return Answer(value=AnswerValue.TIMEOUT)
+
+    def _read_input(self, prompt: str, timeout: float | None) -> str | None:
+        if timeout is None:
+            try:
+                return input(prompt)
+            except (EOFError, KeyboardInterrupt):
+                return None
+
+        result: list[str] = []
+        event = threading.Event()
+
+        def _reader() -> None:
+            try:
+                result.append(input(prompt))
+            except (EOFError, KeyboardInterrupt):
+                pass
+            finally:
+                event.set()
+
+        thread = threading.Thread(target=_reader, daemon=True)
+        thread.start()
+
+        if event.wait(timeout=timeout):
+            return result[0] if result else None
+        return None
