@@ -1,0 +1,22 @@
+digraph parallel_review {
+    graph [goal="Review the PR from multiple perspectives"];
+
+    start [shape=Mdiamond];
+    fan_out [shape=component, label="fan_out"];
+    security [shape=box, label="Security Review", prompt="Review the code for security vulnerabilities"];
+    performance [shape=box, label="Performance Review", prompt="Review the code for performance issues"];
+    style [shape=box, label="Style Review", prompt="Review the code for style and readability"];
+    fan_in [shape=tripleoctagon, label="fan_in"];
+    synthesize [shape=box, label="Synthesize", prompt="Synthesize the review results into a final summary"];
+    exit [shape=Msquare];
+
+    start -> fan_out;
+    fan_out -> security;
+    fan_out -> performance;
+    fan_out -> style;
+    security -> fan_in;
+    performance -> fan_in;
+    style -> fan_in;
+    fan_in -> synthesize;
+    synthesize -> exit;
+}
