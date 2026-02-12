@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from orchestra.engine.edge_selection import select_edge
 from orchestra.engine.failure_routing import resolve_failure_target
+from orchestra.engine.goal_gates import check_goal_gates
 from orchestra.engine.retry import build_retry_policy, execute_with_retry
 from orchestra.models.context import Context
 from orchestra.models.graph import PipelineGraph
@@ -52,6 +53,9 @@ class PipelineRunner:
 
         current_node = start_node
         last_outcome = Outcome(status=OutcomeStatus.SUCCESS)
+        visited_outcomes: dict[str, OutcomeStatus] = {}
+        max_reroutes = int(self._graph.graph_attributes.get("default_max_retry", 50))
+        reroute_count = 0
 
         while True:
             node = self._graph.get_node(current_node.id)
@@ -62,6 +66,39 @@ class PipelineRunner:
                 handler = self._registry.get(node.shape)
                 if handler:
                     handler.handle(node, context, self._graph)
+
+                gate_result = check_goal_gates(visited_outcomes, self._graph)
+                if not gate_result.satisfied:
+                    if gate_result.reroute_target is not None:
+                        if reroute_count >= max_reroutes:
+                            pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
+                            self._emitter.emit(
+                                "PipelineFailed",
+                                pipeline_name=self._graph.name,
+                                error="Max reroutes exceeded for goal gate enforcement",
+                                duration_ms=pipeline_duration_ms,
+                            )
+                            return Outcome(
+                                status=OutcomeStatus.FAIL,
+                                failure_reason="Max reroutes exceeded for goal gate enforcement",
+                            )
+                        reroute_count += 1
+                        target_node = self._graph.get_node(gate_result.reroute_target)
+                        if target_node is not None:
+                            current_node = target_node
+                            continue
+
+                    pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
+                    self._emitter.emit(
+                        "PipelineFailed",
+                        pipeline_name=self._graph.name,
+                        error="Goal gate unsatisfied and no valid reroute target",
+                        duration_ms=pipeline_duration_ms,
+                    )
+                    return Outcome(
+                        status=OutcomeStatus.FAIL,
+                        failure_reason="Goal gate unsatisfied and no valid reroute target",
+                    )
                 break
 
             handler = self._registry.get(node.shape)
@@ -89,6 +126,7 @@ class PipelineRunner:
             stage_duration_ms = int((time.monotonic() - stage_start) * 1000)
 
             completed_nodes.append(node.id)
+            visited_outcomes[node.id] = outcome.status
 
             for key, value in outcome.context_updates.items():
                 context.set(key, value)

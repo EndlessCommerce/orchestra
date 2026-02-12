@@ -38,11 +38,11 @@
   - [x] Write tests in `tests/test_failure_routing.py`: fail edge followed, retry_target used when no fail edge, fallback_retry_target used when no retry_target, pipeline termination when no failure route (4 tests per plan)
   - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement goal gate enforcement
-  - [ ] Create `src/orchestra/engine/goal_gates.py` with `check_goal_gates(visited_outcomes: dict[str, OutcomeStatus], graph: PipelineGraph) -> str | None` — iterate visited nodes with `goal_gate=true` attribute, check if their outcome is SUCCESS or PARTIAL_SUCCESS. If any unsatisfied, return the reroute target: node's `retry_target` → node's `fallback_retry_target` → graph's `retry_target` → graph's `fallback_retry_target` → None (fail). Include max reroute counter (default = graph's `default_max_retry` or 50) to prevent infinite loops.
-  - [ ] Integrate into `src/orchestra/engine/runner.py`: when reaching an exit node (shape=Msquare), call `check_goal_gates()` before exiting. If a reroute target is returned, set `current_node` to that target and continue the loop. If None and gates unsatisfied, emit PipelineFailed.
-  - [ ] Write tests in `tests/test_goal_gates.py`: gate satisfied (exit normally), gate unsatisfied with retry_target (reroute), gate unsatisfied with graph-level retry_target (fallback), gate unsatisfied no target (pipeline fails), partial success satisfies gate (5 tests per plan)
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Implement goal gate enforcement
+  - [x] Create `src/orchestra/engine/goal_gates.py` with `check_goal_gates(visited_outcomes: dict[str, OutcomeStatus], graph: PipelineGraph) -> str | None` — iterate visited nodes with `goal_gate=true` attribute, check if their outcome is SUCCESS or PARTIAL_SUCCESS. If any unsatisfied, return the reroute target: node's `retry_target` → node's `fallback_retry_target` → graph's `retry_target` → graph's `fallback_retry_target` → None (fail). Include max reroute counter (default = graph's `default_max_retry` or 50) to prevent infinite loops.
+  - [x] Integrate into `src/orchestra/engine/runner.py`: when reaching an exit node (shape=Msquare), call `check_goal_gates()` before exiting. If a reroute target is returned, set `current_node` to that target and continue the loop. If None and gates unsatisfied, emit PipelineFailed.
+  - [x] Write tests in `tests/test_goal_gates.py`: gate satisfied (exit normally), gate unsatisfied with retry_target (reroute), gate unsatisfied with graph-level retry_target (fallback), gate unsatisfied no target (pipeline fails), partial success satisfies gate (5 tests per plan)
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Refactor PipelineRunner.run() into extracted methods
   - [ ] Extract `_execute_node()` — handles a single node: get handler, emit StageStarted, call execute_with_retry, update context, emit StageCompleted/StageFailed, emit CheckpointSaved
