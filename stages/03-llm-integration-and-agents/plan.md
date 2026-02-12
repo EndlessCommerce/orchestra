@@ -422,21 +422,21 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 12: CLI Integration — Wire Everything Together
 
-- [ ] Update CLI commands to support real backend selection
-    - [ ] Update `src/orchestra/cli/run.py`:
+- [x] Update CLI commands to support real backend selection
+    - [x] Update `src/orchestra/cli/run.py`:
         - Load full `orchestra.yaml` config (providers, agents, tools, backend)
         - Construct appropriate backend based on config (simulation, direct, langgraph, cli)
         - Build `CodergenHandler` with backend, prompt engine, model resolver
         - Apply model stylesheet transform after variable expansion
         - Pass `on_turn` callback that emits `AgentTurnCompleted` events
-    - [ ] Update `src/orchestra/handlers/registry.py`:
+    - [x] Update `src/orchestra/handlers/registry.py`:
         - Accept backend parameter in `default_registry()` or provide `build_registry(config)` factory
-    - [ ] Ensure `orchestra run` still defaults to simulation mode when no provider is configured
-    - [ ] Write tests verifying CLI wiring:
+    - [x] Ensure `orchestra run` still defaults to simulation mode when no provider is configured
+    - [x] Write tests verifying CLI wiring:
         - Default (no provider) → SimulationBackend used
         - Config with `backend: direct` → DirectLLMBackend used
         - Config with `backend: langgraph` → LangGraphBackend used
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 13: End-to-End Integration Tests (Mocked LLM)
 

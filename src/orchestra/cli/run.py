@@ -7,7 +7,7 @@ from pathlib import Path
 import blake3
 import typer
 
-from orchestra.config.settings import load_config
+from orchestra.config.settings import OrchestraConfig, load_config
 from orchestra.engine.runner import PipelineRunner
 from orchestra.events.dispatcher import EventDispatcher
 from orchestra.events.observer import CxdbObserver, StdoutObserver
@@ -16,12 +16,76 @@ from orchestra.models.outcome import OutcomeStatus
 from orchestra.parser.parser import DotParseError, parse_dot
 from orchestra.storage.cxdb_client import CxdbClient, CxdbConnectionError, CxdbError
 from orchestra.storage.type_bundle import publish_orchestra_types
+from orchestra.transforms.model_stylesheet import apply_model_stylesheet
 from orchestra.transforms.variable_expansion import expand_variables
 from orchestra.validation.validator import ValidationError, validate_or_raise
 
 
+def _build_backend(config: OrchestraConfig):
+    """Construct the appropriate backend based on config."""
+    from orchestra.backends.simulation import SimulationBackend
+
+    backend_name = config.backend
+
+    if backend_name == "simulation" or not backend_name:
+        return SimulationBackend()
+
+    if backend_name == "direct":
+        from orchestra.backends.direct_llm import DirectLLMBackend
+
+        chat_model = _build_chat_model(config)
+        return DirectLLMBackend(chat_model=chat_model)
+
+    if backend_name == "langgraph":
+        from orchestra.backends.langgraph_backend import LangGraphBackend
+
+        chat_model = _build_chat_model(config)
+        return LangGraphBackend(chat_model=chat_model)
+
+    if backend_name == "cli":
+        from orchestra.backends.cli_agent import CLIAgentBackend
+
+        return CLIAgentBackend()
+
+    typer.echo(f"Error: Unknown backend '{backend_name}'. Use: simulation, direct, langgraph, cli")
+    raise typer.Exit(code=1)
+
+
+def _build_chat_model(config: OrchestraConfig):
+    """Build a LangChain chat model from config."""
+    from orchestra.config.providers import get_provider_settings, resolve_model, resolve_provider
+
+    provider_name = resolve_provider("", config.providers)
+    model_name = resolve_model("smart", provider_name, config.providers)
+    settings = get_provider_settings(provider_name, config.providers)
+
+    if provider_name == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(
+            model=model_name,
+            **{k: v for k, v in settings.items() if k in ("max_tokens",)},
+        )
+
+    if provider_name == "openai":
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=model_name,
+            **{k: v for k, v in settings.items() if k in ("max_tokens",)},
+        )
+
+    from langchain_openai import ChatOpenAI
+
+    api_base = settings.get("api_base", "")
+    kwargs = {"model": model_name}
+    if api_base:
+        kwargs["base_url"] = api_base
+    return ChatOpenAI(**kwargs)
+
+
 def run(pipeline: Path) -> None:
-    """Execute a DOT pipeline in simulation mode."""
+    """Execute a DOT pipeline."""
     if not pipeline.exists():
         typer.echo(f"Error: file not found: {pipeline}")
         raise typer.Exit(code=1)
@@ -49,6 +113,7 @@ def run(pipeline: Path) -> None:
 
     # Transform
     graph = expand_variables(graph)
+    graph = apply_model_stylesheet(graph)
 
     # Compute graph hash for resume verification
     graph_hash = blake3.blake3(pipeline.read_bytes()).hexdigest()
@@ -90,8 +155,9 @@ def run(pipeline: Path) -> None:
     dispatcher.add_observer(StdoutObserver())
     dispatcher.add_observer(CxdbObserver(client, context_id))
 
-    # Set up handlers
-    registry = default_registry()
+    # Build backend and handler registry
+    backend = _build_backend(config)
+    registry = default_registry(backend=backend, config=config)
 
     # Run pipeline with SIGINT handling
     runner = PipelineRunner(graph, registry, dispatcher)
