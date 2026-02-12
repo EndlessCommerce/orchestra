@@ -255,25 +255,25 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 5: Prompt Composition Engine
 
-- [ ] Implement the 4-layer prompt composition engine
-    - [ ] Create `src/orchestra/prompts/__init__.py`
-    - [ ] Create `src/orchestra/prompts/engine.py`:
+- [x] Implement the 4-layer prompt composition engine
+    - [x] Create `src/orchestra/prompts/__init__.py`
+    - [x] Create `src/orchestra/prompts/engine.py`:
         - `compose_prompt(agent_config, context, pipeline_dir, config) -> str`
         - Load each layer (role, persona, personality, task) from YAML files via file discovery
         - YAML schema: `content` key (required), optional `description`, `version`
         - Concatenate layers in order: role + persona + personality + task
         - Skip missing/unconfigured layers
         - Task layer: render `content` as Jinja2 template with context variables
-    - [ ] Create `src/orchestra/prompts/loader.py`:
+    - [x] Create `src/orchestra/prompts/loader.py`:
         - `load_prompt_layer(filepath) -> str` — parse YAML, extract `content` key
         - Validate YAML structure
-    - [ ] Write tests in `tests/test_prompt_composition.py`:
+    - [x] Write tests in `tests/test_prompt_composition.py`:
         - Single layer: role-only composes correctly
         - All four layers: concatenated in order with separators
         - Jinja2 interpolation: `{{variable}}` in task template interpolated from context
         - Missing layer: agent without persona → role + personality + task (skip missing)
         - Prompt snapshot tests: known agent configs match expected output
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 6: Provider and Model Resolution
 
