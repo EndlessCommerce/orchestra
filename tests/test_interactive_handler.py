@@ -70,6 +70,20 @@ class TestInteractiveHandler:
         assert outcome.status == OutcomeStatus.FAIL
         assert "rejected" in outcome.failure_reason
 
+    def test_reject_includes_last_response(self):
+        """Reject outcome includes last_response so downstream templates can render."""
+        backend = SimulationBackend()
+        interviewer = QueueInterviewer([Answer(text="/reject", value="/reject")])
+        handler = InteractiveHandler(backend=backend, interviewer=interviewer)
+
+        node = _make_interactive_node()
+        graph = _make_graph(node)
+        outcome = handler.handle(node, Context(), graph)
+
+        assert outcome.status == OutcomeStatus.FAIL
+        assert "last_response" in outcome.context_updates
+        assert len(outcome.context_updates["last_response"]) > 0
+
     def test_multi_turn_exchange(self):
         """Agent sends → human responds → agent sends → human /done → SUCCESS."""
         backend = SimulationBackend()

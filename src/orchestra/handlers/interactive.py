@@ -68,7 +68,10 @@ class InteractiveHandler:
                     status=OutcomeStatus.FAIL,
                     failure_reason="human rejected in interactive mode",
                     notes=self._format_conversation(history),
-                    context_updates={"interactive.history": history},
+                    context_updates={
+                        "interactive.history": history,
+                        "last_response": self._format_conversation(history),
+                    },
                 )
 
             history.append({"agent": agent_text, "human": human_text})
