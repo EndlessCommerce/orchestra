@@ -397,7 +397,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 12: Interactive Mode and Dispatcher Tests
 
-- [ ] Write `tests/test_conversational_backend.py` — unit tests for ConversationalBackend protocol
+- [x] Write `tests/test_conversational_backend.py` — unit tests for ConversationalBackend protocol
     - SimulationBackend: `send_message()` returns canned responses, `reset_conversation()` is no-op
     - DirectLLMBackend: message history accumulates across `send_message()` calls, `reset_conversation()` clears it
     - LangGraphBackend: messages accumulate, agent receives full history on each call
@@ -405,7 +405,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
     - All backends: `run()` still works unchanged (non-breaking)
     - Mark TODO complete and commit the changes to git
 
-- [ ] Write `tests/test_interactive_handler.py` — unit tests for InteractiveHandler
+- [x] Write `tests/test_interactive_handler.py` — unit tests for InteractiveHandler
     - Multi-turn exchange: agent sends → human responds → agent sends → human `/done` → SUCCESS
     - `/approve` command → SUCCESS outcome
     - `/reject` command → FAIL outcome
@@ -414,7 +414,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
     - Use `QueueInterviewer` for deterministic human responses and `SimulationBackend` for agent responses
     - Mark TODO complete and commit the changes to git
 
-- [ ] Write `tests/test_codergen_dispatcher.py` — unit tests for CodergenDispatcher
+- [x] Write `tests/test_codergen_dispatcher.py` — unit tests for CodergenDispatcher
     - Node without `agent.mode` → delegates to standard CodergenHandler
     - Node with `agent.mode="interactive"` → delegates to InteractiveHandler
     - Mark TODO complete and commit the changes to git
