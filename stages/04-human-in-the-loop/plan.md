@@ -364,7 +364,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 9: Interviewer Unit Tests
 
-- [ ] Write `tests/test_interviewer.py` — unit tests for all interviewer implementations
+- [x] Write `tests/test_interviewer.py` — unit tests for all interviewer implementations
     - AutoApprove: YES_NO → YES, MULTIPLE_CHOICE → first option, FREEFORM → "auto-approved"
     - Queue: single answer dequeue, multiple answers in sequence, exhausted → SKIPPED
     - Recording: wraps inner, records Q&A pairs, recordings accessible
