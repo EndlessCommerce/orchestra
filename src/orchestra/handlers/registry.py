@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from orchestra.handlers.base import NodeHandler
 from orchestra.handlers.codergen import SimulationCodergenHandler
+from orchestra.handlers.conditional import ConditionalHandler
 from orchestra.handlers.exit import ExitHandler
 from orchestra.handlers.start import StartHandler
 
@@ -22,4 +23,5 @@ def default_registry() -> HandlerRegistry:
     registry.register("Mdiamond", StartHandler())
     registry.register("Msquare", ExitHandler())
     registry.register("box", SimulationCodergenHandler())
+    registry.register("diamond", ConditionalHandler())
     return registry

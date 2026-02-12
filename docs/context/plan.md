@@ -15,10 +15,10 @@
   - [x] Write tests in `tests/test_edge_selection.py`: condition match wins, preferred label match, label normalization (`[Y] Yes` → `yes`), suggested next IDs, full priority chain (all 5 steps in one graph). Keep existing weight tiebreak, lexical tiebreak, and no-edges tests.
   - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Add conditional (diamond) handler
-  - [ ] Create `src/orchestra/handlers/conditional.py` — no-op handler for `shape=diamond` nodes. Returns SUCCESS (routing is handled by edge selection, not the handler).
-  - [ ] Register in `src/orchestra/handlers/registry.py` `default_registry()`: `registry.register("diamond", ConditionalHandler())`
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Add conditional (diamond) handler
+  - [x] Create `src/orchestra/handlers/conditional.py` — no-op handler for `shape=diamond` nodes. Returns SUCCESS (routing is handled by edge selection, not the handler).
+  - [x] Register in `src/orchestra/handlers/registry.py` `default_registry()`: `registry.register("diamond", ConditionalHandler())`
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Add configurable simulation backend for testing retries
   - [ ] Extend `src/orchestra/handlers/codergen.py` `SimulationCodergenHandler` to accept an optional `outcome_sequences: dict[str, list[OutcomeStatus]]`. On each `handle()` call for a node_id, pop the next status from the list. If the list is exhausted, use the last status. If no sequence for a node_id, return SUCCESS as before.
