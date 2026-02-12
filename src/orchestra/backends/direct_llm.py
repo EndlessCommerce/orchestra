@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from orchestra.backends.errors import sanitize_error
 from orchestra.models.outcome import Outcome, OutcomeStatus
 
 if TYPE_CHECKING:
@@ -35,14 +35,7 @@ class DirectLLMBackend:
             content = str(response.content)
             return content
         except Exception as e:
-            error_msg = _sanitize_error(str(e))
             return Outcome(
                 status=OutcomeStatus.FAIL,
-                failure_reason=error_msg,
+                failure_reason=sanitize_error(str(e)),
             )
-
-
-def _sanitize_error(error: str) -> str:
-    error = re.sub(r"(sk-|key-)[a-zA-Z0-9_-]+", "[REDACTED]", error)
-    error = re.sub(r"Bearer\s+[a-zA-Z0-9_-]+", "Bearer [REDACTED]", error)
-    return error

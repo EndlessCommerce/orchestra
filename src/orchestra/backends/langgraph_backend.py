@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from langchain_core.messages import HumanMessage
 from langgraph.prebuilt import create_react_agent
 
+from orchestra.backends.errors import sanitize_error
 from orchestra.backends.tool_adapter import to_langchain_tool
 from orchestra.backends.write_tracker import WriteTracker
 from orchestra.models.agent_turn import AgentTurn
@@ -43,7 +44,7 @@ class LangGraphBackend:
         except Exception as e:
             return Outcome(
                 status=OutcomeStatus.FAIL,
-                failure_reason=f"Failed to create agent: {e}",
+                failure_reason=sanitize_error(f"Failed to create agent: {e}"),
             )
 
         messages = [HumanMessage(content=prompt)]
@@ -53,7 +54,7 @@ class LangGraphBackend:
         except Exception as e:
             return Outcome(
                 status=OutcomeStatus.FAIL,
-                failure_reason=str(e),
+                failure_reason=sanitize_error(str(e)),
             )
 
         all_messages = result.get("messages", [])

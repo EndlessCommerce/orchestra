@@ -163,12 +163,12 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ## Investigation
 
-- [ ] Verify LangGraph latest stable API for ReAct agent, tool binding, and state serialization
-    - [ ] Check `langgraph` PyPI for latest version and confirm `create_react_agent` API
-    - [ ] Confirm how LangChain `StructuredTool` wrapping works for custom tools
-    - [ ] Verify `FakeListChatModel` or equivalent mock is available for testing
-    - [ ] Pin versions in pyproject.toml based on findings
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Verify LangGraph latest stable API for ReAct agent, tool binding, and state serialization
+    - [x] Check `langgraph` PyPI for latest version and confirm `create_react_agent` API
+    - [x] Confirm how LangChain `StructuredTool` wrapping works for custom tools
+    - [x] Verify `FakeListChatModel` or equivalent mock is available for testing
+    - [x] Pin versions in pyproject.toml based on findings
+    - [x] Mark TODO complete and commit the changes to git
 
 ## Plan
 
