@@ -373,7 +373,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 10: Accelerator Key Tests
 
-- [ ] Write `tests/test_accelerator.py` — unit tests for accelerator key parsing
+- [x] Write `tests/test_accelerator.py` — unit tests for accelerator key parsing
     - `[A] Approve` → key="A", label="Approve"
     - `Y) Yes, deploy` → key="Y", label="Yes, deploy"
     - `Y - Yes, deploy` → key="Y", label="Yes, deploy"
