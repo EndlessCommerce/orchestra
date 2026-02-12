@@ -367,8 +367,8 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 9: LangGraphBackend
 
-- [ ] Implement LangGraphBackend
-    - [ ] Create `src/orchestra/backends/langgraph_backend.py`:
+- [x] Implement LangGraphBackend
+    - [x] Create `src/orchestra/backends/langgraph_backend.py`:
         - `LangGraphBackend` implementing `CodergenBackend`
         - Creates LangGraph ReAct agent with provided tools (wrapping Orchestra tools in LangChain StructuredTool)
         - Streams execution turn-by-turn
@@ -376,10 +376,10 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
         - Invokes `on_turn(agent_turn)` callback
         - Returns final result as string or Outcome
         - Catches LLM API errors → Outcome(status=FAIL)
-    - [ ] Create `src/orchestra/backends/tool_adapter.py`:
+    - [x] Create `src/orchestra/backends/tool_adapter.py`:
         - `to_langchain_tool(orchestra_tool) -> StructuredTool` — wraps Orchestra tool for LangChain
         - Preserves tool name, description, and schema
-    - [ ] Write tests in `tests/test_langgraph_backend.py`:
+    - [x] Write tests in `tests/test_langgraph_backend.py`:
         - Mock LLM + mock tools → agent runs tool loop → returns result
         - Agent calls read_file tool → tool returns content → agent incorporates it
         - `on_turn` callback invoked after each agent loop turn
@@ -387,7 +387,7 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
         - Agent calls write_file → `AgentTurn.files_written` contains the path
         - AgentTurn contains serialized agent state for observability
         - LLM API error → Outcome(status=FAIL)
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 10: CLIAgentBackend
 
