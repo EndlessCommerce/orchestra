@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from orchestra.handlers.prompt_helper import compose_node_prompt
 from orchestra.interviewer.models import Question, QuestionType
 from orchestra.models.outcome import Outcome, OutcomeStatus
+from orchestra.ui.spinner import spinner
 
 if TYPE_CHECKING:
     from orchestra.backends.protocol import ConversationalBackend
@@ -40,7 +41,8 @@ class InteractiveHandler:
                 stage=node.id,
             )
 
-        response = self._backend.send_message(node, prompt, context)
+        with spinner():
+            response = self._backend.send_message(node, prompt, context)
         if isinstance(response, Outcome):
             return response
         agent_text = response
@@ -71,7 +73,8 @@ class InteractiveHandler:
 
             history.append({"agent": agent_text, "human": human_text})
 
-            response = self._backend.send_message(node, human_text, context)
+            with spinner():
+                response = self._backend.send_message(node, human_text, context)
             if isinstance(response, Outcome):
                 self._backend.reset_conversation()
                 return response

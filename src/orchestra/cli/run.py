@@ -25,6 +25,7 @@ from orchestra.validation.validator import ValidationError, validate_or_raise
 def run(
     pipeline: Path,
     auto_approve: bool = typer.Option(False, "--auto-approve", help="Auto-approve all human gates (no stdin required)"),
+    single_line: bool = typer.Option(False, "--single-line", help="Use single-line input (Enter submits) instead of multiline"),
 ) -> None:
     """Execute a DOT pipeline."""
     if not pipeline.exists():
@@ -104,7 +105,7 @@ def run(
     else:
         from orchestra.interviewer.console import ConsoleInterviewer
 
-        interviewer = ConsoleInterviewer()
+        interviewer = ConsoleInterviewer(multiline=not single_line)
 
     # Build backend and handler registry
     backend = build_backend(config)

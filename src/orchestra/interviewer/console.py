@@ -2,10 +2,16 @@ from __future__ import annotations
 
 import threading
 
+from prompt_toolkit import prompt as pt_prompt
+from prompt_toolkit.key_binding import KeyBindings
+
 from orchestra.interviewer.models import Answer, AnswerValue, Option, Question, QuestionType
 
 
 class ConsoleInterviewer:
+    def __init__(self, *, multiline: bool = True) -> None:
+        self._multiline = multiline
+
     def ask(self, question: Question) -> Answer:
         if question.type == QuestionType.MULTIPLE_CHOICE:
             return self._ask_multiple_choice(question)
@@ -58,10 +64,33 @@ class ConsoleInterviewer:
 
     def _ask_freeform(self, question: Question) -> Answer:
         print(f"[?] {question.text}", flush=True)
-        response = self._read_input("> ", question.timeout_seconds)
-        if response is None:
+        if self._multiline:
+            print("(Alt+Enter to submit)", flush=True)
+        try:
+            if question.timeout_seconds is not None:
+                response = self._read_input("> ", question.timeout_seconds)
+                if response is None:
+                    return self._handle_timeout(question)
+            else:
+                response = self._prompt_freeform()
+        except (EOFError, KeyboardInterrupt):
             return self._handle_timeout(question)
         return Answer(text=response.strip(), value=response.strip())
+
+    def _prompt_freeform(self) -> str:
+        if self._multiline:
+            bindings = KeyBindings()
+
+            @bindings.add("enter")
+            def _newline(event: object) -> None:
+                event.current_buffer.insert_text("\n")  # type: ignore[union-attr]
+
+            @bindings.add("escape", "enter")
+            def _submit(event: object) -> None:
+                event.current_buffer.validate_and_handle()  # type: ignore[union-attr]
+
+            return pt_prompt("> ", multiline=True, key_bindings=bindings)
+        return pt_prompt("> ")
 
     def _find_option(self, response: str, options: list[Option]) -> Option | None:
         for option in options:
