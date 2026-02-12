@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import random
 import time
 from typing import TYPE_CHECKING, Any, Protocol
 
 from orchestra.engine.edge_selection import select_edge
+from orchestra.engine.retry import build_retry_policy, execute_with_retry
 from orchestra.models.context import Context
 from orchestra.models.graph import PipelineGraph
 from orchestra.models.outcome import Outcome, OutcomeStatus
@@ -22,10 +24,14 @@ class PipelineRunner:
         graph: PipelineGraph,
         handler_registry: HandlerRegistry,
         event_emitter: EventEmitter,
+        rng: random.Random | None = None,
+        sleep_fn: Any = None,
     ) -> None:
         self._graph = graph
         self._registry = handler_registry
         self._emitter = event_emitter
+        self._rng = rng
+        self._sleep_fn = sleep_fn
 
     def run(self) -> Outcome:
         context = Context()
@@ -68,7 +74,17 @@ class PipelineRunner:
             )
 
             stage_start = time.monotonic()
-            outcome = handler.handle(node, context, self._graph)
+            retry_policy = build_retry_policy(node, self._graph)
+            outcome = execute_with_retry(
+                node=node,
+                handler=handler,
+                context=context,
+                graph=self._graph,
+                policy=retry_policy,
+                emitter=self._emitter,
+                rng=self._rng,
+                sleep_fn=self._sleep_fn,
+            )
             stage_duration_ms = int((time.monotonic() - stage_start) * 1000)
 
             completed_nodes.append(node.id)

@@ -56,6 +56,14 @@ class StageFailed(Event):
     error: str = ""
 
 
+class StageRetrying(Event):
+    event_type: str = "StageRetrying"
+    node_id: str
+    attempt: int = 0
+    max_attempts: int = 0
+    delay_ms: int = 0
+
+
 class CheckpointSaved(Event):
     event_type: str = "CheckpointSaved"
     node_id: str
@@ -71,5 +79,6 @@ EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "StageStarted": StageStarted,
     "StageCompleted": StageCompleted,
     "StageFailed": StageFailed,
+    "StageRetrying": StageRetrying,
     "CheckpointSaved": CheckpointSaved,
 }

@@ -25,12 +25,12 @@
   - [x] Write test in `tests/test_configurable_simulation.py` verifying: node returns FAIL twice then SUCCESS when sequence is `[FAIL, FAIL, SUCCESS]`; node without sequence returns SUCCESS; exhausted sequence returns last status
   - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement retry system with backoff policies
-  - [ ] Create `src/orchestra/engine/retry.py` with: `BackoffConfig` dataclass (initial_delay_ms, backoff_factor, max_delay_ms, jitter), `RetryPolicy` dataclass (max_attempts, backoff), preset policies dict (`none`, `standard`, `aggressive`, `linear`, `patient` with exact parameters from spec), `calculate_delay(config, attempt, rng)` function, `execute_with_retry(node, handler, context, graph, policy, emitter, rng) -> Outcome` function
-  - [ ] Add `StageRetrying` event type to `src/orchestra/events/types.py` with fields: node_id, attempt, max_attempts, delay_ms
-  - [ ] Integrate into `src/orchestra/engine/runner.py`: extract `_execute_node()` method, wrap handler.handle() call with retry loop. Resolve retry policy from node attributes: `max_retries` (default 0, also respect graph-level `default_max_retry`), `backoff_policy` name (default `standard`), `allow_partial` (default false). Pass seedable `random.Random` instance for jitter determinism in tests.
-  - [ ] Write tests in `tests/test_retry.py`: retry on FAIL (node with max_retries=2 retried twice), retry on RETRY status, retry exhaustion (final outcome used for routing), backoff delays (standard policy: ~200ms, ~400ms, ~800ms within tolerance), allow_partial (PARTIAL_SUCCESS when retries exhausted), no retry on SUCCESS (6 tests per plan)
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Implement retry system with backoff policies
+  - [x] Create `src/orchestra/engine/retry.py` with: `BackoffConfig` dataclass (initial_delay_ms, backoff_factor, max_delay_ms, jitter), `RetryPolicy` dataclass (max_attempts, backoff), preset policies dict (`none`, `standard`, `aggressive`, `linear`, `patient` with exact parameters from spec), `calculate_delay(config, attempt, rng)` function, `execute_with_retry(node, handler, context, graph, policy, emitter, rng) -> Outcome` function
+  - [x] Add `StageRetrying` event type to `src/orchestra/events/types.py` with fields: node_id, attempt, max_attempts, delay_ms
+  - [x] Integrate into `src/orchestra/engine/runner.py`: extract `_execute_node()` method, wrap handler.handle() call with retry loop. Resolve retry policy from node attributes: `max_retries` (default 0, also respect graph-level `default_max_retry`), `backoff_policy` name (default `standard`), `allow_partial` (default false). Pass seedable `random.Random` instance for jitter determinism in tests.
+  - [x] Write tests in `tests/test_retry.py`: retry on FAIL (node with max_retries=2 retried twice), retry on RETRY status, retry exhaustion (final outcome used for routing), backoff delays (standard policy: ~200ms, ~400ms, ~800ms within tolerance), allow_partial (PARTIAL_SUCCESS when retries exhausted), no retry on SUCCESS (6 tests per plan)
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Implement failure routing
   - [ ] Create `src/orchestra/engine/failure_routing.py` with `resolve_failure_target(node, graph) -> str | None` implementing the 4-step fallback chain: (1) outgoing edge with `condition="outcome=fail"` — use condition evaluator; (2) node attribute `retry_target`; (3) node attribute `fallback_retry_target`; (4) return None (pipeline terminates)
