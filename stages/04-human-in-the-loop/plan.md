@@ -180,3 +180,223 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 - [ ] Timeout handling works with and without default choices
 - [ ] A human can make decisions at gates and collaborate interactively with agents
 - [ ] All automated tests pass using QueueInterviewer and AutoApproveInterviewer
+
+---
+
+## Plan
+
+### Phase 1: Question/Answer Models and Interviewer Interface
+
+- [ ] Create `src/orchestra/interviewer/models.py` with Question/Answer pydantic models
+    - `QuestionType` enum: `YES_NO`, `MULTIPLE_CHOICE`, `FREEFORM`, `CONFIRMATION`
+    - `AnswerValue` enum: `YES`, `NO`, `SKIPPED`, `TIMEOUT`
+    - `Option` model: `key: str`, `label: str`
+    - `Question` model: `text: str`, `type: QuestionType`, `options: list[Option]`, `stage: str`, `timeout_seconds: float | None`, `default: Answer | None`
+    - `Answer` model: `value: str | AnswerValue`, `selected_option: Option | None`, `text: str`
+    - Per attractor spec Section 6.1–6.3
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Create `src/orchestra/interviewer/base.py` with Interviewer protocol
+    - `ask(question: Question) -> Answer` method
+    - `ask_multiple(questions: list[Question]) -> list[Answer]` method (default: iterate and call ask)
+    - `inform(message: str, stage: str) -> None` method (default: no-op)
+    - Use `typing.Protocol` with `runtime_checkable`, matching `NodeHandler` and `CodergenBackend` patterns
+    - Mark TODO complete and commit the changes to git
+
+### Phase 2: Interviewer Implementations
+
+- [ ] Create `src/orchestra/interviewer/auto_approve.py` — AutoApproveInterviewer
+    - `YES_NO` / `CONFIRMATION` → `Answer(value=AnswerValue.YES)`
+    - `MULTIPLE_CHOICE` → `Answer(value=options[0].key, selected_option=options[0])`
+    - `FREEFORM` → `Answer(value="auto-approved", text="auto-approved")`
+    - Per attractor spec Section 6.4
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Create `src/orchestra/interviewer/queue.py` — QueueInterviewer
+    - Constructor takes `answers: list[Answer]`, stores as `collections.deque`
+    - `ask()` dequeues next answer, returns `Answer(value=AnswerValue.SKIPPED)` when empty
+    - Per attractor spec Section 6.4
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Create `src/orchestra/interviewer/callback.py` — CallbackInterviewer
+    - Constructor takes `callback: Callable[[Question], Answer]`
+    - `ask()` delegates to callback
+    - Per attractor spec Section 6.4
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Create `src/orchestra/interviewer/recording.py` — RecordingInterviewer
+    - Constructor takes `inner: Interviewer`
+    - `ask()` delegates to inner, appends `(question, answer)` to `recordings: list[tuple[Question, Answer]]`
+    - `recordings` property for programmatic access
+    - Per attractor spec Section 6.4
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Create `src/orchestra/interviewer/console.py` — ConsoleInterviewer
+    - `ask()` formats prompt: `[?] {question.text}` with options as `  [{key}] {label}`
+    - Reads stdin via `input()` for `MULTIPLE_CHOICE`, `YES_NO`, `FREEFORM`
+    - Timeout support via `threading.Event` + daemon thread for stdin read
+    - Returns `Answer(value=AnswerValue.TIMEOUT)` on timeout
+    - `inform()` prints `[i] {message}` to stdout
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Create `src/orchestra/interviewer/__init__.py` re-exporting all public types
+    - Mark TODO complete and commit the changes to git
+
+### Phase 3: Accelerator Key Parsing
+
+- [ ] Create `src/orchestra/interviewer/accelerator.py` with shared accelerator parsing
+    - `parse_accelerator(label: str) -> tuple[str, str]` returning `(key, clean_label)`
+    - Handle all 4 patterns: `[K] Label`, `K) Label`, `K - Label`, first character fallback
+    - Edge labels with no text → use edge `to_node` as fallback label
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Refactor `src/orchestra/engine/edge_selection.py` to use shared `parse_accelerator`
+    - Replace `_ACCELERATOR_PREFIX` regex with import from `interviewer.accelerator`
+    - `_normalize_label` calls `parse_accelerator(label)` and returns the clean_label lowercased
+    - Verify existing edge selection tests still pass
+    - Mark TODO complete and commit the changes to git
+
+### Phase 4: WaitHumanHandler
+
+- [ ] Create `src/orchestra/handlers/wait_human.py` — WaitHumanHandler
+    - Constructor takes `interviewer: Interviewer`
+    - `handle(node, context, graph) -> Outcome`:
+        1. Get outgoing edges from `graph.get_outgoing_edges(node.id)`
+        2. Build choices: for each edge, `parse_accelerator(edge.label or edge.to_node)` → `(key, label)`, store `to_node`
+        3. If no choices: return `Outcome(status=FAIL, failure_reason="No outgoing edges for human gate")`
+        4. Build `Question(text=node.label, type=MULTIPLE_CHOICE, options=[Option(key, label)...], stage=node.id)`
+        5. Call `interviewer.ask(question)`
+        6. Handle TIMEOUT: check `node.attributes["human.default_choice"]`, fall back to `Outcome(status=RETRY)`
+        7. Handle SKIPPED: return `Outcome(status=FAIL, failure_reason="human skipped interaction")`
+        8. Match answer to choice, fallback to first choice
+        9. Return `Outcome(status=SUCCESS, suggested_next_ids=[selected.to_node], context_updates={"human.gate.selected": key, "human.gate.label": label})`
+    - Per attractor spec Section 4.6
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Register WaitHumanHandler in `src/orchestra/handlers/registry.py`
+    - Add `interviewer: Interviewer | None = None` parameter to `default_registry()`
+    - If interviewer provided: `registry.register("hexagon", WaitHumanHandler(interviewer))`
+    - If not provided: register with `AutoApproveInterviewer()` as default
+    - Mark TODO complete and commit the changes to git
+
+### Phase 5: HumanInteraction Event
+
+- [ ] Add `HumanInteraction` event to `src/orchestra/events/types.py`
+    - Fields: `node_id: str`, `question_text: str`, `question_type: str`, `answer_value: str`, `answer_text: str`, `selected_option_key: str`
+    - Add to `EVENT_TYPE_MAP`
+    - Mark TODO complete and commit the changes to git
+
+### Phase 6: Interactive Mode
+
+- [ ] Extend `CodergenHandler` to support interactive mode
+    - In `handle()`, check `node.attributes.get("agent.mode") == "interactive"` or `node.attributes.get("agent", {})` mode field
+    - If interactive: delegate to `_handle_interactive(node, context, graph)` method
+    - Interactive mode requires an `Interviewer` — add optional `interviewer` param to `CodergenHandler.__init__`
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Implement `_handle_interactive` chat loop in `CodergenHandler`
+    - Loop:
+        1. Call `backend.run(node, prompt, context, on_turn)` to get agent response
+        2. Use `interviewer.ask(Question(text=agent_response, type=FREEFORM, stage=node.id))` for human turn
+        3. Check for commands: `/done` → break with SUCCESS, `/approve` → break with SUCCESS, `/reject` → break with FAIL
+        4. Append human response to prompt/context for next backend call
+        5. Store conversation history in context under `interactive.history`
+    - Return final `Outcome` with full conversation as `notes`
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Wire interviewer into `CodergenHandler` via `default_registry`
+    - Pass `interviewer` to `CodergenHandler` constructor alongside `backend` and `config`
+    - In `default_registry()`, pass interviewer to CodergenHandler when provided
+    - Mark TODO complete and commit the changes to git
+
+### Phase 7: CLI Integration
+
+- [ ] Add `--auto-approve` flag to `orchestra run` command
+    - In `src/orchestra/cli/run.py`: add `auto_approve: bool = False` parameter
+    - If `--auto-approve`: use `AutoApproveInterviewer()`
+    - Otherwise: use `ConsoleInterviewer()`
+    - Pass interviewer to `default_registry(backend=backend, config=config, interviewer=interviewer)`
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Update `src/orchestra/cli/main.py` to wire the `--auto-approve` option
+    - Ensure the typer option is properly defined and passed through
+    - Mark TODO complete and commit the changes to git
+
+### Phase 8: Test Fixtures
+
+- [ ] Create DOT fixture files for human-in-the-loop tests
+    - `tests/fixtures/test-human-gate.dot` — start → work → hexagon gate → [approve/reject] → exit/retry
+    - `tests/fixtures/test-multiple-gates.dot` — pipeline with 2 sequential human gates
+    - `tests/fixtures/test-interactive.dot` — pipeline with codergen node using `agent.mode="interactive"`
+    - Mark TODO complete and commit the changes to git
+
+### Phase 9: Interviewer Unit Tests
+
+- [ ] Write `tests/test_interviewer.py` — unit tests for all interviewer implementations
+    - AutoApprove: YES_NO → YES, MULTIPLE_CHOICE → first option, FREEFORM → "auto-approved"
+    - Queue: single answer dequeue, multiple answers in sequence, exhausted → SKIPPED
+    - Recording: wraps inner, records Q&A pairs, recordings accessible
+    - Callback: delegates to provided function, return value is the answer
+    - Mark TODO complete and commit the changes to git
+
+### Phase 10: Accelerator Key Tests
+
+- [ ] Write `tests/test_accelerator.py` — unit tests for accelerator key parsing
+    - `[A] Approve` → key="A", label="Approve"
+    - `Y) Yes, deploy` → key="Y", label="Yes, deploy"
+    - `Y - Yes, deploy` → key="Y", label="Yes, deploy"
+    - `Fix issues` → key="F", label="Fix issues"
+    - Empty label → fallback behavior
+    - Run existing `tests/test_edge_selection.py` to verify no regressions from refactor
+    - Mark TODO complete and commit the changes to git
+
+### Phase 11: WaitHumanHandler Tests
+
+- [ ] Write `tests/test_wait_human_handler.py` — unit tests for WaitHumanHandler
+    - Derive choices from 3 outgoing edges → 3 choices with correct labels
+    - Route on selection → outcome `suggested_next_ids` points to correct edge target
+    - Context updated with `human.gate.selected` and `human.gate.label`
+    - No outgoing edges → FAIL outcome
+    - Timeout with `human.default_choice` → uses default
+    - Timeout without default → RETRY outcome
+    - SKIPPED answer → FAIL outcome
+    - All tests use `QueueInterviewer` for deterministic answers
+    - Mark TODO complete and commit the changes to git
+
+### Phase 12: Interactive Mode Tests
+
+- [ ] Write `tests/test_interactive_mode.py` — unit tests for interactive mode
+    - Multi-turn exchange: agent sends → human responds → agent sends → human `/done` → SUCCESS
+    - `/approve` command → SUCCESS outcome
+    - `/reject` command → FAIL outcome
+    - Conversation history stored in context
+    - Use `QueueInterviewer` for deterministic human responses and `SimulationBackend` for agent responses
+    - Mark TODO complete and commit the changes to git
+
+### Phase 13: End-to-End Integration Tests
+
+- [ ] Write `tests/test_human_e2e.py` — end-to-end pipeline tests with human gates
+    - Pipeline with human gate: QueueInterviewer answers "approve" → routes to exit
+    - Pipeline with reject: QueueInterviewer answers "reject" → routes to retry path
+    - Pipeline with auto-approve: AutoApproveInterviewer → first option selected → completes
+    - Multiple human gates: QueueInterviewer with 2 answers → both gates route correctly
+    - Pipeline with interactive node: QueueInterviewer + SimulationBackend → multi-turn exchange → node completes
+    - Mark TODO complete and commit the changes to git
+
+### Phase 14: Review and Cleanup
+
+- [ ] Identify any code that is unused, or could be cleaned up
+    - Look at all previous TODOs and changes in git to identify changes
+    - Identify any code that is no longer used, and remove it
+    - Identify any unnecessary comments, and remove them
+    - If there are any obvious code smells of redundant code, add TODOs below to address them
+    - Mark TODO complete and commit the changes to git
+
+### Phase 15: Verify All Specs Pass
+
+- [ ] Identify all specs that need to be run and updated
+    - Run full test suite: `pytest tests/ -v`
+    - Run new tests in isolation: `pytest tests/test_interviewer.py tests/test_accelerator.py tests/test_wait_human_handler.py tests/test_interactive_mode.py tests/test_human_e2e.py -v`
+    - Run existing tests that may be affected: `pytest tests/test_edge_selection.py tests/test_engine.py tests/test_execution.py tests/test_codergen_handler.py -v`
+    - Identify any specs that failed and fix them
+    - Mark TODO complete and commit the changes to git
