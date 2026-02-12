@@ -139,7 +139,9 @@ def _resolve_session_id(client: CxdbClient, session_id: str) -> str | None:
         if not ctx_id:
             continue
         try:
-            turns = client.get_turns(ctx_id, limit=5)
+            # Use high limit to ensure PipelineStarted turn (first turn) is included
+            # since CXDB returns turns from head backwards
+            turns = client.get_turns(ctx_id, limit=500)
         except CxdbError:
             continue
 

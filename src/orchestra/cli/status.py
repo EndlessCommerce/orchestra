@@ -41,7 +41,7 @@ def status() -> None:
         if not ctx_id:
             continue
         try:
-            turns = client.get_turns(ctx_id)
+            turns = client.get_turns(ctx_id, limit=500)
         except CxdbError:
             continue
 

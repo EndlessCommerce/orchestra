@@ -66,6 +66,7 @@ class CxdbObserver:
 
     def _append_pipeline_lifecycle(self, event: Event) -> None:
         data: dict = {}
+        type_version = 1
         if isinstance(event, PipelineStarted):
             data = {
                 "pipeline_name": event.pipeline_name,
@@ -75,6 +76,7 @@ class CxdbObserver:
                 "dot_file_path": event.dot_file_path,
                 "graph_hash": event.graph_hash,
             }
+            type_version = 2  # v2 has dot_file_path + graph_hash
         elif isinstance(event, PipelineCompleted):
             data = {
                 "pipeline_name": event.pipeline_name,
@@ -98,8 +100,8 @@ class CxdbObserver:
         self._client.append_turn(
             context_id=self._context_id,
             type_id=type_id,
-            type_version=1,
-            data=to_tagged_data(type_id, 1, data),
+            type_version=type_version,
+            data=to_tagged_data(type_id, type_version, data),
         )
 
     def _append_node_execution(self, event: Event) -> None:
@@ -145,6 +147,7 @@ class CxdbObserver:
 
     def _append_checkpoint(self, event: CheckpointSaved) -> None:
         type_id = "dev.orchestra.Checkpoint"
+        type_version = 2  # v2 has next_node_id + visited_outcomes + reroute_count
         data: dict = {
             "current_node": event.node_id,
             "completed_nodes": event.completed_nodes,
@@ -157,6 +160,6 @@ class CxdbObserver:
         self._client.append_turn(
             context_id=self._context_id,
             type_id=type_id,
-            type_version=1,
-            data=to_tagged_data(type_id, 1, data),
+            type_version=type_version,
+            data=to_tagged_data(type_id, type_version, data),
         )

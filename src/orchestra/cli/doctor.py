@@ -4,7 +4,7 @@ import typer
 
 from orchestra.config.settings import load_config
 from orchestra.storage.cxdb_client import CxdbClient, CxdbConnectionError, CxdbError
-from orchestra.storage.type_bundle import publish_orchestra_types
+from orchestra.storage.type_bundle import BUNDLE_ID, publish_orchestra_types
 
 
 def doctor() -> None:
@@ -29,7 +29,7 @@ def doctor() -> None:
 
     try:
         publish_orchestra_types(client)
-        typer.echo("Type bundle: OK (dev.orchestra.v1 registered)")
+        typer.echo(f"Type bundle: OK ({BUNDLE_ID} registered)")
     except CxdbError as e:
         typer.echo(f"Type bundle: FAILED — {e}")
         raise typer.Exit(code=1)

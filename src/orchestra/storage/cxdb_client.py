@@ -77,7 +77,23 @@ class CxdbClient:
                 params={"limit": limit, "view": "typed"},
             )
             response.raise_for_status()
-            return response.json()
+            body = response.json()
+            # Response is {"meta": ..., "turns": [...]}
+            raw_turns = body.get("turns", body) if isinstance(body, dict) else body
+            if not isinstance(raw_turns, list):
+                return []
+            # Normalize: flatten declared_type.type_id into top-level type_id
+            result = []
+            for turn in raw_turns:
+                if not isinstance(turn, dict):
+                    continue
+                normalized = dict(turn)
+                declared = turn.get("declared_type", {})
+                if declared:
+                    normalized.setdefault("type_id", declared.get("type_id", ""))
+                    normalized.setdefault("type_version", declared.get("type_version", 1))
+                result.append(normalized)
+            return result
         except httpx.ConnectError as e:
             raise CxdbConnectionError(
                 f"Cannot connect to CXDB at {self._base_url}: {e}"
@@ -96,7 +112,11 @@ class CxdbClient:
                 params={"limit": limit, "offset": offset},
             )
             response.raise_for_status()
-            return response.json()
+            body = response.json()
+            # Response is {"contexts": [...], ...}
+            if isinstance(body, dict):
+                return body.get("contexts", [])
+            return body
         except httpx.ConnectError as e:
             raise CxdbConnectionError(
                 f"Cannot connect to CXDB at {self._base_url}: {e}"
