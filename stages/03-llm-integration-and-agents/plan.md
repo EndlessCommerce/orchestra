@@ -200,18 +200,18 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 2: WriteTracker
 
-- [ ] Implement WriteTracker and `@modifies_files` decorator
-    - [ ] Create `src/orchestra/backends/write_tracker.py`:
+- [x] Implement WriteTracker and `@modifies_files` decorator
+    - [x] Create `src/orchestra/backends/write_tracker.py`:
         - `WriteTracker` class with `record(path)`, `flush() -> list[str]`
         - Deduplication via ordered set (preserves first-seen order)
         - `@modifies_files` decorator that auto-records returned paths
-    - [ ] Write tests in `tests/test_write_tracker.py`:
+    - [x] Write tests in `tests/test_write_tracker.py`:
         - Record and flush returns paths
         - Flush resets state
         - Deduplication — same path recorded twice returns once
         - Multiple files returned in order
         - `@modifies_files` decorator auto-records returned paths
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 3: Tool Registry
 
