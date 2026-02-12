@@ -1,0 +1,13 @@
+start: clause ("&&" clause)*
+
+clause: key operator literal
+
+key: CONTEXT_KEY | IDENTIFIER
+operator: "=" -> eq | "!=" -> neq
+literal: STRING | IDENTIFIER
+
+CONTEXT_KEY: /context\.[A-Za-z_][A-Za-z0-9_]*/
+IDENTIFIER: /[A-Za-z_][A-Za-z0-9_]*/
+STRING: /\"([^\"\\]|\\[\"nrt\\])*\"/
+
+%ignore /[\s]+/

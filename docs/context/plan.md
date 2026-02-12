@@ -2,12 +2,12 @@
 
 ## Plan
 
-- [ ] Add condition expression parser using Lark
-  - [ ] Create `src/orchestra/conditions/grammar.lark` with the condition expression grammar (Section 10.2): `ConditionExpr ::= Clause ('&&' Clause)*`, `Clause ::= Key Operator Literal`, operators `=` and `!=`, keys `outcome`, `preferred_label`, `context.*`
-  - [ ] Create `src/orchestra/conditions/evaluator.py` with `parse_condition(expr: str)` and `evaluate_condition(expr: str, outcome: Outcome, context: Context) -> bool`. Implement `resolve_key()` for outcome, preferred_label, and context.* variable resolution. Missing context keys resolve to empty string. Empty condition always returns true.
-  - [ ] Add `condition_syntax` validation to `src/orchestra/validation/rules.py` — parse all edge conditions during validation and report syntax errors as ERROR diagnostics
-  - [ ] Write tests in `tests/test_conditions.py`: parse `outcome=success`, `outcome!=success`, `context.key=value`, `&&` conjunction, missing context key, empty condition, invalid syntax (7 tests per plan)
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Add condition expression parser using Lark
+  - [x] Create `src/orchestra/conditions/grammar.lark` with the condition expression grammar (Section 10.2): `ConditionExpr ::= Clause ('&&' Clause)*`, `Clause ::= Key Operator Literal`, operators `=` and `!=`, keys `outcome`, `preferred_label`, `context.*`
+  - [x] Create `src/orchestra/conditions/evaluator.py` with `parse_condition(expr: str)` and `evaluate_condition(expr: str, outcome: Outcome, context: Context) -> bool`. Implement `resolve_key()` for outcome, preferred_label, and context.* variable resolution. Missing context keys resolve to empty string. Empty condition always returns true.
+  - [x] Add `condition_syntax` validation to `src/orchestra/validation/rules.py` — parse all edge conditions during validation and report syntax errors as ERROR diagnostics
+  - [x] Write tests in `tests/test_conditions.py`: parse `outcome=success`, `outcome!=success`, `context.key=value`, `&&` conjunction, missing context key, empty condition, invalid syntax (7 tests per plan)
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Extend edge selection with steps 1-3 (condition match, preferred label, suggested next IDs)
   - [ ] Update `src/orchestra/engine/edge_selection.py` to implement the full 5-step algorithm: (1) evaluate condition expressions on edges, select first matching conditional edge; (2) if outcome has preferred_label, find edge with matching label after normalization (lowercase, trim, strip accelerator prefixes like `[Y] `, `Y) `, `Y - `); (3) if outcome has suggested_next_ids, find edge whose target is in the list; (4) highest weight among unconditional edges; (5) lexical tiebreak

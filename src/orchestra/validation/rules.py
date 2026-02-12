@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 
+from orchestra.conditions.evaluator import ConditionParseError, parse_condition
 from orchestra.models.diagnostics import Diagnostic, Severity
 from orchestra.models.graph import PipelineGraph
 
@@ -149,6 +150,25 @@ def prompt_on_llm_nodes(graph: PipelineGraph) -> list[Diagnostic]:
     return diagnostics
 
 
+def condition_syntax(graph: PipelineGraph) -> list[Diagnostic]:
+    diagnostics = []
+    for edge in graph.edges:
+        if edge.condition:
+            try:
+                parse_condition(edge.condition)
+            except ConditionParseError as e:
+                diagnostics.append(
+                    Diagnostic(
+                        rule="condition_syntax",
+                        severity=Severity.ERROR,
+                        message=f"Invalid condition on edge {edge.from_node} -> {edge.to_node}: {e}",
+                        edge=(edge.from_node, edge.to_node),
+                        suggestion="Fix the condition syntax (e.g., outcome=success, context.key=value)",
+                    )
+                )
+    return diagnostics
+
+
 ALL_RULES = [
     start_node,
     terminal_node,
@@ -157,4 +177,5 @@ ALL_RULES = [
     start_no_incoming,
     exit_no_outgoing,
     prompt_on_llm_nodes,
+    condition_syntax,
 ]
