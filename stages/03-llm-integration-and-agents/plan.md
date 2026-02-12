@@ -350,20 +350,20 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 8: DirectLLMBackend
 
-- [ ] Implement DirectLLMBackend
-    - [ ] Create `src/orchestra/backends/direct_llm.py`:
+- [x] Implement DirectLLMBackend
+    - [x] Create `src/orchestra/backends/direct_llm.py`:
         - `DirectLLMBackend` implementing `CodergenBackend`
         - Single LLM API call via LangChain chat model, no tool use
         - Constructor takes provider config for instantiating the correct LangChain model
         - Does not invoke `on_turn` callback
         - Catches LLM API errors (rate limits, auth, network) → returns `Outcome(status=FAIL, failure_reason=...)`
         - Sanitizes error messages (strips API keys, request bodies)
-    - [ ] Write tests in `tests/test_direct_llm_backend.py`:
+    - [x] Write tests in `tests/test_direct_llm_backend.py`:
         - Mock LLM returns expected response → backend returns it as string
         - Mock LLM returns structured JSON → backend parses into Outcome
         - DirectLLMBackend does not invoke `on_turn` callback
         - LLM API error → Outcome(status=FAIL) with sanitized failure_reason
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 9: LangGraphBackend
 
