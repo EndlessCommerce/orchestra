@@ -163,6 +163,39 @@ ORCHESTRA_TYPE_BUNDLE: dict[str, Any] = {
                 }
             }
         },
+        "dev.orchestra.ParallelExecution": {
+            "versions": {
+                "1": {
+                    "fields": {
+                        "1": {"name": "node_id", "type": "string"},
+                        "2": {"name": "branch_count", "type": "u64"},
+                        "3": {
+                            "name": "branch_contexts",
+                            "type": "array",
+                            "items": "string",
+                            "optional": True,
+                        },
+                        "4": {
+                            "name": "success_count",
+                            "type": "u64",
+                            "optional": True,
+                        },
+                        "5": {
+                            "name": "failure_count",
+                            "type": "u64",
+                            "optional": True,
+                        },
+                        "6": {
+                            "name": "duration_ms",
+                            "type": "u64",
+                            "optional": True,
+                            "semantic": "unix_ms",
+                        },
+                        "7": {"name": "status", "type": "string", "optional": True},
+                    }
+                }
+            }
+        },
     },
 }
 

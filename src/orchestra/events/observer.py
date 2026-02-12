@@ -8,6 +8,8 @@ from orchestra.events.types import (
     AgentTurnCompleted,
     CheckpointSaved,
     Event,
+    ParallelCompleted,
+    ParallelStarted,
     PipelineCompleted,
     PipelineFailed,
     PipelinePaused,
@@ -68,6 +70,8 @@ class CxdbObserver:
             self._append_checkpoint(event)
         elif isinstance(event, AgentTurnCompleted):
             self._append_agent_turn(event)
+        elif isinstance(event, (ParallelStarted, ParallelCompleted)):
+            self._append_parallel_execution(event)
 
     def _append_pipeline_lifecycle(self, event: Event) -> None:
         data: dict = {}
@@ -163,6 +167,32 @@ class CxdbObserver:
             "token_usage": event.token_usage,
             "agent_state": event.agent_state,
         }
+        self._client.append_turn(
+            context_id=self._context_id,
+            type_id=type_id,
+            type_version=1,
+            data=to_tagged_data(type_id, 1, data),
+        )
+
+    def _append_parallel_execution(self, event: Event) -> None:
+        data: dict = {}
+        if isinstance(event, ParallelStarted):
+            data = {
+                "node_id": event.node_id,
+                "branch_count": event.branch_count,
+                "status": "started",
+            }
+        elif isinstance(event, ParallelCompleted):
+            data = {
+                "node_id": event.node_id,
+                "branch_count": 0,
+                "success_count": event.success_count,
+                "failure_count": event.failure_count,
+                "duration_ms": event.duration_ms,
+                "status": "completed",
+            }
+
+        type_id = "dev.orchestra.ParallelExecution"
         self._client.append_turn(
             context_id=self._context_id,
             type_id=type_id,
