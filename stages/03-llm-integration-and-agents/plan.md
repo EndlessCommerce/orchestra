@@ -239,19 +239,19 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 4: File Discovery
 
-- [ ] Implement the 3-level file discovery system
-    - [ ] Create `src/orchestra/config/file_discovery.py`:
+- [x] Implement the 3-level file discovery system
+    - [x] Create `src/orchestra/config/file_discovery.py`:
         - `discover_file(filename, pipeline_dir, config_paths, global_dir) -> Path`
         - Three-level resolution: pipeline-relative → project config paths → `~/.orchestra/`
         - Stops at first match
         - Raises clear error with all searched locations when not found
-    - [ ] Write tests in `tests/test_file_discovery.py`:
+    - [x] Write tests in `tests/test_file_discovery.py`:
         - Pipeline-relative: file found relative to `.dot` file directory
         - Project config path: file found via configured path
         - Global fallback: file found in `~/.orchestra/`
         - Precedence: pipeline-relative found → project config not checked
         - Not found: clear error listing all searched locations
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 5: Prompt Composition Engine
 
