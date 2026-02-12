@@ -455,13 +455,13 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 14: Backend Interface Contract Tests
 
-- [ ] Write backend interface contract tests
-    - [ ] Create `tests/test_backend_contract.py`:
+- [x] Write backend interface contract tests
+    - [x] Create `tests/test_backend_contract.py`:
         - All three backends + SimulationBackend conform to `run(node, prompt, context, on_turn) -> str | Outcome`
         - All backends accept `on_turn=None` without error
         - DirectLLM and CLI backends ignore `on_turn`
         - LangGraph backend invokes `on_turn`
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 15: Review and Cleanup
 
