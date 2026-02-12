@@ -305,7 +305,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 6b: InteractiveHandler and Dispatcher
 
-- [ ] Create `src/orchestra/handlers/interactive.py` — InteractiveHandler
+- [x] Create `src/orchestra/handlers/interactive.py` — InteractiveHandler
     - Constructor takes `backend: ConversationalBackend`, `interviewer: Interviewer`, `config: OrchestraConfig | None`
     - `handle(node, context, graph) -> Outcome`:
         1. Compose initial prompt (reuse prompt composition logic extracted to shared helper)
@@ -321,21 +321,21 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
     - Return `Outcome(status=..., notes=full_conversation, context_updates=...)`
     - Mark TODO complete and commit the changes to git
 
-- [ ] Extract shared prompt composition helper from `CodergenHandler`
+- [x] Extract shared prompt composition helper from `CodergenHandler`
     - Create `src/orchestra/handlers/prompt_helper.py` (or similar)
     - Extract `_get_agent_config()` and prompt composition logic used by both CodergenHandler and InteractiveHandler
     - Update CodergenHandler to use the shared helper
     - Verify existing CodergenHandler tests still pass
     - Mark TODO complete and commit the changes to git
 
-- [ ] Create `CodergenDispatcher` in `src/orchestra/handlers/codergen_dispatcher.py`
+- [x] Create `CodergenDispatcher` in `src/orchestra/handlers/codergen_dispatcher.py`
     - Constructor takes `standard: CodergenHandler`, `interactive: InteractiveHandler`
     - `handle(node, context, graph) -> Outcome`:
         - If `node.attributes.get("agent.mode") == "interactive"`: delegate to `interactive.handle()`
         - Otherwise: delegate to `standard.handle()`
     - Mark TODO complete and commit the changes to git
 
-- [ ] Wire dispatcher into `src/orchestra/handlers/registry.py`
+- [x] Wire dispatcher into `src/orchestra/handlers/registry.py`
     - Update `default_registry()`: when both backend and interviewer are provided, create `CodergenDispatcher(CodergenHandler(...), InteractiveHandler(...))`
     - Register the dispatcher for shape `"box"`
     - When interviewer is None, fall back to plain `CodergenHandler` (no interactive support)

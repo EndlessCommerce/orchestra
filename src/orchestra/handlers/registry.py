@@ -37,11 +37,28 @@ def default_registry(
     registry.register("Msquare", ExitHandler())
 
     if backend is not None:
-        handler = CodergenHandler(backend=backend, config=config)
-    else:
-        handler = SimulationCodergenHandler()
+        standard_handler = CodergenHandler(backend=backend, config=config)
 
-    registry.register("box", handler)
+        if interviewer is not None:
+            from orchestra.backends.protocol import ConversationalBackend
+            from orchestra.handlers.codergen_dispatcher import CodergenDispatcher
+            from orchestra.handlers.interactive import InteractiveHandler
+
+            if isinstance(backend, ConversationalBackend):
+                interactive_handler = InteractiveHandler(
+                    backend=backend, interviewer=interviewer, config=config
+                )
+                box_handler = CodergenDispatcher(
+                    standard=standard_handler, interactive=interactive_handler
+                )
+            else:
+                box_handler = standard_handler
+        else:
+            box_handler = standard_handler
+    else:
+        box_handler = SimulationCodergenHandler()
+
+    registry.register("box", box_handler)
     registry.register("diamond", ConditionalHandler())
 
     # Human gate handler
