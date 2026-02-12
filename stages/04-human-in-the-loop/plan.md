@@ -187,7 +187,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 1: Question/Answer Models and Interviewer Interface
 
-- [ ] Create `src/orchestra/interviewer/models.py` with Question/Answer pydantic models
+- [x] Create `src/orchestra/interviewer/models.py` with Question/Answer pydantic models
     - `QuestionType` enum: `YES_NO`, `MULTIPLE_CHOICE`, `FREEFORM`, `CONFIRMATION`
     - `AnswerValue` enum: `YES`, `NO`, `SKIPPED`, `TIMEOUT`
     - `Option` model: `key: str`, `label: str`
@@ -196,7 +196,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
     - Per attractor spec Section 6.1–6.3
     - Mark TODO complete and commit the changes to git
 
-- [ ] Create `src/orchestra/interviewer/base.py` with Interviewer protocol
+- [x] Create `src/orchestra/interviewer/base.py` with Interviewer protocol
     - `ask(question: Question) -> Answer` method
     - `ask_multiple(questions: list[Question]) -> list[Answer]` method (default: iterate and call ask)
     - `inform(message: str, stage: str) -> None` method (default: no-op)
