@@ -53,12 +53,13 @@ class PipelineRunner:
     def run(
         self,
         *,
+        context: Context | None = None,
         pipeline_name: str = "",
         dot_file_path: str = "",
         graph_hash: str = "",
         session_display_id: str = "",
     ) -> Outcome:
-        state = _RunState(context=Context())
+        state = _RunState(context=context if context is not None else Context())
         state.context.set("graph.goal", self._graph.goal)
 
         name = pipeline_name or self._graph.name
