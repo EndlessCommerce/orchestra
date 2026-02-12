@@ -54,11 +54,11 @@
   - [x] Verify all 68 existing Stage 1 tests still pass after refactoring
   - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Add test fixtures for manual testing
-  - [ ] Create `tests/fixtures/test-branching.dot` — the conditional branching pipeline from the Stage 2a plan (start → do_work → gate → success/failure → exit)
-  - [ ] Create `tests/fixtures/test-retry.dot` — a pipeline with a node configured with `max_retries=2` for testing retry behavior
-  - [ ] Verify `orchestra run tests/fixtures/test-branching.dot` works end-to-end
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Add test fixtures for manual testing
+  - [x] Create `tests/fixtures/test-branching.dot` — the conditional branching pipeline from the Stage 2a plan (start → do_work → gate → success/failure → exit)
+  - [x] Create `tests/fixtures/test-retry.dot` — a pipeline with a node configured with `max_retries=2` for testing retry behavior
+  - [x] Verify `orchestra run tests/fixtures/test-branching.dot` works end-to-end
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Identify all specs that need to be run and updated
   - [ ] Look at all previous TODOs and changes in git to identify changes

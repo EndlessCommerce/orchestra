@@ -1,0 +1,18 @@
+digraph test_branching {
+    graph [goal="Test conditional routing"]
+    node [shape=box]
+
+    start [shape=Mdiamond]
+    exit  [shape=Msquare]
+
+    do_work  [label="Do Work", prompt="Do the work"]
+    gate     [shape=diamond, label="Check Result"]
+    success  [label="Handle Success", prompt="Work succeeded"]
+    failure  [label="Handle Failure", prompt="Work failed"]
+
+    start -> do_work -> gate
+    gate -> success [label="Pass", condition="outcome=success", weight=1]
+    gate -> failure [label="Fail", condition="outcome!=success", weight=0]
+    success -> exit
+    failure -> exit
+}

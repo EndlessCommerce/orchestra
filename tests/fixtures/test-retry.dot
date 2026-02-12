@@ -1,0 +1,12 @@
+digraph test_retry {
+    graph [goal="Test retry behavior"]
+    node [shape=box]
+
+    start [shape=Mdiamond]
+    exit  [shape=Msquare]
+
+    flaky_work [label="Flaky Work", prompt="Do flaky work", max_retries=2, backoff_policy="standard"]
+    done       [label="Done", prompt="Report result"]
+
+    start -> flaky_work -> done -> exit
+}
