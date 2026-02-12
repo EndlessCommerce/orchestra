@@ -440,8 +440,8 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 13: End-to-End Integration Tests (Mocked LLM)
 
-- [ ] Write end-to-end integration tests with mocked LLM
-    - [ ] Create `tests/test_e2e_llm_integration.py`:
+- [x] Write end-to-end integration tests with mocked LLM
+    - [x] Create `tests/test_e2e_llm_integration.py`:
         - Pipeline with agent config → prompt composed from YAML layers → passed to mocked backend
         - Pipeline with stylesheet → correct model resolved for each node → mocked backend called with correct model
         - Pipeline with inline agent attributes (`agent.role="engineer"`) → prompt composed correctly
@@ -449,9 +449,9 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
         - Config validation → invalid orchestra.yaml → clear, actionable errors
         - Backend selection → config sets backend → correct backend used
         - Provider switching → changing default provider → all nodes use new provider's models
-    - [ ] Create test fixtures: sample `.dot` files, YAML prompt files, `orchestra.yaml` configs
-    - [ ] Verify all tests pass: `pytest tests/` with 0 failures
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Create test fixtures: sample `.dot` files, YAML prompt files, `orchestra.yaml` configs
+    - [x] Verify all tests pass: `pytest tests/` with 0 failures
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 14: Backend Interface Contract Tests
 
