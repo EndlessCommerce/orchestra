@@ -123,14 +123,14 @@ Run: `orchestra replay <session_id> --checkpoint <turn_id>`
 
 ## Success Criteria
 
-- [ ] Checkpoint resume reads the CXDB head turn and restores full pipeline state
-- [ ] Completed nodes are not re-executed after resume
-- [ ] Retry counters are preserved across pause/resume
-- [ ] Graceful pause (Ctrl-C) completes the current node and saves a checkpoint
-- [ ] Session management uses CXDB contexts — no SQLite or local files
-- [ ] Session status correctly derived from CXDB context head turn type
-- [ ] Replay forks the CXDB context at any checkpoint turn (O(1))
-- [ ] Forked context shares history but diverges on new execution
-- [ ] CLI commands (status, resume, replay) work correctly against CXDB
-- [ ] A human can run a pipeline, pause it, resume it, and replay from a checkpoint
-- [ ] All automated tests pass
+- [x] Checkpoint resume reads the CXDB head turn and restores full pipeline state
+- [x] Completed nodes are not re-executed after resume
+- [x] Retry counters are preserved across pause/resume
+- [x] Graceful pause (Ctrl-C) completes the current node and saves a checkpoint
+- [x] Session management uses CXDB contexts — no SQLite or local files
+- [x] Session status correctly derived from CXDB context head turn type
+- [ ] ~~Replay forks the CXDB context at any checkpoint turn (O(1))~~ — deferred (CXDB fork API not available)
+- [ ] ~~Forked context shares history but diverges on new execution~~ — deferred (CXDB fork API not available)
+- [x] CLI commands (status, resume) work correctly against CXDB (replay deferred)
+- [x] A human can run a pipeline, pause it, and resume it (replay deferred)
+- [x] All automated tests pass

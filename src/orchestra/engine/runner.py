@@ -45,22 +45,52 @@ class PipelineRunner:
         self._emitter = event_emitter
         self._rng = rng
         self._sleep_fn = sleep_fn
+        self._pause_requested = False
 
-    def run(self) -> Outcome:
+    def request_pause(self) -> None:
+        self._pause_requested = True
+
+    def run(
+        self,
+        *,
+        pipeline_name: str = "",
+        dot_file_path: str = "",
+        graph_hash: str = "",
+        session_display_id: str = "",
+    ) -> Outcome:
         state = _RunState(context=Context())
         state.context.set("graph.goal", self._graph.goal)
 
+        name = pipeline_name or self._graph.name
         self._emitter.emit(
             "PipelineStarted",
-            pipeline_name=self._graph.name,
+            pipeline_name=name,
             goal=self._graph.goal,
+            session_display_id=session_display_id,
+            dot_file_path=dot_file_path,
+            graph_hash=graph_hash,
         )
 
-        pipeline_start = time.monotonic()
         start_node = self._graph.get_start_node()
         if start_node is None:
             raise RuntimeError("No start node found in graph")
 
+        return self._execute_loop(state, start_node, name)
+
+    def resume(
+        self,
+        *,
+        state: _RunState,
+        next_node: Node,
+        pipeline_name: str = "",
+    ) -> Outcome:
+        name = pipeline_name or self._graph.name
+        return self._execute_loop(state, next_node, name)
+
+    def _execute_loop(
+        self, state: _RunState, start_node: Node, pipeline_name: str
+    ) -> Outcome:
+        pipeline_start = time.monotonic()
         current_node = start_node
         last_outcome = Outcome(status=OutcomeStatus.SUCCESS)
         max_reroutes = int(self._graph.graph_attributes.get("default_max_retry", 50))
@@ -75,7 +105,7 @@ class PipelineRunner:
                 if handler:
                     handler.handle(node, state.context, self._graph)
 
-                gate_ok, reroute_node = self._check_exit_gates(state, pipeline_start, max_reroutes)
+                gate_ok, reroute_node = self._check_exit_gates(state, pipeline_start, max_reroutes, pipeline_name)
                 if reroute_node is not None:
                     current_node = reroute_node
                     continue
@@ -93,26 +123,57 @@ class PipelineRunner:
             outcome = self._execute_node(node, handler, state)
             last_outcome = outcome
 
+            # Determine next node
+            next_node_id = ""
+            next_node_obj: Node | None = None
+
             next_edge = select_edge(node.id, outcome, state.context, self._graph)
             if next_edge is not None:
                 next_node_obj = self._graph.get_node(next_edge.to_node)
                 if next_node_obj is None:
                     raise RuntimeError(f"Edge target node '{next_edge.to_node}' not found")
+                next_node_id = next_edge.to_node
+            elif outcome.status in (OutcomeStatus.FAIL, OutcomeStatus.RETRY):
+                failure_next = self._find_failure_target(node, outcome, state)
+                if failure_next is not None:
+                    next_node_obj = failure_next
+                    next_node_id = failure_next.id
+
+            # Save checkpoint with next_node_id
+            self._save_checkpoint(node, state, next_node_id)
+
+            # Check for pause request
+            if self._pause_requested:
+                self._emitter.emit(
+                    "PipelinePaused",
+                    pipeline_name=pipeline_name,
+                    checkpoint_node_id=node.id,
+                )
+                return Outcome(
+                    status=OutcomeStatus.FAIL,
+                    failure_reason="Pipeline paused by user",
+                )
+
+            if next_node_obj is not None:
                 current_node = next_node_obj
                 continue
 
+            # No next node — terminal failure
             if outcome.status in (OutcomeStatus.FAIL, OutcomeStatus.RETRY):
-                failure_next = self._handle_node_failure(node, outcome, state, pipeline_start)
-                if failure_next is not None:
-                    current_node = failure_next
-                    continue
+                pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
+                self._emitter.emit(
+                    "PipelineFailed",
+                    pipeline_name=pipeline_name,
+                    error=outcome.failure_reason or "Stage failed with no outgoing edge",
+                    duration_ms=pipeline_duration_ms,
+                )
                 return outcome
             break
 
         pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
         self._emitter.emit(
             "PipelineCompleted",
-            pipeline_name=self._graph.name,
+            pipeline_name=pipeline_name,
             duration_ms=pipeline_duration_ms,
         )
 
@@ -167,48 +228,46 @@ class PipelineRunner:
                 error=outcome.failure_reason or outcome.notes,
             )
 
+        return outcome
+
+    def _save_checkpoint(self, node: Node, state: _RunState, next_node_id: str) -> None:
         self._emitter.emit(
             "CheckpointSaved",
             node_id=node.id,
             completed_nodes=list(state.completed_nodes),
             context_snapshot=state.context.snapshot(),
             retry_counters=dict(state.retry_counters),
+            next_node_id=next_node_id,
+            visited_outcomes={k: v.value for k, v in state.visited_outcomes.items()},
+            reroute_count=state.reroute_count,
         )
 
-        return outcome
-
-    def _handle_node_failure(
-        self, node: Node, outcome: Outcome, state: _RunState, pipeline_start: float
+    def _find_failure_target(
+        self, node: Node, outcome: Outcome, state: _RunState
     ) -> Node | None:
         failure_target = resolve_failure_target(node, self._graph, outcome, state.context)
         if failure_target is not None:
             target_node = self._graph.get_node(failure_target)
             if target_node is not None:
                 return target_node
-
-        pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
-        self._emitter.emit(
-            "PipelineFailed",
-            pipeline_name=self._graph.name,
-            error=outcome.failure_reason or "Stage failed with no outgoing edge",
-            duration_ms=pipeline_duration_ms,
-        )
         return None
 
     def _check_exit_gates(
-        self, state: _RunState, pipeline_start: float, max_reroutes: int
+        self, state: _RunState, pipeline_start: float, max_reroutes: int, pipeline_name: str = ""
     ) -> tuple[bool, Node | None]:
         """Returns (gates_satisfied, reroute_node). If gates_satisfied is False and reroute_node is None, pipeline should fail."""
         gate_result = check_goal_gates(state.visited_outcomes, self._graph)
         if gate_result.satisfied:
             return True, None
 
+        name = pipeline_name or self._graph.name
+
         if gate_result.reroute_target is not None:
             if state.reroute_count >= max_reroutes:
                 pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
                 self._emitter.emit(
                     "PipelineFailed",
-                    pipeline_name=self._graph.name,
+                    pipeline_name=name,
                     error="Max reroutes exceeded for goal gate enforcement",
                     duration_ms=pipeline_duration_ms,
                 )
@@ -222,7 +281,7 @@ class PipelineRunner:
         pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
         self._emitter.emit(
             "PipelineFailed",
-            pipeline_name=self._graph.name,
+            pipeline_name=name,
             error="Goal gate unsatisfied and no valid reroute target",
             duration_ms=pipeline_duration_ms,
         )

@@ -16,6 +16,8 @@ class PipelineStarted(Event):
     pipeline_name: str
     goal: str = ""
     session_display_id: str = ""
+    dot_file_path: str = ""
+    graph_hash: str = ""
 
 
 class PipelineCompleted(Event):
@@ -70,12 +72,23 @@ class CheckpointSaved(Event):
     completed_nodes: list[str] = Field(default_factory=list)
     context_snapshot: dict[str, Any] = Field(default_factory=dict)
     retry_counters: dict[str, Any] = Field(default_factory=dict)
+    next_node_id: str = ""
+    visited_outcomes: dict[str, str] = Field(default_factory=dict)
+    reroute_count: int = 0
+
+
+class PipelinePaused(Event):
+    event_type: str = "PipelinePaused"
+    pipeline_name: str
+    session_display_id: str = ""
+    checkpoint_node_id: str = ""
 
 
 EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "PipelineStarted": PipelineStarted,
     "PipelineCompleted": PipelineCompleted,
     "PipelineFailed": PipelineFailed,
+    "PipelinePaused": PipelinePaused,
     "StageStarted": StageStarted,
     "StageCompleted": StageCompleted,
     "StageFailed": StageFailed,

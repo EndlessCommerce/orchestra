@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import signal
 import uuid
 from pathlib import Path
 
+import blake3
 import typer
 
 from orchestra.config.settings import load_config
@@ -48,6 +50,10 @@ def run(pipeline: Path) -> None:
     # Transform
     graph = expand_variables(graph)
 
+    # Compute graph hash for resume verification
+    graph_hash = blake3.blake3(pipeline.read_bytes()).hexdigest()
+    dot_file_path = str(pipeline.resolve())
+
     # Connect to CXDB
     client = CxdbClient(config.cxdb.url)
     try:
@@ -87,9 +93,24 @@ def run(pipeline: Path) -> None:
     # Set up handlers
     registry = default_registry()
 
-    # Run pipeline
+    # Run pipeline with SIGINT handling
     runner = PipelineRunner(graph, registry, dispatcher)
-    outcome = runner.run()
+
+    original_handler = signal.getsignal(signal.SIGINT)
+
+    def _sigint_handler(signum: int, frame: object) -> None:
+        typer.echo("\n[Pipeline] Pause requested — completing current node...")
+        runner.request_pause()
+
+    signal.signal(signal.SIGINT, _sigint_handler)
+    try:
+        outcome = runner.run(
+            dot_file_path=dot_file_path,
+            graph_hash=graph_hash,
+            session_display_id=display_id,
+        )
+    finally:
+        signal.signal(signal.SIGINT, original_handler)
 
     typer.echo(f"\nSession: {display_id} (CXDB context: {context_id})")
 

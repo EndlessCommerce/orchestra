@@ -9,6 +9,7 @@ from orchestra.events.types import (
     Event,
     PipelineCompleted,
     PipelineFailed,
+    PipelinePaused,
     PipelineStarted,
     StageCompleted,
     StageFailed,
@@ -34,6 +35,8 @@ class StdoutObserver:
             typer.echo(f"[Pipeline] Completed: {event.pipeline_name} ({event.duration_ms}ms)")
         elif isinstance(event, PipelineFailed):
             typer.echo(f"[Pipeline] FAILED: {event.pipeline_name} — {event.error}")
+        elif isinstance(event, PipelinePaused):
+            typer.echo(f"[Pipeline] Paused: {event.pipeline_name} at {event.checkpoint_node_id}")
         elif isinstance(event, StageStarted):
             typer.echo(f"  [Stage] Started: {event.node_id} ({event.handler_type})")
         elif isinstance(event, StageCompleted):
@@ -54,7 +57,7 @@ class CxdbObserver:
         self._context_id = context_id
 
     def on_event(self, event: Event) -> None:
-        if isinstance(event, (PipelineStarted, PipelineCompleted, PipelineFailed)):
+        if isinstance(event, (PipelineStarted, PipelineCompleted, PipelineFailed, PipelinePaused)):
             self._append_pipeline_lifecycle(event)
         elif isinstance(event, (StageStarted, StageCompleted, StageFailed, StageRetrying)):
             self._append_node_execution(event)
@@ -69,6 +72,8 @@ class CxdbObserver:
                 "goal": event.goal,
                 "status": "started",
                 "session_display_id": event.session_display_id,
+                "dot_file_path": event.dot_file_path,
+                "graph_hash": event.graph_hash,
             }
         elif isinstance(event, PipelineCompleted):
             data = {
@@ -81,6 +86,12 @@ class CxdbObserver:
                 "pipeline_name": event.pipeline_name,
                 "status": "failed",
                 "error": event.error,
+            }
+        elif isinstance(event, PipelinePaused):
+            data = {
+                "pipeline_name": event.pipeline_name,
+                "status": "paused",
+                "session_display_id": event.session_display_id,
             }
 
         type_id = "dev.orchestra.PipelineLifecycle"
@@ -134,11 +145,14 @@ class CxdbObserver:
 
     def _append_checkpoint(self, event: CheckpointSaved) -> None:
         type_id = "dev.orchestra.Checkpoint"
-        data = {
+        data: dict = {
             "current_node": event.node_id,
             "completed_nodes": event.completed_nodes,
             "context_snapshot": event.context_snapshot,
             "retry_counters": event.retry_counters,
+            "next_node_id": event.next_node_id,
+            "visited_outcomes": event.visited_outcomes,
+            "reroute_count": event.reroute_count,
         }
         self._client.append_turn(
             context_id=self._context_id,

@@ -30,6 +30,16 @@ ORCHESTRA_TYPE_BUNDLE: dict[str, Any] = {
                             "type": "string",
                             "optional": True,
                         },
+                        "7": {
+                            "name": "dot_file_path",
+                            "type": "string",
+                            "optional": True,
+                        },
+                        "8": {
+                            "name": "graph_hash",
+                            "type": "string",
+                            "optional": True,
+                        },
                     }
                 }
             }
@@ -63,6 +73,21 @@ ORCHESTRA_TYPE_BUNDLE: dict[str, Any] = {
                         "4": {
                             "name": "retry_counters",
                             "type": "map",
+                            "optional": True,
+                        },
+                        "5": {
+                            "name": "next_node_id",
+                            "type": "string",
+                            "optional": True,
+                        },
+                        "6": {
+                            "name": "visited_outcomes",
+                            "type": "map",
+                            "optional": True,
+                        },
+                        "7": {
+                            "name": "reroute_count",
+                            "type": "u64",
                             "optional": True,
                         },
                     }
