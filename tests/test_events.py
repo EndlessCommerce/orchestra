@@ -9,6 +9,7 @@ from orchestra.events.types import (
     PipelineCompleted,
     PipelineStarted,
     StageCompleted,
+    StageRetrying,
     StageStarted,
 )
 
@@ -56,6 +57,18 @@ def test_stdout_observer_formats_events(capsys) -> None:
     assert "Started: my_pipe" in output
     assert "plan" in output
     assert "Completed" in output
+
+
+def test_stdout_observer_formats_stage_retrying(capsys) -> None:
+    observer = StdoutObserver()
+    observer.on_event(
+        StageRetrying(node_id="flaky_work", attempt=1, max_attempts=3, delay_ms=200)
+    )
+
+    output = capsys.readouterr().out
+    assert "Retrying: flaky_work" in output
+    assert "attempt 1/3" in output
+    assert "delay 200ms" in output
 
 
 def test_cxdb_observer_maps_events() -> None:
@@ -108,3 +121,17 @@ def test_cxdb_observer_maps_events() -> None:
     # PipelineCompleted → PipelineLifecycle (field 3 = status)
     assert calls[4].kwargs["type_id"] == "dev.orchestra.PipelineLifecycle"
     assert calls[4].kwargs["data"][3] == "completed"
+
+
+def test_cxdb_observer_maps_stage_retrying() -> None:
+    mock_client = MagicMock()
+    observer = CxdbObserver(mock_client, context_id="99")
+
+    observer.on_event(
+        StageRetrying(node_id="flaky_work", attempt=2, max_attempts=3, delay_ms=400)
+    )
+
+    assert mock_client.append_turn.call_count == 1
+    call_kwargs = mock_client.append_turn.call_args.kwargs
+    assert call_kwargs["type_id"] == "dev.orchestra.NodeExecution"
+    assert call_kwargs["data"][3] == "retrying"

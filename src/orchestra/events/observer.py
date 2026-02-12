@@ -12,6 +12,7 @@ from orchestra.events.types import (
     PipelineStarted,
     StageCompleted,
     StageFailed,
+    StageRetrying,
     StageStarted,
 )
 
@@ -41,6 +42,8 @@ class StdoutObserver:
                 typer.echo(f"    Response: {event.response}")
         elif isinstance(event, StageFailed):
             typer.echo(f"  [Stage] FAILED: {event.node_id} — {event.error}")
+        elif isinstance(event, StageRetrying):
+            typer.echo(f"  [Stage] Retrying: {event.node_id} (attempt {event.attempt}/{event.max_attempts}, delay {event.delay_ms}ms)")
         elif isinstance(event, CheckpointSaved):
             typer.echo(f"  [Checkpoint] Saved at: {event.node_id}")
 
@@ -53,7 +56,7 @@ class CxdbObserver:
     def on_event(self, event: Event) -> None:
         if isinstance(event, (PipelineStarted, PipelineCompleted, PipelineFailed)):
             self._append_pipeline_lifecycle(event)
-        elif isinstance(event, (StageStarted, StageCompleted, StageFailed)):
+        elif isinstance(event, (StageStarted, StageCompleted, StageFailed, StageRetrying)):
             self._append_node_execution(event)
         elif isinstance(event, CheckpointSaved):
             self._append_checkpoint(event)
@@ -111,6 +114,14 @@ class CxdbObserver:
                 "node_id": event.node_id,
                 "handler_type": event.handler_type,
                 "status": "failed",
+            }
+        elif isinstance(event, StageRetrying):
+            data = {
+                "node_id": event.node_id,
+                "status": "retrying",
+                "attempt": event.attempt,
+                "max_attempts": event.max_attempts,
+                "delay_ms": event.delay_ms,
             }
 
         type_id = "dev.orchestra.NodeExecution"

@@ -5,7 +5,7 @@ digraph test_retry {
     start [shape=Mdiamond]
     exit  [shape=Msquare]
 
-    flaky_work [label="Flaky Work", prompt="Do flaky work", max_retries=2, backoff_policy="standard"]
+    flaky_work [label="Flaky Work", prompt="Do flaky work", max_retries=2, backoff_policy="standard", sim_outcomes="FAIL,FAIL,SUCCESS"]
     done       [label="Done", prompt="Report result"]
 
     start -> flaky_work -> done -> exit
