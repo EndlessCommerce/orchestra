@@ -1,0 +1,29 @@
+content: |
+  Write a design document based on the architecture discussion below.
+
+  Architecture discussion:
+  {{ last_response }}
+
+  Produce a document with these sections:
+
+  # Design Document
+
+  ## Overview
+  (One paragraph describing the system and its purpose)
+
+  ## Requirements
+  (Bulleted list of key functional and non-functional requirements)
+
+  ## Architecture
+  (Description of components, their responsibilities, and how they interact)
+
+  ## Data Flow
+  (How data moves through the system)
+
+  ## Technology Choices
+  (Key technology decisions and rationale)
+
+  ## Open Questions
+  (Unresolved items that need further discussion)
+
+  Keep the document concise — aim for clarity over completeness.

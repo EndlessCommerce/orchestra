@@ -1,0 +1,23 @@
+backend: direct
+
+providers:
+  default: anthropic
+  anthropic:
+    models:
+      smart: claude-sonnet-4-20250514
+      worker: claude-sonnet-4-20250514
+
+agents:
+  brainstorm-agent:
+    role: prompts/roles/creative-collaborator.yaml
+    persona: prompts/personas/brainstorm-partner.yaml
+    personality: prompts/personalities/enthusiastic-explorer.yaml
+    task: prompts/tasks/brainstorm.yaml
+    model: smart
+
+  summarizer:
+    role: prompts/roles/creative-collaborator.yaml
+    persona: prompts/personas/brainstorm-partner.yaml
+    personality: prompts/personalities/concise-organizer.yaml
+    task: prompts/tasks/summarize-brainstorm.yaml
+    model: worker

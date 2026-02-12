@@ -1,0 +1,21 @@
+digraph brainstorm {
+    graph [
+        goal="Brainstorm ideas with the user in a multi-turn conversation, then summarize the results",
+        label="Brainstorm Pipeline"
+    ]
+
+    node [shape=box]
+
+    // ── lifecycle ──────────────────────────────────────────────
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare,  label="Done"]
+
+    // ── interactive brainstorm ────────────────────────────────
+    brainstorm [label="Brainstorm", agent="brainstorm-agent", "agent.mode"="interactive"]
+
+    // ── autonomous summary ────────────────────────────────────
+    summarize [label="Summarize Ideas", agent="summarizer"]
+
+    // ── edges ─────────────────────────────────────────────────
+    start -> brainstorm -> summarize -> exit
+}

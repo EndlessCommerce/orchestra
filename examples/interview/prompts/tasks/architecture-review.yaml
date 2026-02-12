@@ -1,0 +1,17 @@
+content: |
+  Review the requirements gathered in the previous stage and discuss
+  architecture options with the user.
+
+  Requirements from the previous conversation:
+  {{ last_response }}
+
+  Based on these requirements:
+  1. Propose a high-level architecture (components, data flow, key technologies)
+  2. Discuss trade-offs with the user
+  3. Address concerns they raise
+  4. Converge on a design that both of you are comfortable with
+
+  Present your initial proposal, then iterate based on user feedback.
+  When the design is agreed upon, summarize the architecture decision.
+
+  The user will type /done when the architecture review is complete.

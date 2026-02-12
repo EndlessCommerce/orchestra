@@ -1,0 +1,32 @@
+digraph interview {
+    graph [
+        goal="Conduct a multi-stage design interview: gather requirements, review architecture, approve design, and produce documentation",
+        label="Design Interview Pipeline"
+    ]
+
+    node [shape=box]
+
+    // ── lifecycle ──────────────────────────────────────────────
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare,  label="Done"]
+
+    // ── interactive: requirements gathering ───────────────────
+    gather_requirements [label="Gather Requirements", agent="requirements-analyst", "agent.mode"="interactive"]
+
+    // ── interactive: architecture review ──────────────────────
+    architect_review [label="Architecture Review", agent="systems-architect", "agent.mode"="interactive"]
+
+    // ── human approval gate ───────────────────────────────────
+    design_decision [shape=hexagon, label="Approve the design?", "human.default_choice"="a", timeout="900s"]
+
+    // ── autonomous: documentation ─────────────────────────────
+    document [label="Write Design Doc", agent="technical-writer"]
+
+    // ── edges ─────────────────────────────────────────────────
+    start -> gather_requirements -> architect_review -> design_decision
+
+    design_decision -> document [label="[A] Approve"]
+    design_decision -> architect_review [label="[R] Revise"]
+
+    document -> exit
+}

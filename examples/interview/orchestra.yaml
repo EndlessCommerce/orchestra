@@ -1,0 +1,30 @@
+backend: direct
+
+providers:
+  default: anthropic
+  anthropic:
+    models:
+      smart: claude-sonnet-4-20250514
+      worker: claude-sonnet-4-20250514
+
+agents:
+  requirements-analyst:
+    role: prompts/roles/software-consultant.yaml
+    persona: prompts/personas/requirements-analyst.yaml
+    personality: prompts/personalities/patient-interviewer.yaml
+    task: prompts/tasks/gather-requirements.yaml
+    model: smart
+
+  systems-architect:
+    role: prompts/roles/software-consultant.yaml
+    persona: prompts/personas/systems-architect.yaml
+    personality: prompts/personalities/pragmatic-advisor.yaml
+    task: prompts/tasks/architecture-review.yaml
+    model: smart
+
+  technical-writer:
+    role: prompts/roles/software-consultant.yaml
+    persona: prompts/personas/technical-writer.yaml
+    personality: prompts/personalities/concise-organizer.yaml
+    task: prompts/tasks/write-design-doc.yaml
+    model: worker

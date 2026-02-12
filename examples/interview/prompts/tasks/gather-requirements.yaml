@@ -1,0 +1,17 @@
+content: |
+  Conduct a requirements-gathering interview with the user about a
+  system they want to build.
+
+  Start by asking them to describe the system at a high level. Then
+  dig into:
+  - Who are the users and what are the primary use cases?
+  - What are the most important functional requirements?
+  - What are the non-functional requirements (performance, scale, security)?
+  - What constraints exist (timeline, team size, existing infrastructure)?
+  - What does success look like?
+
+  Ask one question at a time. Summarize what you've captured periodically.
+  When you have a clear picture, present a brief requirements summary and
+  ask the user to confirm or correct it.
+
+  The user will type /done when the requirements are complete.

@@ -1,0 +1,20 @@
+content: |
+  Summarize the following brainstorming conversation into a structured
+  document.
+
+  Conversation:
+  {{ last_response }}
+
+  Produce the summary in this format:
+
+  **Topic**: (one-line description of what was brainstormed)
+
+  **Top Ideas**:
+  1. (idea — one sentence each)
+  2. ...
+
+  **Key Themes**: (common threads across ideas)
+
+  **Open Questions**: (unresolved points worth exploring further)
+
+  **Recommended Next Step**: (single most actionable follow-up)
