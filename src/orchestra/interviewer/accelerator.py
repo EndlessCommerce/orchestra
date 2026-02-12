@@ -2,13 +2,8 @@ from __future__ import annotations
 
 import re
 
-# Pattern: [K] Label
 _BRACKET_PATTERN = re.compile(r"^\[(\w)\]\s+(.*)")
-
-# Pattern: K) Label
 _PAREN_PATTERN = re.compile(r"^(\w)\)\s+(.*)")
-
-# Pattern: K - Label  (also handles en-dash)
 _DASH_PATTERN = re.compile(r"^(\w)\s*[-–]\s+(.*)")
 
 

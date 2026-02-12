@@ -56,7 +56,6 @@ class WaitHumanHandler:
 
         answer = self._interviewer.ask(question)
 
-        # Handle timeout
         if answer.value == AnswerValue.TIMEOUT:
             default_choice = node.attributes.get("human.default_choice")
             if default_choice:
@@ -68,14 +67,12 @@ class WaitHumanHandler:
                 failure_reason="human gate timeout, no default",
             )
 
-        # Handle skipped
         if answer.value == AnswerValue.SKIPPED:
             return Outcome(
                 status=OutcomeStatus.FAIL,
                 failure_reason="human skipped interaction",
             )
 
-        # Match answer to choice
         selected = self._find_matching_choice(answer, choices)
         if selected is None:
             selected = choices[0]
@@ -87,17 +84,14 @@ class WaitHumanHandler:
     ) -> _Choice | None:
         value = str(answer.value).strip().upper()
 
-        # Match by key
         for choice in choices:
             if choice.key.upper() == value:
                 return choice
 
-        # Match by label
         for choice in choices:
             if choice.label.strip().upper() == value:
                 return choice
 
-        # Match by selected_option key
         if answer.selected_option is not None:
             for choice in choices:
                 if choice.key.upper() == answer.selected_option.key.upper():

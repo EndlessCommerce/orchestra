@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import threading
 
 from orchestra.interviewer.models import Answer, AnswerValue, Option, Question, QuestionType
@@ -41,17 +40,12 @@ class ConsoleInterviewer:
         return Answer(value=AnswerValue.SKIPPED)
 
     def _ask_yes_no(self, question: Question) -> Answer:
-        print(f"[?] {question.text}", flush=True)
-        response = self._read_input("[Y/N]: ", question.timeout_seconds)
-        if response is None:
-            return self._handle_timeout(question)
-
-        response = response.strip().upper()
-        if response in ("Y", "YES"):
-            return Answer(value=AnswerValue.YES)
-        return Answer(value=AnswerValue.NO)
+        return self._ask_binary(question)
 
     def _ask_confirmation(self, question: Question) -> Answer:
+        return self._ask_binary(question)
+
+    def _ask_binary(self, question: Question) -> Answer:
         print(f"[?] {question.text}", flush=True)
         response = self._read_input("[Y/N]: ", question.timeout_seconds)
         if response is None:

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from orchestra.handlers.prompt_helper import compose_node_prompt
-from orchestra.interviewer.models import Answer, AnswerValue, Question, QuestionType
+from orchestra.interviewer.models import Question, QuestionType
 from orchestra.models.outcome import Outcome, OutcomeStatus
 
 if TYPE_CHECKING:
@@ -32,11 +32,9 @@ class InteractiveHandler:
         prompt = compose_node_prompt(node, context, self._config)
         history: list[dict[str, str]] = list(context.get("interactive.history", []))
 
-        # Resume case: replay prior conversation
         if history:
             self._replay_history(node, context, history)
 
-        # First agent turn
         response = self._backend.send_message(node, prompt, context)
         if isinstance(response, Outcome):
             return response
@@ -52,7 +50,6 @@ class InteractiveHandler:
 
             human_text = answer.text or str(answer.value)
 
-            # Check commands
             command = human_text.strip().lower()
             if command in _DONE_COMMANDS:
                 history.append({"agent": agent_text, "human": human_text})
@@ -69,7 +66,6 @@ class InteractiveHandler:
 
             history.append({"agent": agent_text, "human": human_text})
 
-            # Next agent turn
             response = self._backend.send_message(node, human_text, context)
             if isinstance(response, Outcome):
                 self._backend.reset_conversation()
@@ -99,7 +95,6 @@ class InteractiveHandler:
             self._interviewer.inform(
                 f"[resumed] You: {entry.get('human', '')}", stage=node.id
             )
-            # Replay messages to rebuild backend conversation state
             self._backend.send_message(node, entry.get("agent", ""), context)
             human_msg = entry.get("human", "")
             if human_msg:
