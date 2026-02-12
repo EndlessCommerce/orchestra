@@ -44,15 +44,15 @@
   - [x] Write tests in `tests/test_goal_gates.py`: gate satisfied (exit normally), gate unsatisfied with retry_target (reroute), gate unsatisfied with graph-level retry_target (fallback), gate unsatisfied no target (pipeline fails), partial success satisfies gate (5 tests per plan)
   - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Refactor PipelineRunner.run() into extracted methods
-  - [ ] Extract `_execute_node()` — handles a single node: get handler, emit StageStarted, call execute_with_retry, update context, emit StageCompleted/StageFailed, emit CheckpointSaved
-  - [ ] Extract `_handle_node_failure()` — calls failure routing, returns next node or None
-  - [ ] Extract `_check_exit_gates()` — calls goal gate enforcement at exit, returns next node or None
-  - [ ] Track `visited_outcomes: dict[str, OutcomeStatus]` for goal gate checking
-  - [ ] Track `retry_counters: dict[str, int]` for checkpoint state
-  - [ ] Track `reroute_count: int` for cycle protection
-  - [ ] Verify all 68 existing Stage 1 tests still pass after refactoring
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Refactor PipelineRunner.run() into extracted methods
+  - [x] Extract `_execute_node()` — handles a single node: get handler, emit StageStarted, call execute_with_retry, update context, emit StageCompleted/StageFailed, emit CheckpointSaved
+  - [x] Extract `_handle_node_failure()` — calls failure routing, returns next node or None
+  - [x] Extract `_check_exit_gates()` — calls goal gate enforcement at exit, returns next node or None
+  - [x] Track `visited_outcomes: dict[str, OutcomeStatus]` for goal gate checking
+  - [x] Track `retry_counters: dict[str, int]` for checkpoint state
+  - [x] Track `reroute_count: int` for cycle protection
+  - [x] Verify all 68 existing Stage 1 tests still pass after refactoring
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Add test fixtures for manual testing
   - [ ] Create `tests/fixtures/test-branching.dot` — the conditional branching pipeline from the Stage 2a plan (start → do_work → gate → success/failure → exit)
