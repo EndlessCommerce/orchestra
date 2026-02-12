@@ -320,12 +320,12 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 7: CodergenHandler Adapter and SimulationBackend
 
-- [ ] Refactor SimulationCodergenHandler into SimulationBackend + CodergenHandler
-    - [ ] Create `src/orchestra/backends/simulation.py`:
+- [x] Refactor SimulationCodergenHandler into SimulationBackend + CodergenHandler
+    - [x] Create `src/orchestra/backends/simulation.py`:
         - `SimulationBackend` implementing `CodergenBackend` protocol
         - Same behavior as current `SimulationCodergenHandler` but returns `str` or `Outcome`
         - Accepts `outcome_sequences` like the current handler
-    - [ ] Create `src/orchestra/handlers/codergen_handler.py`:
+    - [x] Create `src/orchestra/handlers/codergen_handler.py`:
         - `CodergenHandler` implementing `NodeHandler` protocol
         - Constructor: `__init__(backend, prompt_engine, model_resolver, config)`
         - `handle(node, context, graph) -> Outcome`:
@@ -335,9 +335,9 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
             4. Convert `str` result to `Outcome(status=SUCCESS, notes=str, context_updates={"last_response": str})`
             5. Pass through `Outcome` results directly
             6. Write `prompt.md` and `response.md` to stage logs directory
-    - [ ] Update `src/orchestra/handlers/codergen.py` — keep `SimulationCodergenHandler` as a thin wrapper or alias for backwards compatibility during transition, then remove
-    - [ ] Update `src/orchestra/handlers/registry.py` — `default_registry()` registers `CodergenHandler(backend=SimulationBackend())` for shape `"box"`
-    - [ ] Write tests in `tests/test_codergen_handler.py`:
+    - [x] Update `src/orchestra/handlers/codergen.py` — keep `SimulationCodergenHandler` as a thin wrapper or alias for backwards compatibility during transition, then remove
+    - [x] Update `src/orchestra/handlers/registry.py` — `default_registry()` registers `CodergenHandler(backend=SimulationBackend())` for shape `"box"`
+    - [x] Write tests in `tests/test_codergen_handler.py`:
         - Handler wraps backend: calls `backend.run()` and returns Outcome
         - String to Outcome conversion: backend returns str → handler wraps in Outcome
         - Backend returns Outcome: passes through directly
@@ -345,8 +345,8 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
         - Model resolution integration: handler resolves model and passes to backend
         - Writes prompt.md and response.md to logs directory
         - SimulationBackend compatibility: same results as old SimulationCodergenHandler
-    - [ ] Run full test suite — verify all 137 existing tests pass unchanged
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Run full test suite — verify all 137 existing tests pass unchanged
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 8: DirectLLMBackend
 
