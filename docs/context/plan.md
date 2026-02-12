@@ -9,11 +9,11 @@
   - [x] Write tests in `tests/test_conditions.py`: parse `outcome=success`, `outcome!=success`, `context.key=value`, `&&` conjunction, missing context key, empty condition, invalid syntax (7 tests per plan)
   - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Extend edge selection with steps 1-3 (condition match, preferred label, suggested next IDs)
-  - [ ] Update `src/orchestra/engine/edge_selection.py` to implement the full 5-step algorithm: (1) evaluate condition expressions on edges, select first matching conditional edge; (2) if outcome has preferred_label, find edge with matching label after normalization (lowercase, trim, strip accelerator prefixes like `[Y] `, `Y) `, `Y - `); (3) if outcome has suggested_next_ids, find edge whose target is in the list; (4) highest weight among unconditional edges; (5) lexical tiebreak
-  - [ ] Update existing edge selection test `test_unconditional_preferred_over_conditional` — the semantics change: with condition evaluation, conditional edges that *match* now win over unconditional edges (Step 1 beats Step 4). This test used invalid condition syntax (`outcome == success` with spaces), so it should be updated to use valid syntax and test the correct behavior.
-  - [ ] Write tests in `tests/test_edge_selection.py`: condition match wins, preferred label match, label normalization (`[Y] Yes` → `yes`), suggested next IDs, full priority chain (all 5 steps in one graph). Keep existing weight tiebreak, lexical tiebreak, and no-edges tests.
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Extend edge selection with steps 1-3 (condition match, preferred label, suggested next IDs)
+  - [x] Update `src/orchestra/engine/edge_selection.py` to implement the full 5-step algorithm: (1) evaluate condition expressions on edges, select first matching conditional edge; (2) if outcome has preferred_label, find edge with matching label after normalization (lowercase, trim, strip accelerator prefixes like `[Y] `, `Y) `, `Y - `); (3) if outcome has suggested_next_ids, find edge whose target is in the list; (4) highest weight among unconditional edges; (5) lexical tiebreak
+  - [x] Update existing edge selection test `test_unconditional_preferred_over_conditional` — the semantics change: with condition evaluation, conditional edges that *match* now win over unconditional edges (Step 1 beats Step 4). This test used invalid condition syntax (`outcome == success` with spaces), so it should be updated to use valid syntax and test the correct behavior.
+  - [x] Write tests in `tests/test_edge_selection.py`: condition match wins, preferred label match, label normalization (`[Y] Yes` → `yes`), suggested next IDs, full priority chain (all 5 steps in one graph). Keep existing weight tiebreak, lexical tiebreak, and no-edges tests.
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Add conditional (diamond) handler
   - [ ] Create `src/orchestra/handlers/conditional.py` — no-op handler for `shape=diamond` nodes. Returns SUCCESS (routing is handled by edge selection, not the handler).
