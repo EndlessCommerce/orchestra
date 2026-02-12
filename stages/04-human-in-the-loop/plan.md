@@ -244,13 +244,13 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 3: Accelerator Key Parsing
 
-- [ ] Create `src/orchestra/interviewer/accelerator.py` with shared accelerator parsing
+- [x] Create `src/orchestra/interviewer/accelerator.py` with shared accelerator parsing
     - `parse_accelerator(label: str) -> tuple[str, str]` returning `(key, clean_label)`
     - Handle all 4 patterns: `[K] Label`, `K) Label`, `K - Label`, first character fallback
     - Edge labels with no text → use edge `to_node` as fallback label
     - Mark TODO complete and commit the changes to git
 
-- [ ] Refactor `src/orchestra/engine/edge_selection.py` to use shared `parse_accelerator`
+- [x] Refactor `src/orchestra/engine/edge_selection.py` to use shared `parse_accelerator`
     - Replace `_ACCELERATOR_PREFIX` regex with import from `interviewer.accelerator`
     - `_normalize_label` calls `parse_accelerator(label)` and returns the clean_label lowercased
     - Verify existing edge selection tests still pass

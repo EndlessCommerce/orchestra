@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import re
-
 from orchestra.conditions.evaluator import ConditionParseError, evaluate_condition
+from orchestra.interviewer.accelerator import parse_accelerator
 from orchestra.models.context import Context
 from orchestra.models.graph import Edge, PipelineGraph
 from orchestra.models.outcome import Outcome
 
-_ACCELERATOR_PREFIX = re.compile(r"^\[?\w\]?\s*[-–)]\s*|^\[\w\]\s+")
-
 
 def _normalize_label(label: str) -> str:
-    normalized = _ACCELERATOR_PREFIX.sub("", label)
-    return normalized.strip().lower()
+    _key, clean_label = parse_accelerator(label)
+    return clean_label.strip().lower()
 
 
 def select_edge(
