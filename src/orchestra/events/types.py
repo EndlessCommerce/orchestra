@@ -107,6 +107,36 @@ class HumanInteraction(Event):
     selected_option_key: str = ""
 
 
+class ParallelStarted(Event):
+    event_type: str = "ParallelStarted"
+    node_id: str
+    branch_count: int = 0
+
+
+class ParallelBranchStarted(Event):
+    event_type: str = "ParallelBranchStarted"
+    node_id: str
+    branch_id: str = ""
+    first_node_id: str = ""
+
+
+class ParallelBranchCompleted(Event):
+    event_type: str = "ParallelBranchCompleted"
+    node_id: str
+    branch_id: str = ""
+    status: str = ""
+    duration_ms: int = 0
+    failure_reason: str = ""
+
+
+class ParallelCompleted(Event):
+    event_type: str = "ParallelCompleted"
+    node_id: str
+    success_count: int = 0
+    failure_count: int = 0
+    duration_ms: int = 0
+
+
 EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "PipelineStarted": PipelineStarted,
     "PipelineCompleted": PipelineCompleted,
@@ -119,4 +149,8 @@ EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "CheckpointSaved": CheckpointSaved,
     "AgentTurnCompleted": AgentTurnCompleted,
     "HumanInteraction": HumanInteraction,
+    "ParallelStarted": ParallelStarted,
+    "ParallelBranchStarted": ParallelBranchStarted,
+    "ParallelBranchCompleted": ParallelBranchCompleted,
+    "ParallelCompleted": ParallelCompleted,
 }

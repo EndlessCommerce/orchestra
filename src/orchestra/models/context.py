@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 
@@ -15,3 +16,8 @@ class Context:
 
     def snapshot(self) -> dict[str, Any]:
         return dict(self._data)
+
+    def clone(self) -> Context:
+        new_ctx = Context()
+        new_ctx._data = copy.deepcopy(self._data)
+        return new_ctx
