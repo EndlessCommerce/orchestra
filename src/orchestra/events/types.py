@@ -97,6 +97,16 @@ class AgentTurnCompleted(Event):
     agent_state: str = ""
 
 
+class HumanInteraction(Event):
+    event_type: str = "HumanInteraction"
+    node_id: str
+    question_text: str = ""
+    question_type: str = ""
+    answer_value: str = ""
+    answer_text: str = ""
+    selected_option_key: str = ""
+
+
 EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "PipelineStarted": PipelineStarted,
     "PipelineCompleted": PipelineCompleted,
@@ -108,4 +118,5 @@ EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "StageRetrying": StageRetrying,
     "CheckpointSaved": CheckpointSaved,
     "AgentTurnCompleted": AgentTurnCompleted,
+    "HumanInteraction": HumanInteraction,
 }

@@ -281,7 +281,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 5: HumanInteraction Event
 
-- [ ] Add `HumanInteraction` event to `src/orchestra/events/types.py`
+- [x] Add `HumanInteraction` event to `src/orchestra/events/types.py`
     - Fields: `node_id: str`, `question_text: str`, `question_type: str`, `answer_value: str`, `answer_text: str`, `selected_option_key: str`
     - Add to `EVENT_TYPE_MAP`
     - Mark TODO complete and commit the changes to git
