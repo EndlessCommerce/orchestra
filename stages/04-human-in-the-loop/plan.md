@@ -440,7 +440,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 15: Verify All Specs Pass
 
-- [ ] Identify all specs that need to be run and updated
+- [x] Identify all specs that need to be run and updated
     - Run full test suite: `pytest tests/ -v`
     - Run new tests in isolation: `pytest tests/test_interviewer.py tests/test_accelerator.py tests/test_wait_human_handler.py tests/test_interactive_mode.py tests/test_human_e2e.py -v`
     - Run existing tests that may be affected: `pytest tests/test_edge_selection.py tests/test_engine.py tests/test_execution.py tests/test_codergen_handler.py -v`
