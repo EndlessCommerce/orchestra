@@ -110,11 +110,34 @@ decision_points:
     tradeoffs:
       - "Full checkpoint (same as node completion): consistent, enables resume mid-conversation, but each turn creates a CXDB entry"
       - "Lightweight turn log (events only, no full state snapshot): less overhead but resume would need to replay from last full checkpoint"
+      - "Context-based resume: store conversation history in context.context_updates, checkpoint at node completion. On resume, handler detects history and replays."
     recommendation:
-      text: "Full checkpoint after each human turn. The plan explicitly requires 'resume mid-conversation' which needs full state snapshots. The overhead is acceptable since human turns are infrequent."
+      text: "Context-based resume. Store conversation history in context. Checkpoint at node completion. On resume, handler reads history from context, replays it via backend, and shows to user."
       confidence: 4/5
-    needs_context:
-      - "What state needs to be captured for conversation resume — just the message history, or the full backend state?"
+    needs_context: []
+    decision: "RESOLVED — Context-based resume. Store history in context. One checkpoint at node completion. Handler replays on resume."
+
+  - id: interactive-handler-design
+    question: Should interactive mode extend CodergenHandler or be a separate handler?
+    tradeoffs:
+      - "Extend CodergenHandler: fewer classes, shared prompt logic, but mixes responsibilities"
+      - "Separate InteractiveHandler + CodergenDispatcher: clean separation, each handler does one thing, dispatcher routes by attribute"
+    recommendation:
+      text: "Separate InteractiveHandler + CodergenDispatcher. Extract shared prompt logic to a helper."
+      confidence: 4/5
+    needs_context: []
+    decision: "RESOLVED — Separate InteractiveHandler + CodergenDispatcher. Shared prompt helper extracted."
+
+  - id: backend-multi-turn
+    question: How should interactive mode handle multi-turn conversation with the backend?
+    tradeoffs:
+      - "Accumulate in prompt: serialize history into prompt string, call run() each turn. Simple but inefficient."
+      - "New ConversationalBackend protocol: add send_message()/reset_conversation() alongside run(). Cleaner, backends maintain real conversation state."
+    recommendation:
+      text: "New ConversationalBackend protocol. Non-breaking addition to existing backends."
+      confidence: 4/5
+    needs_context: []
+    decision: "RESOLVED — New ConversationalBackend protocol with send_message() and reset_conversation(). Existing run() unchanged."
 </decision-points>
 
 ---

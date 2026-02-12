@@ -175,8 +175,8 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 - [ ] AutoApproveInterviewer works for CI/automation (no stdin required)
 - [ ] QueueInterviewer enables deterministic testing with pre-filled answers
 - [ ] RecordingInterviewer captures all Q&A pairs for audit
-- [ ] Chat-style interactive mode supports multi-turn human-agent conversation
-- [ ] Interactive mode checkpoints after each human turn, enabling resume mid-conversation
+- [ ] Chat-style interactive mode supports multi-turn human-agent conversation via ConversationalBackend protocol
+- [ ] Interactive mode stores conversation history in context, enabling resume from node start with history replay
 - [ ] Timeout handling works with and without default choices
 - [ ] A human can make decisions at gates and collaborate interactively with agents
 - [ ] All automated tests pass using QueueInterviewer and AutoApproveInterviewer
@@ -286,27 +286,59 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
     - Add to `EVENT_TYPE_MAP`
     - Mark TODO complete and commit the changes to git
 
-### Phase 6: Interactive Mode
+### Phase 6a: Multi-Turn Backend Protocol
 
-- [ ] Extend `CodergenHandler` to support interactive mode
-    - In `handle()`, check `node.attributes.get("agent.mode") == "interactive"` or `node.attributes.get("agent", {})` mode field
-    - If interactive: delegate to `_handle_interactive(node, context, graph)` method
-    - Interactive mode requires an `Interviewer` — add optional `interviewer` param to `CodergenHandler.__init__`
+- [ ] Define `ConversationalBackend` protocol in `src/orchestra/backends/protocol.py`
+    - New protocol alongside existing `CodergenBackend` (non-breaking):
+        - `send_message(node, message, context, on_turn=None) -> str | Outcome` — send a single message in an ongoing conversation
+        - `reset_conversation() -> None` — clear conversation state
+    - `CodergenBackend` remains unchanged — single-shot `run()` still works for non-interactive nodes
     - Mark TODO complete and commit the changes to git
 
-- [ ] Implement `_handle_interactive` chat loop in `CodergenHandler`
-    - Loop:
-        1. Call `backend.run(node, prompt, context, on_turn)` to get agent response
-        2. Use `interviewer.ask(Question(text=agent_response, type=FREEFORM, stage=node.id))` for human turn
-        3. Check for commands: `/done` → break with SUCCESS, `/approve` → break with SUCCESS, `/reject` → break with FAIL
-        4. Append human response to prompt/context for next backend call
-        5. Store conversation history in context under `interactive.history`
-    - Return final `Outcome` with full conversation as `notes`
+- [ ] Implement `ConversationalBackend` on existing backends
+    - **SimulationBackend**: `send_message()` returns canned responses (same as `run()`)
+    - **DirectLLMBackend**: Accumulate `HumanMessage`/`AIMessage` list across calls to `send_message()`. Each call appends the human message and invokes the LLM with the full history. `reset_conversation()` clears the message list.
+    - **LangGraphBackend**: Accumulate messages in the agent's message history. Each `send_message()` invokes the agent with the new message appended. `reset_conversation()` creates a fresh agent.
+    - **CLIAgentBackend**: Accumulate conversation history as formatted text. Each `send_message()` passes the full history as stdin. `reset_conversation()` clears history.
+    - Existing `run()` method is unchanged — it remains the single-shot entry point
     - Mark TODO complete and commit the changes to git
 
-- [ ] Wire interviewer into `CodergenHandler` via `default_registry`
-    - Pass `interviewer` to `CodergenHandler` constructor alongside `backend` and `config`
-    - In `default_registry()`, pass interviewer to CodergenHandler when provided
+### Phase 6b: InteractiveHandler and Dispatcher
+
+- [ ] Create `src/orchestra/handlers/interactive.py` — InteractiveHandler
+    - Constructor takes `backend: ConversationalBackend`, `interviewer: Interviewer`, `config: OrchestraConfig | None`
+    - `handle(node, context, graph) -> Outcome`:
+        1. Compose initial prompt (reuse prompt composition logic extracted to shared helper)
+        2. Check `context.get("interactive.history")` for resume case — if history exists, replay it via `backend.send_message()` for each prior turn, then `interviewer.inform()` to show the user what happened
+        3. Call `backend.send_message(node, prompt, context)` for first agent response
+        4. Loop:
+            a. Present agent response via `interviewer.ask(Question(text=response, type=FREEFORM, stage=node.id))`
+            b. Check for commands: `/done` → break SUCCESS, `/approve` → break SUCCESS, `/reject` → break FAIL
+            c. Append `{"agent": response, "human": answer.text}` to history list
+            d. Call `backend.send_message(node, answer.text, context)` for next agent response
+        5. Store history: `context_updates={"interactive.history": history}`
+        6. Call `backend.reset_conversation()`
+    - Return `Outcome(status=..., notes=full_conversation, context_updates=...)`
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Extract shared prompt composition helper from `CodergenHandler`
+    - Create `src/orchestra/handlers/prompt_helper.py` (or similar)
+    - Extract `_get_agent_config()` and prompt composition logic used by both CodergenHandler and InteractiveHandler
+    - Update CodergenHandler to use the shared helper
+    - Verify existing CodergenHandler tests still pass
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Create `CodergenDispatcher` in `src/orchestra/handlers/codergen_dispatcher.py`
+    - Constructor takes `standard: CodergenHandler`, `interactive: InteractiveHandler`
+    - `handle(node, context, graph) -> Outcome`:
+        - If `node.attributes.get("agent.mode") == "interactive"`: delegate to `interactive.handle()`
+        - Otherwise: delegate to `standard.handle()`
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Wire dispatcher into `src/orchestra/handlers/registry.py`
+    - Update `default_registry()`: when both backend and interviewer are provided, create `CodergenDispatcher(CodergenHandler(...), InteractiveHandler(...))`
+    - Register the dispatcher for shape `"box"`
+    - When interviewer is None, fall back to plain `CodergenHandler` (no interactive support)
     - Mark TODO complete and commit the changes to git
 
 ### Phase 7: CLI Integration
@@ -363,14 +395,28 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
     - All tests use `QueueInterviewer` for deterministic answers
     - Mark TODO complete and commit the changes to git
 
-### Phase 12: Interactive Mode Tests
+### Phase 12: Interactive Mode and Dispatcher Tests
 
-- [ ] Write `tests/test_interactive_mode.py` — unit tests for interactive mode
+- [ ] Write `tests/test_conversational_backend.py` — unit tests for ConversationalBackend protocol
+    - SimulationBackend: `send_message()` returns canned responses, `reset_conversation()` is no-op
+    - DirectLLMBackend: message history accumulates across `send_message()` calls, `reset_conversation()` clears it
+    - LangGraphBackend: messages accumulate, agent receives full history on each call
+    - CLIAgentBackend: conversation formatted as text, subprocess receives full history
+    - All backends: `run()` still works unchanged (non-breaking)
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Write `tests/test_interactive_handler.py` — unit tests for InteractiveHandler
     - Multi-turn exchange: agent sends → human responds → agent sends → human `/done` → SUCCESS
     - `/approve` command → SUCCESS outcome
     - `/reject` command → FAIL outcome
-    - Conversation history stored in context
+    - Conversation history stored in `outcome.context_updates["interactive.history"]`
+    - Resume: pre-populate `context` with `interactive.history` → handler replays history and continues
     - Use `QueueInterviewer` for deterministic human responses and `SimulationBackend` for agent responses
+    - Mark TODO complete and commit the changes to git
+
+- [ ] Write `tests/test_codergen_dispatcher.py` — unit tests for CodergenDispatcher
+    - Node without `agent.mode` → delegates to standard CodergenHandler
+    - Node with `agent.mode="interactive"` → delegates to InteractiveHandler
     - Mark TODO complete and commit the changes to git
 
 ### Phase 13: End-to-End Integration Tests
