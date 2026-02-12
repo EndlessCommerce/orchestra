@@ -1,0 +1,17 @@
+digraph test_human_gate {
+    graph [goal="Test human decision gate"]
+
+    start [shape=Mdiamond]
+    exit  [shape=Msquare]
+
+    do_work     [shape=box, label="Do Work", prompt="Generate a plan"]
+    review_gate [shape=hexagon, label="Review the plan"]
+    apply       [shape=box, label="Apply", prompt="Apply the plan"]
+    revise      [shape=box, label="Revise", prompt="Revise the plan"]
+
+    start -> do_work -> review_gate
+    review_gate -> apply  [label="[A] Approve"]
+    review_gate -> revise [label="[R] Reject"]
+    apply -> exit
+    revise -> review_gate
+}

@@ -1,0 +1,20 @@
+digraph test_multiple_gates {
+    graph [goal="Test multiple human gates"]
+
+    start [shape=Mdiamond]
+    exit  [shape=Msquare]
+
+    step1  [shape=box, label="Step 1", prompt="First step"]
+    gate1  [shape=hexagon, label="Gate 1"]
+    step2  [shape=box, label="Step 2", prompt="Second step"]
+    gate2  [shape=hexagon, label="Gate 2"]
+    finish [shape=box, label="Finish", prompt="Finalize"]
+
+    start -> step1 -> gate1
+    gate1 -> step2  [label="[C] Continue"]
+    gate1 -> exit   [label="[S] Stop"]
+    step2 -> gate2
+    gate2 -> finish [label="[C] Continue"]
+    gate2 -> exit   [label="[S] Stop"]
+    finish -> exit
+}

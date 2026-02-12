@@ -1,0 +1,11 @@
+digraph test_interactive {
+    graph [goal="Test interactive mode"]
+
+    start [shape=Mdiamond]
+    exit  [shape=Msquare]
+
+    collaborate [shape=box, label="Collaborate", prompt="Help the user with their task", "agent.mode"="interactive"]
+    summarize   [shape=box, label="Summarize", prompt="Summarize what was done"]
+
+    start -> collaborate -> summarize -> exit
+}

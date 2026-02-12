@@ -356,7 +356,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 8: Test Fixtures
 
-- [ ] Create DOT fixture files for human-in-the-loop tests
+- [x] Create DOT fixture files for human-in-the-loop tests
     - `tests/fixtures/test-human-gate.dot` — start → work → hexagon gate → [approve/reject] → exit/retry
     - `tests/fixtures/test-multiple-gates.dot` — pipeline with 2 sequential human gates
     - `tests/fixtures/test-interactive.dot` — pipeline with codergen node using `agent.mode="interactive"`
