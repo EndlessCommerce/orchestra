@@ -215,27 +215,27 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 3: Tool Registry
 
-- [ ] Implement the agent-level tool registry
-    - [ ] Create `src/orchestra/tools/__init__.py`
-    - [ ] Create `src/orchestra/tools/registry.py`:
+- [x] Implement the agent-level tool registry
+    - [x] Create `src/orchestra/tools/__init__.py`
+    - [x] Create `src/orchestra/tools/registry.py`:
         - `ToolRegistry` class with `register(name, fn, description)` and `@register()` decorator
         - `get(name) -> Tool` and `get_tools(names: list[str]) -> list[Tool]`
         - `Tool` dataclass: `name`, `description`, `fn`, `schema` (for LangChain compatibility)
-    - [ ] Create `src/orchestra/tools/builtins.py`:
+    - [x] Create `src/orchestra/tools/builtins.py`:
         - Built-in tools: `read-file`, `write-file`, `edit-file`, `search-code`, `shell`
         - Each tool is a function that takes appropriate args and returns a string result
         - `write-file` and `edit-file` accept an optional `WriteTracker` and call `record()` on modification
-    - [ ] Create `src/orchestra/tools/yaml_tools.py`:
+    - [x] Create `src/orchestra/tools/yaml_tools.py`:
         - Load tool definitions from `orchestra.yaml` `tools` section
         - Shell command tools: name + command template → registered tool that runs subprocess
-    - [ ] Write tests in `tests/test_tool_registry.py`:
+    - [x] Write tests in `tests/test_tool_registry.py`:
         - Register builtin tool via decorator → available by name
         - Register custom tool → registered and callable
         - YAML shell tool → registered and callable (mock subprocess)
         - Agent tool resolution — `tools: [read-file, search-code]` → correct tools assembled
         - Agent tool restriction — only listed tools available
         - Unknown tool name → clear error
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 4: File Discovery
 
