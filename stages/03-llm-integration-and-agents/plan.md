@@ -22,22 +22,26 @@ Replace simulation mode with real LLM execution. Implement the CodergenBackend i
 
 ### Included
 
-- **CodergenBackend Interface.** `run(node, prompt, context, on_turn) -> str | Outcome` protocol. The pipeline engine calls this interface and passes an `on_turn` callback. Backends that support turn-level visibility invoke `on_turn` after each agent loop turn with an `AgentTurn` containing messages, tool calls, files written, token usage, and serialized agent state.
-- **AgentTurn Data Model.** Dataclass emitted by backends after each turn: `turn_number`, `model`, `provider`, `messages`, `tool_calls`, `files_written`, `token_usage`, `agent_state`. The workspace layer (Stage 6) hooks into this for per-turn commits and CXDB recording.
+- **CodergenBackend Interface.** `run(node, prompt, context, on_turn=None) -> str | Outcome` protocol. This extends the attractor spec's `CodergenBackend` interface (Section 4.5) by adding an optional `on_turn` callback parameter. The pipeline engine calls this interface and passes an `on_turn` callback. Backends that support turn-level visibility invoke `on_turn` after each agent loop turn with an `AgentTurn` containing messages, tool calls, files written, token usage, and serialized agent state. Backends that don't support turn-level visibility (DirectLLM, CLI) ignore the callback. When a backend returns a bare `str`, the `CodergenHandler` wraps it in an `Outcome(status=SUCCESS, notes=response_text, context_updates={"last_response": response_text})`.
+- **CodergenHandler Adapter Layer.** The existing `NodeHandler` protocol (`handle(node, context, graph) -> Outcome`) is preserved. `CodergenHandler` implements `NodeHandler` and wraps a `CodergenBackend`. It is responsible for: (1) composing the prompt via the prompt engine, (2) resolving the model via the resolution chain, (3) calling `backend.run(node, prompt, context, on_turn)`, (4) converting `str` results to `Outcome`, (5) writing `prompt.md` and `response.md` to the stage logs directory. The `SimulationCodergenHandler` is retained as `SimulationBackend` — a `CodergenBackend` implementation that returns simulated responses, usable for dry-runs and all existing tests.
+- **Handler Registry Changes.** `default_registry()` registers `CodergenHandler(backend=SimulationBackend())` for shape `"box"` by default. When `orchestra.yaml` specifies a real backend, the CLI commands construct the appropriate backend and pass it to `CodergenHandler`. The `PipelineRunner` and `_execute_node()` method are unchanged — they continue to call `handler.handle(node, context, graph)`.
+- **AgentTurn Data Model.** Dataclass emitted by backends after each turn: `turn_number`, `model`, `provider`, `messages`, `tool_calls`, `files_written`, `token_usage`, `agent_state`. The workspace layer (Stage 6) hooks into this for per-turn commits. A new CXDB turn type `dev.orchestra.AgentTurn` is registered for persisting agent turn data.
 - **WriteTracker.** Tracks file modifications made by tools within each agent turn. Write tools (write-file, edit-file) call `write_tracker.record(path)` after every modification. `flush()` returns the tracked paths and resets for the next turn. The `@modifies_files` decorator auto-records paths for custom tools.
 - **DirectLLMBackend.** Single LLM API call with no tool use. Suitable for analysis, review, and synthesis nodes. Uses LangChain chat model. Does not invoke `on_turn`.
 - **LangGraphBackend.** LangGraph ReAct agent for within-node agentic execution with tools (read_file, edit_file, shell, grep, glob, plus agent-configured additions). Streams execution turn-by-turn, invokes `on_turn` after each turn with write-tracked files and agent state. This is the primary backend.
-- **CLIAgentBackend.** Spawns CLI coding agents (Claude Code, Codex, Gemini CLI) as subprocesses. Captures stdout as the response. Does not invoke `on_turn` — the workspace layer falls back to `git status` at node completion.
+- **CLIAgentBackend.** Spawns CLI coding agents (Claude Code, Codex, Gemini CLI) as subprocesses. Passes prompt via stdin and context as JSON on a temp file (path provided via `--context-file` flag or `ORCHESTRA_CONTEXT_FILE` env var). Captures stdout as the response. Does not invoke `on_turn` — the workspace layer falls back to `git status` at node completion.
 - **Backend Selection.** Configurable at global level in `orchestra.yaml`, per-pipeline, and (future) per-node.
 - **Provider Configuration.** `orchestra.yaml` providers section: default provider, per-provider model maps with semantic tiers (smart/worker/cheap), provider-specific settings (max_tokens, api_base).
 - **Provider Alias Resolution.** `llm_model: smart` + `llm_provider: anthropic` → `claude-opus-4-20250514`. Unknown aliases pass through as literal model strings.
-- **Model Stylesheet Application.** Parse the CSS-like `model_stylesheet` graph attribute. Apply rules by specificity (ID > class > universal). Set `llm_model`, `llm_provider`, `reasoning_effort` on nodes that don't have explicit overrides.
+- **Model Stylesheet Application.** Parse the CSS-like `model_stylesheet` graph attribute per attractor spec Section 8. Apply rules by specificity (ID > class > universal). Set `llm_model`, `llm_provider`, `reasoning_effort` on nodes that don't have explicit overrides. Implemented as a graph transform (applied after parsing, before validation).
 - **Model Resolution Precedence.** Explicit node attribute > stylesheet rule (by specificity) > agent config model > graph-level default > provider default.
-- **Prompt Composition Engine.** Four layers from YAML files: role (system prompt), persona (modifiers), personality (modifiers), task (Jinja2 template). Layers concatenated in order. Task layer uses Jinja2 for variable interpolation (`{{pr_diff}}`, etc.).
+- **Prompt Composition Engine.** Four layers from YAML files: role (system prompt), persona (modifiers), personality (modifiers), task (Jinja2 template). Layers concatenated in order. Task layer uses Jinja2 for variable interpolation (`{{pr_diff}}`, etc.). Note: `$goal` expansion in DOT `prompt` attributes uses the existing variable expansion transform (simple string replacement). Jinja2 is used only in the task layer YAML files, which are a separate composition system. The two template syntaxes serve different scopes and do not overlap.
 - **File Discovery.** Three-level resolution: pipeline-relative → project config paths → `~/.orchestra/`. Stops at first match.
 - **Agent Configuration.** `agents` section in `orchestra.yaml`: per-agent role, persona, personality, task, tools. Node-level `agent` attribute references config by name. Inline agent attributes (`agent.role`, `agent.persona`, etc.) as alternatives.
-- **Agent-Level Tool Registry.** Decorator-based registration (`@tool_registry.register()`). Built-in tools (read-file, write-file, search-code) auto-generated per workspace repo. Repo-scoped naming (`backend:run-tests`). YAML shell command tool loading. Hybrid model: backend base set + agent additions + agent restrictions.
-- **orchestra.yaml Configuration Loading.** Parse and validate the full `orchestra.yaml` structure: providers, workspace (repos, tools), agents, backend selection.
+- **Agent-Level Tool Registry.** Decorator-based registration (`@tool_registry.register()`). Flat tool names in Stage 3 (no repo-scoped naming — repo-scoped `backend:read-file` naming deferred to Stage 6 when workspace/repo concepts exist). Built-in tools: read-file, write-file, edit-file, search-code, shell. YAML shell command tool loading from `orchestra.yaml` tools section. Hybrid model: backend base set + agent additions + agent restrictions.
+- **orchestra.yaml Configuration Loading.** Parse and validate the full `orchestra.yaml` structure: providers, agents, tools, backend selection.
+- **LLM Error Handling.** LLM API errors (rate limits, network timeouts, auth failures) are caught by the backend and surfaced as `Outcome(status=FAIL, failure_reason=...)`. The existing node-level retry system (Stage 2a) handles retries at the pipeline level. Backends do NOT retry internally — this keeps retry policy centralized and configurable via DOT attributes.
+- **New Dependencies.** Added to `pyproject.toml`: `langchain-core`, `langchain-anthropic`, `langchain-openai`, `langgraph`, `jinja2`.
 
 ### Excluded
 
@@ -126,12 +130,25 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 | Test | Description |
 |------|-------------|
-| Register builtin tool | `@register_builtin("read-file")` → tool available as `read-file` |
-| Register custom tool | `@register("run-migration", repo="backend")` → available as `backend:run-migration` |
-| Repo-scoped naming | Tool `read-file` in repo `backend` → `backend:read-file` |
-| YAML shell tool | Tool defined in `orchestra.yaml` workspace.tools → registered and callable |
-| Agent tool resolution | Agent config `tools: [backend:run-tests, backend:read-file]` → correct tools assembled |
-| Cross-repo tool | Tool without repo scope → available globally |
+| Register builtin tool | `@register("read-file")` → tool available as `read-file` |
+| Register custom tool | `@register("run-migration")` → tool registered and callable |
+| YAML shell tool | Tool defined in `orchestra.yaml` tools section → registered and callable |
+| Agent tool resolution | Agent config `tools: [run-tests, read-file]` → correct tools assembled |
+| Agent tool restriction | Agent config `tools: [read-file]` → only `read-file` available, not `write-file` |
+| Unknown tool error | Agent references non-existent tool name → clear error at config validation |
+
+### CodergenHandler Adapter Tests
+
+| Test | Description |
+|------|-------------|
+| Handler wraps backend | CodergenHandler(backend=mock) calls backend.run() and returns Outcome |
+| String to Outcome conversion | Backend returns str → handler wraps in Outcome(status=SUCCESS, notes=str) |
+| Backend returns Outcome | Backend returns Outcome directly → handler passes it through |
+| Prompt composition integration | Handler composes prompt from agent config before passing to backend |
+| Model resolution integration | Handler resolves model from resolution chain and passes to backend |
+| Writes prompt.md and response.md | Handler writes prompt and response files to stage logs directory |
+| SimulationBackend compatibility | SimulationBackend returns same results as old SimulationCodergenHandler |
+| Existing tests unchanged | All 137 existing tests pass with CodergenHandler(backend=SimulationBackend()) |
 
 ### End-to-End Integration Tests (Mocked LLM)
 
@@ -222,17 +239,21 @@ Change `providers.default` in `orchestra.yaml` from `anthropic` to `openai`. Run
 
 ## Success Criteria
 
-- [ ] All three CodergenBackend implementations work and conform to the `run(node, prompt, context, on_turn)` interface
+- [ ] All three CodergenBackend implementations work and conform to the `run(node, prompt, context, on_turn=None)` interface
+- [ ] CodergenHandler wraps CodergenBackend and implements the existing NodeHandler protocol — PipelineRunner is unchanged
+- [ ] SimulationBackend replaces SimulationCodergenHandler and all existing tests continue to pass
 - [ ] LangGraphBackend invokes `on_turn` after each agent loop turn with correct AgentTurn data
+- [ ] AgentTurn data is persisted to CXDB as `dev.orchestra.AgentTurn` turns
 - [ ] WriteTracker records file modifications from write tools and flushes per turn
 - [ ] `@modifies_files` decorator auto-records paths for custom tools
 - [ ] Provider alias resolution maps semantic tiers to concrete model strings
-- [ ] Model stylesheet applies per-node overrides by specificity
+- [ ] Model stylesheet applies per-node overrides by specificity (implemented as a graph transform)
 - [ ] Full model resolution precedence chain works (explicit > stylesheet > agent > graph > provider)
 - [ ] Prompt composition assembles four layers from YAML files with Jinja2 interpolation
 - [ ] File discovery resolves files via the 3-level chain
-- [ ] Tool registry supports decorator registration, YAML shell tools, and repo-scoped naming
+- [ ] Tool registry supports decorator registration, YAML shell tools, and flat naming
 - [ ] Agent configuration from `orchestra.yaml` correctly composes prompts, resolves models, and assembles tools
+- [ ] LLM API errors surface as Outcome(status=FAIL) and are handled by the existing node-level retry system
 - [ ] A human can run a pipeline with real LLM calls and inspect the AI-generated output
 - [ ] Changing one line in `orchestra.yaml` (default provider) switches all agents to a different provider
-- [ ] All automated tests pass with mocked LLMs
+- [ ] All automated tests pass with mocked LLMs (including all 137 existing tests via SimulationBackend)
