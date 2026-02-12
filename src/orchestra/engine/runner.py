@@ -5,6 +5,7 @@ import time
 from typing import TYPE_CHECKING, Any, Protocol
 
 from orchestra.engine.edge_selection import select_edge
+from orchestra.engine.failure_routing import resolve_failure_target
 from orchestra.engine.retry import build_retry_policy, execute_with_retry
 from orchestra.models.context import Context
 from orchestra.models.graph import PipelineGraph
@@ -125,22 +126,30 @@ class PipelineRunner:
             last_outcome = outcome
 
             next_edge = select_edge(node.id, outcome, context, self._graph)
-            if next_edge is None:
-                if outcome.status in (OutcomeStatus.FAIL, OutcomeStatus.RETRY):
-                    pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
-                    self._emitter.emit(
-                        "PipelineFailed",
-                        pipeline_name=self._graph.name,
-                        error=outcome.failure_reason or "Stage failed with no outgoing edge",
-                        duration_ms=pipeline_duration_ms,
-                    )
-                    return outcome
-                break
+            if next_edge is not None:
+                next_node = self._graph.get_node(next_edge.to_node)
+                if next_node is None:
+                    raise RuntimeError(f"Edge target node '{next_edge.to_node}' not found")
+                current_node = next_node
+                continue
 
-            next_node = self._graph.get_node(next_edge.to_node)
-            if next_node is None:
-                raise RuntimeError(f"Edge target node '{next_edge.to_node}' not found")
-            current_node = next_node
+            if outcome.status in (OutcomeStatus.FAIL, OutcomeStatus.RETRY):
+                failure_target = resolve_failure_target(node, self._graph, outcome, context)
+                if failure_target is not None:
+                    target_node = self._graph.get_node(failure_target)
+                    if target_node is not None:
+                        current_node = target_node
+                        continue
+
+                pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
+                self._emitter.emit(
+                    "PipelineFailed",
+                    pipeline_name=self._graph.name,
+                    error=outcome.failure_reason or "Stage failed with no outgoing edge",
+                    duration_ms=pipeline_duration_ms,
+                )
+                return outcome
+            break
 
         pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
         self._emitter.emit(

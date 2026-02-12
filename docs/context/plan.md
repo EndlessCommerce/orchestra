@@ -32,11 +32,11 @@
   - [x] Write tests in `tests/test_retry.py`: retry on FAIL (node with max_retries=2 retried twice), retry on RETRY status, retry exhaustion (final outcome used for routing), backoff delays (standard policy: ~200ms, ~400ms, ~800ms within tolerance), allow_partial (PARTIAL_SUCCESS when retries exhausted), no retry on SUCCESS (6 tests per plan)
   - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement failure routing
-  - [ ] Create `src/orchestra/engine/failure_routing.py` with `resolve_failure_target(node, graph) -> str | None` implementing the 4-step fallback chain: (1) outgoing edge with `condition="outcome=fail"` — use condition evaluator; (2) node attribute `retry_target`; (3) node attribute `fallback_retry_target`; (4) return None (pipeline terminates)
-  - [ ] Integrate into `src/orchestra/engine/runner.py`: after retry exhaustion with FAIL outcome, call `resolve_failure_target()`. If a target is found, set `current_node` to that target and continue the loop. If None, emit PipelineFailed and return.
-  - [ ] Write tests in `tests/test_failure_routing.py`: fail edge followed, retry_target used when no fail edge, fallback_retry_target used when no retry_target, pipeline termination when no failure route (4 tests per plan)
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Implement failure routing
+  - [x] Create `src/orchestra/engine/failure_routing.py` with `resolve_failure_target(node, graph) -> str | None` implementing the 4-step fallback chain: (1) outgoing edge with `condition="outcome=fail"` — use condition evaluator; (2) node attribute `retry_target`; (3) node attribute `fallback_retry_target`; (4) return None (pipeline terminates)
+  - [x] Integrate into `src/orchestra/engine/runner.py`: after retry exhaustion with FAIL outcome, call `resolve_failure_target()`. If a target is found, set `current_node` to that target and continue the loop. If None, emit PipelineFailed and return.
+  - [x] Write tests in `tests/test_failure_routing.py`: fail edge followed, retry_target used when no fail edge, fallback_retry_target used when no retry_target, pipeline termination when no failure route (4 tests per plan)
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Implement goal gate enforcement
   - [ ] Create `src/orchestra/engine/goal_gates.py` with `check_goal_gates(visited_outcomes: dict[str, OutcomeStatus], graph: PipelineGraph) -> str | None` — iterate visited nodes with `goal_gate=true` attribute, check if their outcome is SUCCESS or PARTIAL_SUCCESS. If any unsatisfied, return the reroute target: node's `retry_target` → node's `fallback_retry_target` → graph's `retry_target` → graph's `fallback_retry_target` → None (fail). Include max reroute counter (default = graph's `default_max_retry` or 50) to prevent infinite loops.
