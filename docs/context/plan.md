@@ -60,12 +60,12 @@
   - [x] Verify `orchestra run tests/fixtures/test-branching.dot` works end-to-end
   - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Identify all specs that need to be run and updated
-  - [ ] Look at all previous TODOs and changes in git to identify changes
-  - [ ] Run full test suite: `uv run pytest tests/ -v` and verify all tests pass (68 existing + new Stage 2a tests)
-  - [ ] Identify any specs that failed and add a new TODO to fix them
-  - [ ] Identify any missing spec coverage — check that all 23 test cases from the Stage 2a plan are covered
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Identify all specs that need to be run and updated
+  - [x] Look at all previous TODOs and changes in git to identify changes
+  - [x] Run full test suite: `uv run pytest tests/ -v` and verify all tests pass (68 existing + new Stage 2a tests)
+  - [x] Identify any specs that failed and add a new TODO to fix them
+  - [x] Identify any missing spec coverage — check that all 23 test cases from the Stage 2a plan are covered
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Identify any code that is unused, or could be cleaned up
   - [ ] Look at all previous TODOs and changes in git to identify changes
