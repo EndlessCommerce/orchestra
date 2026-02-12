@@ -421,7 +421,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 13: End-to-End Integration Tests
 
-- [ ] Write `tests/test_human_e2e.py` — end-to-end pipeline tests with human gates
+- [x] Write `tests/test_human_e2e.py` — end-to-end pipeline tests with human gates
     - Pipeline with human gate: QueueInterviewer answers "approve" → routes to exit
     - Pipeline with reject: QueueInterviewer answers "reject" → routes to retry path
     - Pipeline with auto-approve: AutoApproveInterviewer → first option selected → completes
