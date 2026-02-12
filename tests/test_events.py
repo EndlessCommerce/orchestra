@@ -88,23 +88,23 @@ def test_cxdb_observer_maps_events() -> None:
     assert mock_client.append_turn.call_count == 5
 
     calls = mock_client.append_turn.call_args_list
-    # PipelineStarted → PipelineLifecycle
+    # PipelineStarted → PipelineLifecycle (field 3 = status)
     assert calls[0].kwargs["type_id"] == "dev.orchestra.PipelineLifecycle"
-    assert calls[0].kwargs["data"]["status"] == "started"
+    assert calls[0].kwargs["data"][3] == "started"
 
-    # StageStarted → NodeExecution
+    # StageStarted → NodeExecution (field 3 = status)
     assert calls[1].kwargs["type_id"] == "dev.orchestra.NodeExecution"
-    assert calls[1].kwargs["data"]["status"] == "started"
+    assert calls[1].kwargs["data"][3] == "started"
 
-    # StageCompleted → NodeExecution
+    # StageCompleted → NodeExecution (field 4 = prompt, field 5 = response)
     assert calls[2].kwargs["type_id"] == "dev.orchestra.NodeExecution"
-    assert calls[2].kwargs["data"]["prompt"] == "do it"
-    assert calls[2].kwargs["data"]["response"] == "done"
+    assert calls[2].kwargs["data"][4] == "do it"
+    assert calls[2].kwargs["data"][5] == "done"
 
-    # CheckpointSaved → Checkpoint
+    # CheckpointSaved → Checkpoint (field 1 = current_node)
     assert calls[3].kwargs["type_id"] == "dev.orchestra.Checkpoint"
-    assert calls[3].kwargs["data"]["current_node"] == "plan"
+    assert calls[3].kwargs["data"][1] == "plan"
 
-    # PipelineCompleted → PipelineLifecycle
+    # PipelineCompleted → PipelineLifecycle (field 3 = status)
     assert calls[4].kwargs["type_id"] == "dev.orchestra.PipelineLifecycle"
-    assert calls[4].kwargs["data"]["status"] == "completed"
+    assert calls[4].kwargs["data"][3] == "completed"

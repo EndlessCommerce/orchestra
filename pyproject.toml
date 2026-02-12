@@ -9,6 +9,8 @@ dependencies = [
     "httpx",
     "pydantic",
     "pyyaml",
+    "blake3>=1.0.8",
+    "msgpack>=1.1.2",
 ]
 
 [project.scripts]

@@ -15,6 +15,8 @@ from orchestra.events.types import (
     StageStarted,
 )
 
+from orchestra.storage.type_bundle import to_tagged_data
+
 if TYPE_CHECKING:
     from orchestra.storage.cxdb_client import CxdbClient
 
@@ -78,11 +80,12 @@ class CxdbObserver:
                 "error": event.error,
             }
 
+        type_id = "dev.orchestra.PipelineLifecycle"
         self._client.append_turn(
             context_id=self._context_id,
-            type_id="dev.orchestra.PipelineLifecycle",
+            type_id=type_id,
             type_version=1,
-            data=data,
+            data=to_tagged_data(type_id, 1, data),
         )
 
     def _append_node_execution(self, event: Event) -> None:
@@ -110,22 +113,25 @@ class CxdbObserver:
                 "status": "failed",
             }
 
+        type_id = "dev.orchestra.NodeExecution"
         self._client.append_turn(
             context_id=self._context_id,
-            type_id="dev.orchestra.NodeExecution",
+            type_id=type_id,
             type_version=1,
-            data=data,
+            data=to_tagged_data(type_id, 1, data),
         )
 
     def _append_checkpoint(self, event: CheckpointSaved) -> None:
+        type_id = "dev.orchestra.Checkpoint"
+        data = {
+            "current_node": event.node_id,
+            "completed_nodes": event.completed_nodes,
+            "context_snapshot": event.context_snapshot,
+            "retry_counters": event.retry_counters,
+        }
         self._client.append_turn(
             context_id=self._context_id,
-            type_id="dev.orchestra.Checkpoint",
+            type_id=type_id,
             type_version=1,
-            data={
-                "current_node": event.node_id,
-                "completed_nodes": event.completed_nodes,
-                "context_snapshot": event.context_snapshot,
-                "retry_counters": event.retry_counters,
-            },
+            data=to_tagged_data(type_id, 1, data),
         )

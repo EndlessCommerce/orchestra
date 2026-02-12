@@ -16,6 +16,7 @@ from orchestra.events.observer import CxdbObserver, StdoutObserver
 from orchestra.handlers.registry import default_registry
 from orchestra.models.graph import Edge, Node, PipelineGraph
 from orchestra.models.outcome import OutcomeStatus
+from orchestra.storage.type_bundle import from_tagged_data
 
 
 class TurnRecordingClient:
@@ -36,12 +37,14 @@ class TurnRecordingClient:
     def append_turn(
         self, context_id: str, type_id: str, type_version: int, data: dict[str, Any]
     ) -> dict[str, Any]:
+        # Decode numeric field tags back to named fields for test assertions
+        named_data = from_tagged_data(type_id, type_version, data)
         self.turns.append(
             {
                 "context_id": context_id,
                 "type_id": type_id,
                 "type_version": type_version,
-                "data": data,
+                "data": named_data,
             }
         )
         return {"turn_id": str(len(self.turns))}

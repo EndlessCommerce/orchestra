@@ -1,27 +1,48 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
+from orchestra.storage.binary_protocol import CxdbBinaryClient
+from orchestra.storage.exceptions import CxdbConnectionError, CxdbError
 
-class CxdbError(Exception):
-    pass
-
-
-class CxdbConnectionError(CxdbError):
-    pass
+# Re-export for backwards compatibility
+__all__ = ["CxdbClient", "CxdbConnectionError", "CxdbError"]
 
 
 class CxdbClient:
+    """CXDB client using HTTP for reads/registry and binary protocol for writes."""
+
     def __init__(self, base_url: str = "http://localhost:9010") -> None:
         self._base_url = base_url.rstrip("/")
         self._client = httpx.Client(base_url=self._base_url, timeout=10.0)
 
+        # Derive binary protocol host/port from HTTP URL
+        parsed = urlparse(self._base_url)
+        self._binary_host = parsed.hostname or "localhost"
+        # Binary protocol runs on port 9009 (HTTP is 9010)
+        http_port = parsed.port or 9010
+        self._binary_port = http_port - 1  # 9010 -> 9009
+
+        self._binary: CxdbBinaryClient | None = None
+
+    def _get_binary(self) -> CxdbBinaryClient:
+        if self._binary is None:
+            self._binary = CxdbBinaryClient(
+                host=self._binary_host, port=self._binary_port
+            )
+            self._binary.connect()
+        return self._binary
+
     def health_check(self) -> dict[str, Any]:
         try:
-            response = self._client.get("/health")
+            response = self._client.get("/healthz")
             response.raise_for_status()
+            text = response.text.strip()
+            if text == "ok":
+                return {"status": "ok"}
             return response.json()
         except httpx.ConnectError as e:
             raise CxdbConnectionError(
@@ -31,19 +52,7 @@ class CxdbClient:
             raise CxdbError(f"CXDB health check failed: {e}") from e
 
     def create_context(self, base_turn_id: str = "0") -> dict[str, Any]:
-        try:
-            response = self._client.post(
-                "/v1/contexts/create",
-                json={"base_turn_id": base_turn_id},
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.ConnectError as e:
-            raise CxdbConnectionError(
-                f"Cannot connect to CXDB at {self._base_url}: {e}"
-            ) from e
-        except httpx.HTTPStatusError as e:
-            raise CxdbError(f"Failed to create context: {e}") from e
+        return self._get_binary().create_context(int(base_turn_id))
 
     def append_turn(
         self,
@@ -52,25 +61,12 @@ class CxdbClient:
         type_version: int,
         data: dict[str, Any],
     ) -> dict[str, Any]:
-        try:
-            response = self._client.post(
-                f"/v1/contexts/{context_id}/append",
-                json={
-                    "type_id": type_id,
-                    "type_version": type_version,
-                    "data": data,
-                },
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.ConnectError as e:
-            raise CxdbConnectionError(
-                f"Cannot connect to CXDB at {self._base_url}: {e}"
-            ) from e
-        except httpx.HTTPStatusError as e:
-            raise CxdbError(
-                f"Failed to append turn to context {context_id}: {e}"
-            ) from e
+        return self._get_binary().append_turn(
+            context_id=int(context_id),
+            type_id=type_id,
+            type_version=type_version,
+            data=data,
+        )
 
     def get_turns(
         self, context_id: str, limit: int = 64
@@ -126,3 +122,5 @@ class CxdbClient:
 
     def close(self) -> None:
         self._client.close()
+        if self._binary is not None:
+            self._binary.close()
