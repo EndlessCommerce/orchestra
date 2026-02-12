@@ -384,7 +384,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 11: WaitHumanHandler Tests
 
-- [ ] Write `tests/test_wait_human_handler.py` — unit tests for WaitHumanHandler
+- [x] Write `tests/test_wait_human_handler.py` — unit tests for WaitHumanHandler
     - Derive choices from 3 outgoing edges → 3 choices with correct labels
     - Route on selection → outcome `suggested_next_ids` points to correct edge target
     - Context updated with `human.gate.selected` and `human.gate.label`
