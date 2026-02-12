@@ -75,14 +75,14 @@ class PipelineRunner:
                 if handler:
                     handler.handle(node, state.context, self._graph)
 
-                next_node = self._check_exit_gates(state, pipeline_start, max_reroutes)
-                if next_node is not None:
-                    current_node = next_node
+                gate_ok, reroute_node = self._check_exit_gates(state, pipeline_start, max_reroutes)
+                if reroute_node is not None:
+                    current_node = reroute_node
                     continue
-                if next_node is None and not check_goal_gates(state.visited_outcomes, self._graph).satisfied:
+                if not gate_ok:
                     return Outcome(
                         status=OutcomeStatus.FAIL,
-                        failure_reason="Goal gate unsatisfied and no valid reroute target",
+                        failure_reason="Goal gate unsatisfied",
                     )
                 break
 
@@ -197,10 +197,11 @@ class PipelineRunner:
 
     def _check_exit_gates(
         self, state: _RunState, pipeline_start: float, max_reroutes: int
-    ) -> Node | None:
+    ) -> tuple[bool, Node | None]:
+        """Returns (gates_satisfied, reroute_node). If gates_satisfied is False and reroute_node is None, pipeline should fail."""
         gate_result = check_goal_gates(state.visited_outcomes, self._graph)
         if gate_result.satisfied:
-            return None
+            return True, None
 
         if gate_result.reroute_target is not None:
             if state.reroute_count >= max_reroutes:
@@ -211,12 +212,12 @@ class PipelineRunner:
                     error="Max reroutes exceeded for goal gate enforcement",
                     duration_ms=pipeline_duration_ms,
                 )
-                return None
+                return False, None
 
             state.reroute_count += 1
             target_node = self._graph.get_node(gate_result.reroute_target)
             if target_node is not None:
-                return target_node
+                return False, target_node
 
         pipeline_duration_ms = int((time.monotonic() - pipeline_start) * 1000)
         self._emitter.emit(
@@ -225,4 +226,4 @@ class PipelineRunner:
             error="Goal gate unsatisfied and no valid reroute target",
             duration_ms=pipeline_duration_ms,
         )
-        return None
+        return False, None
