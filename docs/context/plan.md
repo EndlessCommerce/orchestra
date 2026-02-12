@@ -20,10 +20,10 @@
   - [x] Register in `src/orchestra/handlers/registry.py` `default_registry()`: `registry.register("diamond", ConditionalHandler())`
   - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Add configurable simulation backend for testing retries
-  - [ ] Extend `src/orchestra/handlers/codergen.py` `SimulationCodergenHandler` to accept an optional `outcome_sequences: dict[str, list[OutcomeStatus]]`. On each `handle()` call for a node_id, pop the next status from the list. If the list is exhausted, use the last status. If no sequence for a node_id, return SUCCESS as before.
-  - [ ] Write test in `tests/test_configurable_simulation.py` verifying: node returns FAIL twice then SUCCESS when sequence is `[FAIL, FAIL, SUCCESS]`; node without sequence returns SUCCESS; exhausted sequence returns last status
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Add configurable simulation backend for testing retries
+  - [x] Extend `src/orchestra/handlers/codergen.py` `SimulationCodergenHandler` to accept an optional `outcome_sequences: dict[str, list[OutcomeStatus]]`. On each `handle()` call for a node_id, pop the next status from the list. If the list is exhausted, use the last status. If no sequence for a node_id, return SUCCESS as before.
+  - [x] Write test in `tests/test_configurable_simulation.py` verifying: node returns FAIL twice then SUCCESS when sequence is `[FAIL, FAIL, SUCCESS]`; node without sequence returns SUCCESS; exhausted sequence returns last status
+  - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Implement retry system with backoff policies
   - [ ] Create `src/orchestra/engine/retry.py` with: `BackoffConfig` dataclass (initial_delay_ms, backoff_factor, max_delay_ms, jitter), `RetryPolicy` dataclass (max_attempts, backoff), preset policies dict (`none`, `standard`, `aggressive`, `linear`, `patient` with exact parameters from spec), `calculate_delay(config, attempt, rng)` function, `execute_with_retry(node, handler, context, graph, policy, emitter, rng) -> Outcome` function
