@@ -35,6 +35,18 @@ class SimulationBackend:
             failure_reason=failure_reason,
         )
 
+    def send_message(
+        self,
+        node: Node,
+        message: str,
+        context: Context,
+        on_turn: OnTurnCallback | None = None,
+    ) -> str | Outcome:
+        return f"[Simulated] Response to: {message[:50]}"
+
+    def reset_conversation(self) -> None:
+        pass
+
     def _resolve_status(self, node_id: str, node: Node) -> OutcomeStatus:
         sequence = self._get_sequence(node_id, node)
         if sequence is None:

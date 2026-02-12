@@ -288,14 +288,14 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 6a: Multi-Turn Backend Protocol
 
-- [ ] Define `ConversationalBackend` protocol in `src/orchestra/backends/protocol.py`
+- [x] Define `ConversationalBackend` protocol in `src/orchestra/backends/protocol.py`
     - New protocol alongside existing `CodergenBackend` (non-breaking):
         - `send_message(node, message, context, on_turn=None) -> str | Outcome` — send a single message in an ongoing conversation
         - `reset_conversation() -> None` — clear conversation state
     - `CodergenBackend` remains unchanged — single-shot `run()` still works for non-interactive nodes
     - Mark TODO complete and commit the changes to git
 
-- [ ] Implement `ConversationalBackend` on existing backends
+- [x] Implement `ConversationalBackend` on existing backends
     - **SimulationBackend**: `send_message()` returns canned responses (same as `run()`)
     - **DirectLLMBackend**: Accumulate `HumanMessage`/`AIMessage` list across calls to `send_message()`. Each call appends the human message and invokes the LLM with the full history. `reset_conversation()` clears the message list.
     - **LangGraphBackend**: Accumulate messages in the agent's message history. Each `send_message()` invokes the agent with the new message appended. `reset_conversation()` creates a fresh agent.

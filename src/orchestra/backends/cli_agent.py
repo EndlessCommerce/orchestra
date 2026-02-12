@@ -23,6 +23,7 @@ class CLIAgentBackend:
         self._command = command
         self._args = args or []
         self._timeout = timeout
+        self._conversation_history: list[str] = []
 
     def run(
         self,
@@ -79,3 +80,20 @@ class CLIAgentBackend:
                 status=OutcomeStatus.FAIL,
                 failure_reason=str(e),
             )
+
+    def send_message(
+        self,
+        node: Node,
+        message: str,
+        context: Context,
+        on_turn: OnTurnCallback | None = None,
+    ) -> str | Outcome:
+        self._conversation_history.append(f"Human: {message}")
+        full_prompt = "\n".join(self._conversation_history)
+        result = self.run(node, full_prompt, context, on_turn)
+        if isinstance(result, str):
+            self._conversation_history.append(f"Assistant: {result}")
+        return result
+
+    def reset_conversation(self) -> None:
+        self._conversation_history = []

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Callable, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from orchestra.models.agent_turn import AgentTurn
@@ -20,3 +20,30 @@ class CodergenBackend(Protocol):
         context: Context,
         on_turn: OnTurnCallback | None = None,
     ) -> str | Outcome: ...
+
+
+@runtime_checkable
+class ConversationalBackend(Protocol):
+    """Extension of CodergenBackend for multi-turn interactive conversations.
+
+    Backends implement send_message() to maintain conversation state across turns,
+    and reset_conversation() to clear that state.
+    """
+
+    def run(
+        self,
+        node: Node,
+        prompt: str,
+        context: Context,
+        on_turn: OnTurnCallback | None = None,
+    ) -> str | Outcome: ...
+
+    def send_message(
+        self,
+        node: Node,
+        message: str,
+        context: Context,
+        on_turn: OnTurnCallback | None = None,
+    ) -> str | Outcome: ...
+
+    def reset_conversation(self) -> None: ...

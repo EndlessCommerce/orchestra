@@ -29,6 +29,7 @@ class LangGraphBackend:
         self._chat_model = chat_model
         self._tools = tools or []
         self._write_tracker = WriteTracker()
+        self._conversation_messages: list[Any] = []
 
     def run(
         self,
@@ -86,6 +87,44 @@ class LangGraphBackend:
         if final_message is not None:
             return str(final_message.content)
         return ""
+
+    def send_message(
+        self,
+        node: Node,
+        message: str,
+        context: Context,
+        on_turn: OnTurnCallback | None = None,
+    ) -> str | Outcome:
+        self._conversation_messages.append(HumanMessage(content=message))
+
+        lc_tools = [to_langchain_tool(t) for t in self._tools]
+        try:
+            agent = create_react_agent(self._chat_model, lc_tools)
+        except Exception as e:
+            return Outcome(
+                status=OutcomeStatus.FAIL,
+                failure_reason=sanitize_error(f"Failed to create agent: {e}"),
+            )
+
+        try:
+            result = agent.invoke({"messages": list(self._conversation_messages)})
+        except Exception as e:
+            return Outcome(
+                status=OutcomeStatus.FAIL,
+                failure_reason=sanitize_error(str(e)),
+            )
+
+        all_messages = result.get("messages", [])
+        # Store full message history for next turn
+        self._conversation_messages = list(all_messages)
+
+        final_message = all_messages[-1] if all_messages else None
+        if final_message is not None:
+            return str(final_message.content)
+        return ""
+
+    def reset_conversation(self) -> None:
+        self._conversation_messages = []
 
 
 def _extract_token_usage(msg: Any) -> dict[str, int]:
