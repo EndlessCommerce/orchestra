@@ -391,20 +391,20 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 10: CLIAgentBackend
 
-- [ ] Implement CLIAgentBackend
-    - [ ] Create `src/orchestra/backends/cli_agent.py`:
+- [x] Implement CLIAgentBackend
+    - [x] Create `src/orchestra/backends/cli_agent.py`:
         - `CLIAgentBackend` implementing `CodergenBackend`
         - Spawns CLI agent (Claude Code, Codex, Gemini CLI) as subprocess
         - Passes prompt via stdin, context via temp JSON file (path in `ORCHESTRA_CONTEXT_FILE` env var or `--context-file` flag)
         - Captures stdout as response
         - Does not invoke `on_turn`
         - Configurable command template per agent type
-    - [ ] Write tests in `tests/test_cli_agent_backend.py`:
+    - [x] Write tests in `tests/test_cli_agent_backend.py`:
         - Mock subprocess returns stdout → backend captures it as response
         - CLIAgentBackend does not invoke `on_turn` callback
         - Context file written to temp directory with correct content
         - Subprocess error → Outcome(status=FAIL)
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 11: AgentTurn CXDB Persistence
 
