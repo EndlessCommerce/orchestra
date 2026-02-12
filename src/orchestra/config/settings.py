@@ -46,6 +46,7 @@ class OrchestraConfig(BaseModel):
     agents: dict[str, AgentConfig] = Field(default_factory=dict)
     tools: list[ToolConfig] = Field(default_factory=list)
     backend: str = "simulation"
+    config_dir: Path | None = None
 
 
 def _find_config_file(start: Path | None = None) -> Path | None:
@@ -68,6 +69,7 @@ def load_config(start: Path | None = None) -> OrchestraConfig:
         with open(config_path) as f:
             raw = yaml.safe_load(f) or {}
         config = OrchestraConfig.model_validate(raw)
+        config.config_dir = config_path.parent
     else:
         config = OrchestraConfig()
 

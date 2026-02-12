@@ -34,6 +34,11 @@ class InteractiveHandler:
 
         if history:
             self._replay_history(node, context, history)
+        else:
+            self._interviewer.inform(
+                "Interactive mode — type /done to finish, /reject to abort.",
+                stage=node.id,
+            )
 
         response = self._backend.send_message(node, prompt, context)
         if isinstance(response, Outcome):

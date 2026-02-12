@@ -23,7 +23,7 @@ node_stmt: IDENTIFIER attr_block? ";"?
 attr_block: "[" attr ("," attr)* "]"
 attr: key "=" value
 
-key: QUALIFIED_ID | IDENTIFIER
+key: QUALIFIED_ID | IDENTIFIER | STRING
 QUALIFIED_ID: /[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+/
 
 value: STRING | DURATION | FLOAT | INTEGER | BOOLEAN | IDENTIFIER

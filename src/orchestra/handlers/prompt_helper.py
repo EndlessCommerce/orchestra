@@ -27,6 +27,7 @@ def compose_node_prompt(node: Node, context: Context, config: OrchestraConfig | 
         composed = compose_prompt(
             agent_config,
             context=context.snapshot(),
+            pipeline_dir=config.config_dir,
         )
         if composed:
             prompt = composed

@@ -3,7 +3,7 @@ from orchestra.backends.direct_llm import DirectLLMBackend
 from orchestra.backends.langgraph_backend import LangGraphBackend
 from orchestra.backends.simulation import SimulationBackend
 from orchestra.config.settings import OrchestraConfig, ProviderConfig, ProvidersConfig
-from orchestra.cli.run import _build_backend
+from orchestra.cli.backend_factory import build_backend as _build_backend
 
 
 class TestBuildBackend:

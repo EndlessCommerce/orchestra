@@ -148,7 +148,11 @@ class DotTransformer(Transformer):
         return (key, value)
 
     def key(self, items: list) -> str:
-        return str(items[0])
+        token = items[0]
+        text = str(token)
+        if token.type == "STRING":
+            return text[1:-1]
+        return text
 
     def value(self, items: list) -> Any:
         token = items[0]

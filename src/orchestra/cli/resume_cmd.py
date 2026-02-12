@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import signal
+from pathlib import Path
 
 import typer
 
+from orchestra.cli.backend_factory import build_backend
 from orchestra.config.settings import load_config
 from orchestra.engine.resume import (
     ResumeError,
@@ -76,6 +78,10 @@ def resume(session_id: str) -> None:
         typer.echo(f"Error: Next node '{resume_info.next_node_id}' not found in graph")
         raise typer.Exit(code=1)
 
+    # Reload config from the pipeline's directory for correct backend/agent resolution
+    dot_path = Path(resume_info.dot_file_path)
+    config = load_config(start=dot_path.parent)
+
     # Publish type bundle (idempotent)
     try:
         publish_orchestra_types(client)
@@ -88,7 +94,14 @@ def resume(session_id: str) -> None:
     dispatcher.add_observer(StdoutObserver())
     dispatcher.add_observer(CxdbObserver(client, context_id))
 
-    registry = default_registry()
+    # Build interviewer
+    from orchestra.interviewer.console import ConsoleInterviewer
+
+    interviewer = ConsoleInterviewer()
+
+    # Build backend and handler registry
+    backend = build_backend(config)
+    registry = default_registry(backend=backend, config=config, interviewer=interviewer)
 
     typer.echo(f"[Resume] Resuming session {session_id} from node '{resume_info.next_node_id}'")
 

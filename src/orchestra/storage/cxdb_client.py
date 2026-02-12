@@ -138,6 +138,10 @@ class CxdbClient:
                 f"Cannot connect to CXDB at {self._base_url}: {e}"
             ) from e
         except httpx.HTTPStatusError as e:
+            # 409 Conflict or 422 Unprocessable Entity means the bundle
+            # already exists with the same schema — treat as success.
+            if e.response.status_code in (409, 422):
+                return
             raise CxdbError(f"Failed to publish type bundle: {e}") from e
 
     def close(self) -> None:

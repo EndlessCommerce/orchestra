@@ -4,7 +4,7 @@ digraph test_interactive {
     start [shape=Mdiamond]
     exit  [shape=Msquare]
 
-    collaborate [shape=box, label="Collaborate", prompt="Help the user with their task", agent.mode="interactive"]
+    collaborate [shape=box, label="Collaborate", prompt="Help the user with their task", "agent.mode"="interactive"]
     summarize   [shape=box, label="Summarize", prompt="Summarize what was done"]
 
     start -> collaborate -> summarize -> exit
