@@ -6,11 +6,9 @@ from orchestra.models.outcome import Outcome, OutcomeStatus
 
 if TYPE_CHECKING:
     from orchestra.backends.protocol import CodergenBackend, OnTurnCallback
-    from orchestra.config.model_resolution import resolve_node_model
     from orchestra.config.settings import AgentConfig, OrchestraConfig
     from orchestra.models.context import Context
     from orchestra.models.graph import Node, PipelineGraph
-    from orchestra.prompts.engine import compose_prompt
 
 
 class CodergenHandler:

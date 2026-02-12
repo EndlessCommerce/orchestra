@@ -465,37 +465,37 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 15: Review and Cleanup
 
-- [ ] Identify any code that is unused, or could be cleaned up
-    - [ ] Look at all previous TODOs and changes in git to identify changes
-    - [ ] Identify any code that is no longer used, and remove it (e.g., old `SimulationCodergenHandler` if fully replaced)
-    - [ ] Identify any unnecessary comments, and remove them
-    - [ ] If there are any obvious code smells or redundant code, add TODOs below to address them
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Identify any code that is unused, or could be cleaned up
+    - [x] Look at all previous TODOs and changes in git to identify changes
+    - [x] Identify any code that is no longer used, and remove it (e.g., old `SimulationCodergenHandler` if fully replaced)
+    - [x] Identify any unnecessary comments, and remove them
+    - [x] If there are any obvious code smells or redundant code, add TODOs below to address them
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Identify all specs that need to be run and updated
-    - [ ] Look at all previous TODOs and changes in git to identify changes
-    - [ ] Run the full test suite: `pytest tests/`
-    - [ ] Identify any specs that failed and add them to a new TODO to fix
-    - [ ] Identify any missing specs that need to be added or updated
-    - [ ] Add these specs to a new TODO
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Identify all specs that need to be run and updated
+    - [x] Look at all previous TODOs and changes in git to identify changes
+    - [x] Run the full test suite: `pytest tests/`
+    - [x] Identify any specs that failed and add them to a new TODO to fix
+    - [x] Identify any missing specs that need to be added or updated
+    - [x] Add these specs to a new TODO
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Final verification — all success criteria from plan.md
-    - [ ] All three CodergenBackend implementations conform to the protocol
-    - [ ] CodergenHandler wraps CodergenBackend and implements NodeHandler — PipelineRunner unchanged
-    - [ ] SimulationBackend replaces SimulationCodergenHandler — all 137 existing tests pass
-    - [ ] LangGraphBackend invokes `on_turn` with correct AgentTurn data
-    - [ ] AgentTurn persisted to CXDB as `dev.orchestra.AgentTurn`
-    - [ ] WriteTracker records file modifications and `@modifies_files` works
-    - [ ] Provider alias resolution maps semantic tiers to model strings
-    - [ ] Model stylesheet applies per-node overrides by specificity (graph transform)
-    - [ ] Full resolution precedence chain works
-    - [ ] Prompt composition assembles 4 layers with Jinja2
-    - [ ] File discovery resolves via 3-level chain
-    - [ ] Tool registry supports decorators, YAML shell tools, flat naming
-    - [ ] LLM API errors surface as Outcome(status=FAIL)
-    - [ ] Full test suite passes: 190+ tests, 0 failures
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Final verification — all success criteria from plan.md
+    - [x] All three CodergenBackend implementations conform to the protocol
+    - [x] CodergenHandler wraps CodergenBackend and implements NodeHandler — PipelineRunner unchanged
+    - [x] SimulationBackend replaces SimulationCodergenHandler — all 137 existing tests pass
+    - [x] LangGraphBackend invokes `on_turn` with correct AgentTurn data
+    - [x] AgentTurn persisted to CXDB as `dev.orchestra.AgentTurn`
+    - [x] WriteTracker records file modifications and `@modifies_files` works
+    - [x] Provider alias resolution maps semantic tiers to model strings
+    - [x] Model stylesheet applies per-node overrides by specificity (graph transform)
+    - [x] Full resolution precedence chain works
+    - [x] Prompt composition assembles 4 layers with Jinja2
+    - [x] File discovery resolves via 3-level chain
+    - [x] Tool registry supports decorators, YAML shell tools, flat naming
+    - [x] LLM API errors surface as Outcome(status=FAIL)
+    - [x] Full test suite passes: 300 tests, 0 failures
+    - [x] Mark TODO complete and commit the changes to git
 
 ## Manual Testing Guide
 
