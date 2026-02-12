@@ -84,6 +84,19 @@ class PipelinePaused(Event):
     checkpoint_node_id: str = ""
 
 
+class AgentTurnCompleted(Event):
+    event_type: str = "AgentTurnCompleted"
+    node_id: str
+    turn_number: int = 0
+    model: str = ""
+    provider: str = ""
+    messages: str = ""
+    tool_calls: str = ""
+    files_written: list[str] = Field(default_factory=list)
+    token_usage: dict[str, int] = Field(default_factory=dict)
+    agent_state: str = ""
+
+
 EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "PipelineStarted": PipelineStarted,
     "PipelineCompleted": PipelineCompleted,
@@ -94,4 +107,5 @@ EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "StageFailed": StageFailed,
     "StageRetrying": StageRetrying,
     "CheckpointSaved": CheckpointSaved,
+    "AgentTurnCompleted": AgentTurnCompleted,
 }

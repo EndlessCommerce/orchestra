@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Protocol
 import typer
 
 from orchestra.events.types import (
+    AgentTurnCompleted,
     CheckpointSaved,
     Event,
     PipelineCompleted,
@@ -47,6 +48,8 @@ class StdoutObserver:
             typer.echo(f"  [Stage] FAILED: {event.node_id} — {event.error}")
         elif isinstance(event, StageRetrying):
             typer.echo(f"  [Stage] Retrying: {event.node_id} (attempt {event.attempt}/{event.max_attempts}, delay {event.delay_ms}ms)")
+        elif isinstance(event, AgentTurnCompleted):
+            typer.echo(f"  [AgentTurn] {event.node_id} turn {event.turn_number} ({event.model})")
         elif isinstance(event, CheckpointSaved):
             typer.echo(f"  [Checkpoint] Saved at: {event.node_id}")
 
@@ -63,6 +66,8 @@ class CxdbObserver:
             self._append_node_execution(event)
         elif isinstance(event, CheckpointSaved):
             self._append_checkpoint(event)
+        elif isinstance(event, AgentTurnCompleted):
+            self._append_agent_turn(event)
 
     def _append_pipeline_lifecycle(self, event: Event) -> None:
         data: dict = {}
@@ -138,6 +143,26 @@ class CxdbObserver:
             }
 
         type_id = "dev.orchestra.NodeExecution"
+        self._client.append_turn(
+            context_id=self._context_id,
+            type_id=type_id,
+            type_version=1,
+            data=to_tagged_data(type_id, 1, data),
+        )
+
+    def _append_agent_turn(self, event: AgentTurnCompleted) -> None:
+        type_id = "dev.orchestra.AgentTurn"
+        data = {
+            "turn_number": event.turn_number,
+            "node_id": event.node_id,
+            "model": event.model,
+            "provider": event.provider,
+            "messages": event.messages,
+            "tool_calls": event.tool_calls,
+            "files_written": event.files_written,
+            "token_usage": event.token_usage,
+            "agent_state": event.agent_state,
+        }
         self._client.append_turn(
             context_id=self._context_id,
             type_id=type_id,

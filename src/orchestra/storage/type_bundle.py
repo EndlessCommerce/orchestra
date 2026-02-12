@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from orchestra.storage.cxdb_client import CxdbClient
 
-BUNDLE_ID = "dev.orchestra.v2"
+BUNDLE_ID = "dev.orchestra.v3"
 
 ORCHESTRA_TYPE_BUNDLE: dict[str, Any] = {
     "registry_version": 1,
@@ -127,6 +127,40 @@ ORCHESTRA_TYPE_BUNDLE: dict[str, Any] = {
                         },
                     }
                 },
+            }
+        },
+        "dev.orchestra.AgentTurn": {
+            "versions": {
+                "1": {
+                    "fields": {
+                        "1": {"name": "turn_number", "type": "u64"},
+                        "2": {"name": "node_id", "type": "string"},
+                        "3": {"name": "model", "type": "string", "optional": True},
+                        "4": {"name": "provider", "type": "string", "optional": True},
+                        "5": {"name": "messages", "type": "string", "optional": True},
+                        "6": {
+                            "name": "tool_calls",
+                            "type": "string",
+                            "optional": True,
+                        },
+                        "7": {
+                            "name": "files_written",
+                            "type": "array",
+                            "items": "string",
+                            "optional": True,
+                        },
+                        "8": {
+                            "name": "token_usage",
+                            "type": "map",
+                            "optional": True,
+                        },
+                        "9": {
+                            "name": "agent_state",
+                            "type": "string",
+                            "optional": True,
+                        },
+                    }
+                }
             }
         },
     },

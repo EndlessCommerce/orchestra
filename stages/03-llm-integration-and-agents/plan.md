@@ -408,17 +408,17 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 11: AgentTurn CXDB Persistence
 
-- [ ] Register `dev.orchestra.AgentTurn` CXDB type and persist turns
-    - [ ] Update `src/orchestra/storage/type_bundle.py`:
+- [x] Register `dev.orchestra.AgentTurn` CXDB type and persist turns
+    - [x] Update `src/orchestra/storage/type_bundle.py`:
         - Add `dev.orchestra.AgentTurn` v1 type with fields: turn_number, node_id, model, provider, messages (as JSON string), tool_calls (as JSON string), files_written (array), token_usage (map), agent_state (as JSON string)
-    - [ ] Update `src/orchestra/events/types.py`:
+    - [x] Update `src/orchestra/events/types.py`:
         - Add `AgentTurnCompleted` event type with AgentTurn data
-    - [ ] Update `src/orchestra/events/observer.py`:
+    - [x] Update `src/orchestra/events/observer.py`:
         - `CxdbObserver` handles `AgentTurnCompleted` events → appends as `dev.orchestra.AgentTurn` turn
-    - [ ] Write tests:
+    - [x] Write tests:
         - AgentTurn CXDB type registered correctly in type bundle
         - CxdbObserver persists AgentTurnCompleted events
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 12: CLI Integration — Wire Everything Together
 
