@@ -7,12 +7,15 @@ from orchestra.handlers.codergen import SimulationCodergenHandler
 from orchestra.handlers.codergen_handler import CodergenHandler
 from orchestra.handlers.conditional import ConditionalHandler
 from orchestra.handlers.exit import ExitHandler
+from orchestra.handlers.fan_in_handler import FanInHandler
+from orchestra.handlers.parallel_handler import ParallelHandler
 from orchestra.handlers.start import StartHandler
 from orchestra.handlers.wait_human import WaitHumanHandler
 
 if TYPE_CHECKING:
     from orchestra.backends.protocol import CodergenBackend
     from orchestra.config.settings import OrchestraConfig
+    from orchestra.engine.runner import EventEmitter
     from orchestra.interviewer.base import Interviewer
 
 
@@ -31,6 +34,7 @@ def default_registry(
     backend: CodergenBackend | None = None,
     config: OrchestraConfig | None = None,
     interviewer: Interviewer | None = None,
+    event_emitter: EventEmitter | None = None,
 ) -> HandlerRegistry:
     registry = HandlerRegistry()
     registry.register("Mdiamond", StartHandler())
@@ -60,6 +64,8 @@ def default_registry(
 
     registry.register("box", box_handler)
     registry.register("diamond", ConditionalHandler())
+    registry.register("component", ParallelHandler(handler_registry=registry, event_emitter=event_emitter))
+    registry.register("tripleoctagon", FanInHandler(backend=backend))
 
     # Human gate handler
     if interviewer is not None:
