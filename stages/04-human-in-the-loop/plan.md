@@ -343,14 +343,14 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 7: CLI Integration
 
-- [ ] Add `--auto-approve` flag to `orchestra run` command
+- [x] Add `--auto-approve` flag to `orchestra run` command
     - In `src/orchestra/cli/run.py`: add `auto_approve: bool = False` parameter
     - If `--auto-approve`: use `AutoApproveInterviewer()`
     - Otherwise: use `ConsoleInterviewer()`
     - Pass interviewer to `default_registry(backend=backend, config=config, interviewer=interviewer)`
     - Mark TODO complete and commit the changes to git
 
-- [ ] Update `src/orchestra/cli/main.py` to wire the `--auto-approve` option
+- [x] Update `src/orchestra/cli/main.py` to wire the `--auto-approve` option
     - Ensure the typer option is properly defined and passed through
     - Mark TODO complete and commit the changes to git
 

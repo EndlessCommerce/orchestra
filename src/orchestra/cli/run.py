@@ -84,7 +84,10 @@ def _build_chat_model(config: OrchestraConfig):
     return ChatOpenAI(**kwargs)
 
 
-def run(pipeline: Path) -> None:
+def run(
+    pipeline: Path,
+    auto_approve: bool = typer.Option(False, "--auto-approve", help="Auto-approve all human gates (no stdin required)"),
+) -> None:
     """Execute a DOT pipeline."""
     if not pipeline.exists():
         typer.echo(f"Error: file not found: {pipeline}")
@@ -155,9 +158,19 @@ def run(pipeline: Path) -> None:
     dispatcher.add_observer(StdoutObserver())
     dispatcher.add_observer(CxdbObserver(client, context_id))
 
+    # Build interviewer
+    if auto_approve:
+        from orchestra.interviewer.auto_approve import AutoApproveInterviewer
+
+        interviewer = AutoApproveInterviewer()
+    else:
+        from orchestra.interviewer.console import ConsoleInterviewer
+
+        interviewer = ConsoleInterviewer()
+
     # Build backend and handler registry
     backend = _build_backend(config)
-    registry = default_registry(backend=backend, config=config)
+    registry = default_registry(backend=backend, config=config, interviewer=interviewer)
 
     # Run pipeline with SIGINT handling
     runner = PipelineRunner(graph, registry, dispatcher)
