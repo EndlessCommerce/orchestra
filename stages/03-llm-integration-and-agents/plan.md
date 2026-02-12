@@ -174,29 +174,29 @@ LLM calls are mocked in all automated tests. Use LangChain's `FakeListChatModel`
 
 ### Phase 1: Foundation — Dependencies, Data Models, Config Schema
 
-- [ ] Add new dependencies to `pyproject.toml`
-    - [ ] Add `langchain-core`, `langchain-anthropic`, `langchain-openai`, `langgraph`, `jinja2`
-    - [ ] Use compatible release specifiers (`~=`) pinned to latest stable minor versions
-    - [ ] Run `pip install -e ".[dev]"` to verify installation
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Add new dependencies to `pyproject.toml`
+    - [x] Add `langchain-core`, `langchain-anthropic`, `langchain-openai`, `langgraph`, `jinja2`
+    - [x] Use compatible release specifiers (`~=`) pinned to latest stable minor versions
+    - [x] Run `pip install -e ".[dev]"` to verify installation
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Define `AgentTurn` data model and `CodergenBackend` protocol
-    - [ ] Create `src/orchestra/backends/__init__.py`
-    - [ ] Create `src/orchestra/backends/protocol.py` — define `CodergenBackend` protocol: `run(node, prompt, context, on_turn=None) -> str | Outcome`
-    - [ ] Create `src/orchestra/models/agent_turn.py` — define `AgentTurn` dataclass with fields: `turn_number`, `model`, `provider`, `messages`, `tool_calls`, `files_written`, `token_usage`, `agent_state`
-    - [ ] Write tests in `tests/test_agent_turn.py` for AgentTurn construction and serialization
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Define `AgentTurn` data model and `CodergenBackend` protocol
+    - [x] Create `src/orchestra/backends/__init__.py`
+    - [x] Create `src/orchestra/backends/protocol.py` — define `CodergenBackend` protocol: `run(node, prompt, context, on_turn=None) -> str | Outcome`
+    - [x] Create `src/orchestra/models/agent_turn.py` — define `AgentTurn` dataclass with fields: `turn_number`, `model`, `provider`, `messages`, `tool_calls`, `files_written`, `token_usage`, `agent_state`
+    - [x] Write tests in `tests/test_agent_turn.py` for AgentTurn construction and serialization
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Extend `orchestra.yaml` config schema for providers, agents, tools, backend selection
-    - [ ] Update `src/orchestra/config/settings.py` with new Pydantic models:
+- [x] Extend `orchestra.yaml` config schema for providers, agents, tools, backend selection
+    - [x] Update `src/orchestra/config/settings.py` with new Pydantic models:
         - `ProviderConfig` — models dict (smart/worker/cheap mapping), settings (max_tokens, api_base)
         - `ProvidersConfig` — default provider name, per-provider configs (anthropic, openai, openrouter)
         - `AgentConfig` — role, persona, personality, task (file paths), tools list, provider override, model override
         - `ToolConfig` — name, command (for YAML shell tools), description
         - `OrchestraConfig` — extend with `providers`, `agents`, `tools`, `backend` fields
-    - [ ] Write tests in `tests/test_config.py` for loading valid configs, missing optional fields, invalid configs producing clear errors
-    - [ ] Verify existing config tests still pass (only `cxdb` section was previously tested)
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Write tests in `tests/test_config.py` for loading valid configs, missing optional fields, invalid configs producing clear errors
+    - [x] Verify existing config tests still pass (only `cxdb` section was previously tested)
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Phase 2: WriteTracker
 

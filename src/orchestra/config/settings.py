@@ -2,17 +2,50 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CxdbConfig(BaseModel):
     url: str = "http://localhost:9010"
 
 
+class ProviderConfig(BaseModel):
+    models: dict[str, str] = Field(default_factory=dict)
+    settings: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProvidersConfig(BaseModel):
+    default: str = ""
+    anthropic: ProviderConfig = ProviderConfig()
+    openai: ProviderConfig = ProviderConfig()
+    openrouter: ProviderConfig = ProviderConfig()
+
+
+class AgentConfig(BaseModel):
+    role: str = ""
+    persona: str = ""
+    personality: str = ""
+    task: str = ""
+    tools: list[str] = Field(default_factory=list)
+    provider: str = ""
+    model: str = ""
+
+
+class ToolConfig(BaseModel):
+    name: str
+    command: str = ""
+    description: str = ""
+
+
 class OrchestraConfig(BaseModel):
     cxdb: CxdbConfig = CxdbConfig()
+    providers: ProvidersConfig = ProvidersConfig()
+    agents: dict[str, AgentConfig] = Field(default_factory=dict)
+    tools: list[ToolConfig] = Field(default_factory=list)
+    backend: str = "simulation"
 
 
 def _find_config_file(start: Path | None = None) -> Path | None:
