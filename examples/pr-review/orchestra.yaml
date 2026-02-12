@@ -1,0 +1,38 @@
+backend: direct
+
+providers:
+  default: anthropic
+  anthropic:
+    models:
+      smart: claude-opus-4-20250514
+      worker: claude-sonnet-4-20250514
+      cheap: claude-haiku-3-20250514
+
+agents:
+  security-reviewer:
+    role: prompts/roles/pr-reviewer.yaml
+    persona: prompts/personas/security-specialist.yaml
+    personality: prompts/personalities/critic.yaml
+    task: prompts/tasks/review-security.yaml
+    model: smart
+
+  quality-reviewer:
+    role: prompts/roles/pr-reviewer.yaml
+    persona: prompts/personas/code-quality-specialist.yaml
+    personality: prompts/personalities/critic.yaml
+    task: prompts/tasks/review-quality.yaml
+    model: smart
+
+  correctness-reviewer:
+    role: prompts/roles/pr-reviewer.yaml
+    persona: prompts/personas/correctness-specialist.yaml
+    personality: prompts/personalities/critic.yaml
+    task: prompts/tasks/review-correctness.yaml
+    model: smart
+
+  synthesizer:
+    role: prompts/roles/review-synthesizer.yaml
+    persona: prompts/personas/tech-lead.yaml
+    personality: prompts/personalities/balanced-decisive.yaml
+    task: prompts/tasks/synthesize-review.yaml
+    model: smart

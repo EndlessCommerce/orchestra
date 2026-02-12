@@ -1,0 +1,51 @@
+digraph pr_review {
+    graph [
+        goal="Review a pull request from security, code quality, and correctness perspectives, then synthesize a final verdict",
+        label="PR Review Pipeline",
+        model_stylesheet="
+            *            { llm_model: worker; llm_provider: anthropic; }
+            #synthesize  { llm_model: smart; }
+        "
+    ]
+
+    node [shape=box]
+
+    // ── lifecycle ──────────────────────────────────────────────
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare,  label="Done"]
+
+    // ── parallel fan-out / fan-in ─────────────────────────────
+    fan_out [shape=component,     label="Fan Out Reviews"]
+    fan_in  [shape=tripleoctagon, label="Collect Reviews"]
+
+    // ── specialist reviewers (all share role + critic trait) ──
+    security    [label="Security Review",    agent="security-reviewer",    class="critic"]
+    quality     [label="Code Quality Review", agent="quality-reviewer",    class="critic"]
+    correctness [label="Correctness Review", agent="correctness-reviewer", class="critic"]
+
+    // ── synthesis ─────────────────────────────────────────────
+    synthesize [label="Synthesize Reviews", agent="synthesizer", goal_gate=true]
+
+    // ── human approval gate ───────────────────────────────────
+    approval [shape=hexagon, label="Review the synthesis", "human.default_choice"="a", timeout="900s"]
+
+    // ── rework node (if human rejects synthesis) ──────────────
+    rework [label="Revise Synthesis", agent="synthesizer", prompt="Revise the review synthesis based on the feedback provided. Address the concerns raised and produce an updated verdict."]
+
+    // ── edges ─────────────────────────────────────────────────
+    start -> fan_out
+
+    fan_out -> security
+    fan_out -> quality
+    fan_out -> correctness
+
+    security    -> fan_in
+    quality     -> fan_in
+    correctness -> fan_in
+
+    fan_in -> synthesize -> approval
+
+    approval -> exit   [label="[A] Approve"]
+    approval -> rework [label="[R] Revise"]
+    rework   -> approval
+}

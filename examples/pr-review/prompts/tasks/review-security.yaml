@@ -1,0 +1,14 @@
+content: |
+  Review this pull request from a **security** perspective.
+
+  For each finding, provide:
+  - **File and line** (if identifiable from the diff)
+  - **Severity**: critical / high / medium / low
+  - **Category**: e.g. injection, auth bypass, data exposure, dependency risk
+  - **Description**: what the vulnerability is and how it could be exploited
+  - **Recommendation**: specific fix or mitigation
+
+  If the PR introduces no security concerns, state that explicitly with
+  a brief explanation of what you checked.
+
+  End with a verdict: APPROVE, REQUEST_CHANGES, or COMMENT.

@@ -1,0 +1,17 @@
+content: |
+  Review this pull request from a **code quality** perspective.
+
+  For each finding, provide:
+  - **File and line** (if identifiable from the diff)
+  - **Severity**: high / medium / low / nitpick
+  - **Category**: e.g. naming, duplication, complexity, missing tests, style
+  - **Description**: what the quality issue is and why it matters
+  - **Recommendation**: specific improvement
+
+  Consider:
+  - Does the code follow existing project conventions?
+  - Are there missing or inadequate tests?
+  - Is there unnecessary complexity or dead code?
+  - Are abstractions at the right level?
+
+  End with a verdict: APPROVE, REQUEST_CHANGES, or COMMENT.

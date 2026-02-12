@@ -1,0 +1,17 @@
+content: |
+  Review this pull request from a **correctness** perspective.
+
+  For each finding, provide:
+  - **File and line** (if identifiable from the diff)
+  - **Severity**: critical / high / medium / low
+  - **Category**: e.g. logic error, edge case, race condition, error handling
+  - **Description**: the incorrect behavior and a scenario that triggers it
+  - **Recommendation**: specific fix
+
+  Consider:
+  - Does the code do what the PR description claims?
+  - Are edge cases handled (empty inputs, nulls, boundaries)?
+  - Are error paths handled gracefully?
+  - Could any change break existing callers or invariants?
+
+  End with a verdict: APPROVE, REQUEST_CHANGES, or COMMENT.

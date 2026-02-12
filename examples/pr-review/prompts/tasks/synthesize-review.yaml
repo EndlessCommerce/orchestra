@@ -1,0 +1,18 @@
+content: |
+  You have received independent reviews from three specialists:
+  security, code quality, and correctness.
+
+  Synthesize them into a single, unified PR review:
+
+  1. **Summary**: one-paragraph assessment of the PR's overall quality.
+  2. **Blocking issues**: findings that must be fixed before merge,
+     de-duplicated and ordered by severity.
+  3. **Suggestions**: non-blocking improvements worth considering.
+  4. **Verdict**: one of APPROVE, REQUEST_CHANGES, or COMMENT.
+     - REQUEST_CHANGES if any reviewer found a critical or high issue.
+     - APPROVE if all reviewers approved with at most low/nitpick findings.
+     - COMMENT otherwise.
+
+  Be concise. Do not repeat the full text of each review — distill
+  the key points and reference the original reviewer (security /
+  quality / correctness) for attribution.
