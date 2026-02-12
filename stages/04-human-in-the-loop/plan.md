@@ -258,7 +258,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
 
 ### Phase 4: WaitHumanHandler
 
-- [ ] Create `src/orchestra/handlers/wait_human.py` — WaitHumanHandler
+- [x] Create `src/orchestra/handlers/wait_human.py` — WaitHumanHandler
     - Constructor takes `interviewer: Interviewer`
     - `handle(node, context, graph) -> Outcome`:
         1. Get outgoing edges from `graph.get_outgoing_edges(node.id)`
@@ -273,7 +273,7 @@ Run: `orchestra run test-human-gate.dot --auto-approve`
     - Per attractor spec Section 4.6
     - Mark TODO complete and commit the changes to git
 
-- [ ] Register WaitHumanHandler in `src/orchestra/handlers/registry.py`
+- [x] Register WaitHumanHandler in `src/orchestra/handlers/registry.py`
     - Add `interviewer: Interviewer | None = None` parameter to `default_registry()`
     - If interviewer provided: `registry.register("hexagon", WaitHumanHandler(interviewer))`
     - If not provided: register with `AutoApproveInterviewer()` as default

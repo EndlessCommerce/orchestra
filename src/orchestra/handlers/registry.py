@@ -8,10 +8,12 @@ from orchestra.handlers.codergen_handler import CodergenHandler
 from orchestra.handlers.conditional import ConditionalHandler
 from orchestra.handlers.exit import ExitHandler
 from orchestra.handlers.start import StartHandler
+from orchestra.handlers.wait_human import WaitHumanHandler
 
 if TYPE_CHECKING:
     from orchestra.backends.protocol import CodergenBackend
     from orchestra.config.settings import OrchestraConfig
+    from orchestra.interviewer.base import Interviewer
 
 
 class HandlerRegistry:
@@ -28,6 +30,7 @@ class HandlerRegistry:
 def default_registry(
     backend: CodergenBackend | None = None,
     config: OrchestraConfig | None = None,
+    interviewer: Interviewer | None = None,
 ) -> HandlerRegistry:
     registry = HandlerRegistry()
     registry.register("Mdiamond", StartHandler())
@@ -40,4 +43,13 @@ def default_registry(
 
     registry.register("box", handler)
     registry.register("diamond", ConditionalHandler())
+
+    # Human gate handler
+    if interviewer is not None:
+        registry.register("hexagon", WaitHumanHandler(interviewer))
+    else:
+        from orchestra.interviewer.auto_approve import AutoApproveInterviewer
+
+        registry.register("hexagon", WaitHumanHandler(AutoApproveInterviewer()))
+
     return registry
