@@ -157,6 +157,34 @@ class AgentCommitCreated(Event):
     turn_number: int = 0
 
 
+class WorktreeCreated(Event):
+    event_type: str = "WorktreeCreated"
+    repo_name: str
+    branch_id: str
+    worktree_path: str
+    worktree_branch: str
+
+
+class WorktreeMerged(Event):
+    event_type: str = "WorktreeMerged"
+    repo_name: str
+    branch_ids: list[str] = Field(default_factory=list)
+    merged_sha: str = ""
+
+
+class WorktreeMergeConflict(Event):
+    event_type: str = "WorktreeMergeConflict"
+    repo_name: str
+    branch_ids: list[str] = Field(default_factory=list)
+    conflicting_files: list[str] = Field(default_factory=list)
+
+
+class WorkspaceSnapshotRecorded(Event):
+    event_type: str = "WorkspaceSnapshotRecorded"
+    node_id: str
+    workspace_snapshot: dict[str, str] = Field(default_factory=dict)
+
+
 EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "PipelineStarted": PipelineStarted,
     "PipelineCompleted": PipelineCompleted,
@@ -175,4 +203,8 @@ EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "ParallelCompleted": ParallelCompleted,
     "SessionBranchCreated": SessionBranchCreated,
     "AgentCommitCreated": AgentCommitCreated,
+    "WorktreeCreated": WorktreeCreated,
+    "WorktreeMerged": WorktreeMerged,
+    "WorktreeMergeConflict": WorktreeMergeConflict,
+    "WorkspaceSnapshotRecorded": WorkspaceSnapshotRecorded,
 }

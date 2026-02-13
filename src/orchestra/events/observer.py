@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Protocol
 
 import typer
@@ -20,12 +21,20 @@ from orchestra.events.types import (
     StageFailed,
     StageRetrying,
     StageStarted,
+    WorktreeCreated,
+    WorktreeMergeConflict,
+    WorktreeMerged,
+    WorkspaceSnapshotRecorded,
 )
 
 from orchestra.storage.type_bundle import to_tagged_data
 
 if TYPE_CHECKING:
     from orchestra.storage.cxdb_client import CxdbClient
+
+
+def _truncate(s: str, max_len: int = 80) -> str:
+    return s if len(s) <= max_len else s[:max_len] + "..."
 
 
 class EventObserver(Protocol):
@@ -53,7 +62,26 @@ class StdoutObserver:
         elif isinstance(event, StageRetrying):
             typer.echo(f"  [Stage] Retrying: {event.node_id} (attempt {event.attempt}/{event.max_attempts}, delay {event.delay_ms}ms)")
         elif isinstance(event, AgentTurnCompleted):
-            typer.echo(f"  [AgentTurn] {event.node_id} turn {event.turn_number} ({event.model})")
+            tokens = event.token_usage
+            token_str = ""
+            if tokens:
+                inp = tokens.get("input", 0)
+                out = tokens.get("output", 0)
+                token_str = f" — {inp + out} tokens"
+            typer.echo(f"  [AgentTurn] {event.node_id} turn {event.turn_number} ({event.model}){token_str}")
+            if event.tool_calls:
+                try:
+                    calls = json.loads(event.tool_calls) if isinstance(event.tool_calls, str) else event.tool_calls
+                except (json.JSONDecodeError, TypeError):
+                    calls = []
+                for tc in calls:
+                    name = tc.get("name", "?")
+                    args = tc.get("args", {})
+                    args_summary = ", ".join(f"{k}={_truncate(str(v))}" for k, v in args.items())
+                    typer.echo(f"    tool: {name}({args_summary})")
+            if event.files_written:
+                for f in event.files_written:
+                    typer.echo(f"    wrote: {f}")
         elif isinstance(event, CheckpointSaved):
             typer.echo(f"  [Checkpoint] Saved at: {event.node_id}")
         elif isinstance(event, SessionBranchCreated):
@@ -61,6 +89,15 @@ class StdoutObserver:
         elif isinstance(event, AgentCommitCreated):
             summary = event.message.split("\n")[0][:60]
             typer.echo(f"  [Commit] {event.sha[:8]} {summary} ({len(event.files)} files)")
+        elif isinstance(event, WorktreeCreated):
+            typer.echo(f"  [Worktree] Created: {event.branch_id} in {event.repo_name} ({event.worktree_branch})")
+        elif isinstance(event, WorktreeMerged):
+            typer.echo(f"  [Worktree] Merged: {', '.join(event.branch_ids)} → {event.merged_sha[:8]}")
+        elif isinstance(event, WorktreeMergeConflict):
+            typer.echo(f"  [Worktree] CONFLICT: {', '.join(event.branch_ids)} — {len(event.conflicting_files)} files")
+        elif isinstance(event, WorkspaceSnapshotRecorded):
+            repos = ", ".join(f"{k}={v[:8]}" for k, v in event.workspace_snapshot.items())
+            typer.echo(f"  [Snapshot] {event.node_id}: {repos}")
 
 
 class CxdbObserver:
@@ -79,6 +116,8 @@ class CxdbObserver:
             self._append_agent_turn(event)
         elif isinstance(event, (ParallelStarted, ParallelCompleted)):
             self._append_parallel_execution(event)
+        elif isinstance(event, (WorktreeCreated, WorktreeMerged)):
+            self._append_worktree_event(event)
 
     def _append_pipeline_lifecycle(self, event: Event) -> None:
         data: dict = {}
@@ -203,6 +242,32 @@ class CxdbObserver:
             }
 
         type_id = "dev.orchestra.ParallelExecution"
+        self._client.append_turn(
+            context_id=self._context_id,
+            type_id=type_id,
+            type_version=1,
+            data=to_tagged_data(type_id, 1, data),
+        )
+
+    def _append_worktree_event(self, event: Event) -> None:
+        data: dict = {}
+        if isinstance(event, WorktreeCreated):
+            data = {
+                "repo_name": event.repo_name,
+                "branch_id": event.branch_id,
+                "worktree_path": event.worktree_path,
+                "worktree_branch": event.worktree_branch,
+                "status": "created",
+            }
+        elif isinstance(event, WorktreeMerged):
+            data = {
+                "repo_name": event.repo_name,
+                "branch_ids": event.branch_ids,
+                "merged_sha": event.merged_sha,
+                "status": "merged",
+            }
+
+        type_id = "dev.orchestra.WorktreeEvent"
         self._client.append_turn(
             context_id=self._context_id,
             type_id=type_id,

@@ -197,15 +197,15 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ### Layer 3: Workspace Events
 
-- [ ] Add new event types to `src/orchestra/events/types.py`
-    - [ ] `WorktreeCreated(Event)` — fields: `repo_name`, `branch_id`, `worktree_path`, `worktree_branch`
-    - [ ] `WorktreeMerged(Event)` — fields: `repo_name`, `branch_ids: list[str]`, `merged_sha`
-    - [ ] `WorktreeMergeConflict(Event)` — fields: `repo_name`, `branch_ids: list[str]`, `conflicting_files: list[str]`
-    - [ ] `WorkspaceSnapshotRecorded(Event)` — fields: `node_id`, `workspace_snapshot: dict[str, str]`
-    - [ ] Register all four in `EVENT_TYPE_MAP`
-    - [ ] Update `StdoutObserver` in `observer.py` to log new events
-    - [ ] Update `CxdbObserver` in `observer.py` to record `WorktreeCreated` and `WorktreeMerged` events (as `dev.orchestra.WorktreeEvent` v1)
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Add new event types to `src/orchestra/events/types.py`
+    - [x] `WorktreeCreated(Event)` — fields: `repo_name`, `branch_id`, `worktree_path`, `worktree_branch`
+    - [x] `WorktreeMerged(Event)` — fields: `repo_name`, `branch_ids: list[str]`, `merged_sha`
+    - [x] `WorktreeMergeConflict(Event)` — fields: `repo_name`, `branch_ids: list[str]`, `conflicting_files: list[str]`
+    - [x] `WorkspaceSnapshotRecorded(Event)` — fields: `node_id`, `workspace_snapshot: dict[str, str]`
+    - [x] Register all four in `EVENT_TYPE_MAP`
+    - [x] Update `StdoutObserver` in `observer.py` to log new events
+    - [x] Update `CxdbObserver` in `observer.py` to record `WorktreeCreated` and `WorktreeMerged` events (as `dev.orchestra.WorktreeEvent` v1)
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 4: Parallel Handler Integration
 

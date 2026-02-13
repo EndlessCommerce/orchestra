@@ -203,6 +203,38 @@ ORCHESTRA_TYPE_BUNDLE: dict[str, Any] = {
                 },
             }
         },
+        "dev.orchestra.WorktreeEvent": {
+            "versions": {
+                "1": {
+                    "fields": {
+                        "1": {"name": "repo_name", "type": "string"},
+                        "2": {"name": "branch_id", "type": "string", "optional": True},
+                        "3": {
+                            "name": "worktree_path",
+                            "type": "string",
+                            "optional": True,
+                        },
+                        "4": {
+                            "name": "worktree_branch",
+                            "type": "string",
+                            "optional": True,
+                        },
+                        "5": {
+                            "name": "branch_ids",
+                            "type": "array",
+                            "items": "string",
+                            "optional": True,
+                        },
+                        "6": {
+                            "name": "merged_sha",
+                            "type": "string",
+                            "optional": True,
+                        },
+                        "7": {"name": "status", "type": "string"},
+                    }
+                }
+            }
+        },
         "dev.orchestra.ParallelExecution": {
             "versions": {
                 "1": {
