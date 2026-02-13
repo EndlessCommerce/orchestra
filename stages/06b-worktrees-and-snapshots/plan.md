@@ -251,13 +251,13 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ### Layer 6: Resume with Git State
 
-- [ ] Extend resume at node boundary to restore git state
-    - [ ] Update `restore_from_turns()` in `engine/resume.py` to extract `workspace_snapshot` from the latest Checkpoint turn and include it in `ResumeInfo`
-    - [ ] Add `workspace_snapshot: dict[str, str]` field to `ResumeInfo` dataclass (default `{}`)
-    - [ ] Create `src/orchestra/workspace/restore.py` with function `restore_git_state(workspace_snapshot: dict[str, str], repos: dict[str, RepoConfig], config_dir: Path) -> None` — for each repo in snapshot: resolve repo path, checkout session branch, verify/checkout to the recorded SHA
-    - [ ] Update `cli/resume_cmd.py` to call `restore_git_state()` after `restore_from_turns()` succeeds, before starting the runner
-    - [ ] Set up workspace (session branches, repo tools, write tracker) in resume command, same as in `run.py`
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Extend resume at node boundary to restore git state
+    - [x] Update `restore_from_turns()` in `engine/resume.py` to extract `workspace_snapshot` from the latest Checkpoint turn and include it in `ResumeInfo`
+    - [x] Add `workspace_snapshot: dict[str, str]` field to `ResumeInfo` dataclass (default `{}`)
+    - [x] Create `src/orchestra/workspace/restore.py` with function `restore_git_state(workspace_snapshot: dict[str, str], repos: dict[str, RepoConfig], config_dir: Path) -> None` — for each repo in snapshot: resolve repo path, checkout session branch, verify/checkout to the recorded SHA
+    - [x] Update `cli/resume_cmd.py` to call `restore_git_state()` after `restore_from_turns()` succeeds, before starting the runner
+    - [x] Set up workspace (session branches, repo tools, write tracker) in resume command, same as in `run.py`
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 7: Resume at Agent Turn
 

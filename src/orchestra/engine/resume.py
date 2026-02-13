@@ -23,6 +23,7 @@ class ResumeInfo:
     dot_file_path: str
     graph_hash: str
     context_id: str
+    workspace_snapshot: dict[str, str] | None = None
 
 
 class ResumeError(Exception):
@@ -96,6 +97,8 @@ def restore_from_turns(turns: list[dict[str, Any]], context_id: str) -> ResumeIn
         reroute_count=int(checkpoint_data.get("reroute_count", 0)),
     )
 
+    workspace_snapshot = checkpoint_data.get("workspace_snapshot", {}) or {}
+
     return ResumeInfo(
         state=state,
         next_node_id=next_node_id,
@@ -103,6 +106,7 @@ def restore_from_turns(turns: list[dict[str, Any]], context_id: str) -> ResumeIn
         dot_file_path=dot_file_path,
         graph_hash=graph_hash,
         context_id=context_id,
+        workspace_snapshot=workspace_snapshot if workspace_snapshot else None,
     )
 
 

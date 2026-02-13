@@ -82,6 +82,14 @@ def resume(session_id: str) -> None:
     dot_path = Path(resume_info.dot_file_path)
     config = load_config(start=dot_path.parent)
 
+    # Restore git state from workspace snapshot (if present)
+    if resume_info.workspace_snapshot:
+        from orchestra.workspace.restore import restore_git_state
+
+        config_dir = config.config_dir or dot_path.parent
+        restore_git_state(resume_info.workspace_snapshot, config.workspace.repos, config_dir)
+        typer.echo(f"[Resume] Git state restored from workspace snapshot")
+
     # Publish type bundle (idempotent)
     try:
         publish_orchestra_types(client)
@@ -99,10 +107,34 @@ def resume(session_id: str) -> None:
 
     interviewer = ConsoleInterviewer()
 
+    # Set up workspace (if configured)
+    workspace_manager = None
+    if config.workspace.repos:
+        try:
+            from orchestra.workspace.commit_message import build_commit_message_generator
+            from orchestra.workspace.on_turn import build_on_turn_callback
+            from orchestra.workspace.workspace_manager import WorkspaceManager
+
+            commit_gen = build_commit_message_generator(config)
+            workspace_manager = WorkspaceManager(
+                config=config,
+                event_emitter=dispatcher,
+                commit_gen=commit_gen,
+            )
+            workspace_manager.setup_session(resume_info.pipeline_name, session_id)
+            dispatcher.add_observer(workspace_manager)
+        except Exception as e:
+            typer.echo(f"Warning: Workspace setup failed during resume: {e}")
+            workspace_manager = None
+
+    on_turn = None
+    if workspace_manager is not None:
+        from orchestra.workspace.on_turn import build_on_turn_callback
+
+        on_turn = build_on_turn_callback(dispatcher, workspace_manager)
+
     # Build backend and handler registry
     backend = build_backend(config)
-    on_turn = None
-    workspace_manager = None
     registry = default_registry(
         backend=backend, config=config, interviewer=interviewer,
         on_turn=on_turn, workspace_manager=workspace_manager,
@@ -110,7 +142,7 @@ def resume(session_id: str) -> None:
 
     typer.echo(f"[Resume] Resuming session {session_id} from node '{resume_info.next_node_id}'")
 
-    runner = PipelineRunner(graph, registry, dispatcher)
+    runner = PipelineRunner(graph, registry, dispatcher, workspace_manager=workspace_manager)
 
     original_handler = signal.getsignal(signal.SIGINT)
 
@@ -127,6 +159,8 @@ def resume(session_id: str) -> None:
         )
     finally:
         signal.signal(signal.SIGINT, original_handler)
+        if workspace_manager is not None:
+            workspace_manager.teardown_session()
 
     typer.echo(f"\nSession: {session_id} (CXDB context: {context_id})")
 
