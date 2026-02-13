@@ -158,11 +158,12 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ## Investigation
 
-- [ ] Verify CXDB O(1) fork semantics work with current Python client
-    - [ ] Write a small test: create context A, append 3 turns, fork at turn 2, verify new context has turns 1-2, append to both, verify independence
-    - [ ] Confirm `create_context(base_turn_id=str(turn_id))` in `CxdbClient` works as expected
-    - [ ] Update the plan with findings
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Verify CXDB O(1) fork semantics work with current Python client
+    - [x] Write a small test: create context A, append 3 turns, fork at turn 2, verify new context has turns 1-2, append to both, verify independence
+    - [x] Confirm `create_context(base_turn_id=str(turn_id))` in `CxdbClient` works as expected
+    - [x] Update the plan with findings
+    - [x] Mark TODO complete and commit the changes to git
+    - **Findings:** CXDB O(1) fork works as expected. `create_context(base_turn_id=str(turn_id))` forks at the specified turn. The new context shares history up to the fork point (O(1), no data copying). New turns append independently to each context. Tests in `tests/test_cxdb_fork.py`.
 
 ## Plan
 
