@@ -127,6 +127,42 @@ ORCHESTRA_TYPE_BUNDLE: dict[str, Any] = {
                         },
                     }
                 },
+                "3": {
+                    "fields": {
+                        "1": {"name": "current_node", "type": "string"},
+                        "2": {
+                            "name": "completed_nodes",
+                            "type": "array",
+                            "items": "string",
+                        },
+                        "3": {"name": "context_snapshot", "type": "map"},
+                        "4": {
+                            "name": "retry_counters",
+                            "type": "map",
+                            "optional": True,
+                        },
+                        "5": {
+                            "name": "next_node_id",
+                            "type": "string",
+                            "optional": True,
+                        },
+                        "6": {
+                            "name": "visited_outcomes",
+                            "type": "map",
+                            "optional": True,
+                        },
+                        "7": {
+                            "name": "reroute_count",
+                            "type": "u64",
+                            "optional": True,
+                        },
+                        "8": {
+                            "name": "workspace_snapshot",
+                            "type": "map",
+                            "optional": True,
+                        },
+                    }
+                },
             }
         },
         "dev.orchestra.AgentTurn": {

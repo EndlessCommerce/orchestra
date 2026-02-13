@@ -16,6 +16,7 @@ from orchestra.models.outcome import Outcome, OutcomeStatus
 if TYPE_CHECKING:
     from orchestra.handlers.base import NodeHandler
     from orchestra.handlers.registry import HandlerRegistry
+    from orchestra.workspace.workspace_manager import WorkspaceManager
 
 
 class EventEmitter(Protocol):
@@ -39,6 +40,7 @@ class PipelineRunner:
         event_emitter: EventEmitter,
         rng: random.Random | None = None,
         sleep_fn: Any = None,
+        workspace_manager: WorkspaceManager | None = None,
     ) -> None:
         self._graph = graph
         self._registry = handler_registry
@@ -46,6 +48,7 @@ class PipelineRunner:
         self._rng = rng
         self._sleep_fn = sleep_fn
         self._pause_requested = False
+        self._workspace_manager = workspace_manager
 
     def request_pause(self) -> None:
         self._pause_requested = True
@@ -244,6 +247,10 @@ class PipelineRunner:
         return outcome
 
     def _save_checkpoint(self, node: Node, state: _RunState, next_node_id: str) -> None:
+        workspace_snapshot: dict[str, str] = {}
+        if self._workspace_manager is not None:
+            workspace_snapshot = self._workspace_manager.get_workspace_snapshot()
+
         self._emitter.emit(
             "CheckpointSaved",
             node_id=node.id,
@@ -253,6 +260,7 @@ class PipelineRunner:
             next_node_id=next_node_id,
             visited_outcomes={k: v.value for k, v in state.visited_outcomes.items()},
             reroute_count=state.reroute_count,
+            workspace_snapshot=workspace_snapshot,
         )
 
     def _find_failure_target(

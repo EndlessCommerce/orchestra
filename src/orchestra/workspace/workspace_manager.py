@@ -45,6 +45,7 @@ class WorkspaceManager:
         self._current_node_id = ""
         self._worktree_manager: WorktreeManager | None = None
         self._active_worktrees: dict[str, dict[str, RepoContext]] = {}
+        self._last_snapshot_shas: dict[str, str] = {}
 
     @property
     def has_workspace(self) -> bool:
@@ -116,6 +117,23 @@ class WorkspaceManager:
             for bid in branch_ids:
                 self._active_worktrees.pop(bid, None)
         return result
+
+    def get_workspace_snapshot(self) -> dict[str, str]:
+        """Return {repo_name: HEAD_SHA} for each repo. Returns {} if unchanged since last snapshot."""
+        snapshot: dict[str, str] = {}
+        changed = False
+        for name, repo_ctx in self._repo_contexts.items():
+            try:
+                sha = git_ops.rev_parse("HEAD", cwd=repo_ctx.path)
+                snapshot[name] = sha
+                if sha != self._last_snapshot_shas.get(name):
+                    changed = True
+            except Exception:
+                logger.warning("Failed to get HEAD SHA for repo %s", name)
+        if not changed:
+            return {}
+        self._last_snapshot_shas = dict(snapshot)
+        return snapshot
 
     def on_event(self, event: Event) -> None:
         from orchestra.events.types import StageCompleted, StageFailed, StageStarted

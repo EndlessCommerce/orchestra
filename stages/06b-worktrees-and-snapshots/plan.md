@@ -239,15 +239,15 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ### Layer 5: Workspace Snapshots
 
-- [ ] Add workspace snapshots to checkpoints
-    - [ ] Add `workspace_snapshot: dict[str, str]` field to `CheckpointSaved` event in `types.py` (default `{}`)
-    - [ ] Update `WorkspaceManager` to track whether repo state has changed since last checkpoint (compare HEAD SHAs)
-    - [ ] Add `get_workspace_snapshot() -> dict[str, str]` method to `WorkspaceManager` — returns `{repo_name: HEAD_SHA}` for each repo. Returns `{}` if no repos have changed since last snapshot.
-    - [ ] Update `PipelineRunner._save_checkpoint()` to include `workspace_snapshot` in the emitted event — this requires the runner to have access to the workspace manager or for the checkpoint event to be enriched by the workspace manager observer
-    - [ ] **Approach:** Have `WorkspaceManager.on_event()` listen for `CheckpointSaved` events and enrich them with `workspace_snapshot` before CXDB records them. Alternatively, have the runner query `workspace_manager.get_workspace_snapshot()` when saving checkpoints. **Decision:** Use the runner approach — add optional `workspace_manager` to `PipelineRunner.__init__()` and query it in `_save_checkpoint()`.
-    - [ ] Update `CxdbObserver._append_checkpoint()` to bump to v3 and include `workspace_snapshot` in data
-    - [ ] Update `src/orchestra/storage/type_bundle.py` to register `dev.orchestra.Checkpoint` v3 schema
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Add workspace snapshots to checkpoints
+    - [x] Add `workspace_snapshot: dict[str, str]` field to `CheckpointSaved` event in `types.py` (default `{}`)
+    - [x] Update `WorkspaceManager` to track whether repo state has changed since last checkpoint (compare HEAD SHAs)
+    - [x] Add `get_workspace_snapshot() -> dict[str, str]` method to `WorkspaceManager` — returns `{repo_name: HEAD_SHA}` for each repo. Returns `{}` if no repos have changed since last snapshot.
+    - [x] Update `PipelineRunner._save_checkpoint()` to include `workspace_snapshot` in the emitted event — this requires the runner to have access to the workspace manager or for the checkpoint event to be enriched by the workspace manager observer
+    - [x] **Approach:** Have `WorkspaceManager.on_event()` listen for `CheckpointSaved` events and enrich them with `workspace_snapshot` before CXDB records them. Alternatively, have the runner query `workspace_manager.get_workspace_snapshot()` when saving checkpoints. **Decision:** Use the runner approach — add optional `workspace_manager` to `PipelineRunner.__init__()` and query it in `_save_checkpoint()`.
+    - [x] Update `CxdbObserver._append_checkpoint()` to bump to v3 and include `workspace_snapshot` in data
+    - [x] Update `src/orchestra/storage/type_bundle.py` to register `dev.orchestra.Checkpoint` v3 schema
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 6: Resume with Git State
 

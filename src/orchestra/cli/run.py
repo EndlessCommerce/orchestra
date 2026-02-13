@@ -161,7 +161,7 @@ def run(
     )
 
     # Run pipeline with SIGINT handling
-    runner = PipelineRunner(graph, registry, dispatcher)
+    runner = PipelineRunner(graph, registry, dispatcher, workspace_manager=workspace_manager)
 
     original_handler = signal.getsignal(signal.SIGINT)
 

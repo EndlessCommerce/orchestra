@@ -75,6 +75,7 @@ class CheckpointSaved(Event):
     next_node_id: str = ""
     visited_outcomes: dict[str, str] = Field(default_factory=dict)
     reroute_count: int = 0
+    workspace_snapshot: dict[str, str] = Field(default_factory=dict)
 
 
 class PipelinePaused(Event):

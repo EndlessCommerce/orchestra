@@ -277,7 +277,7 @@ class CxdbObserver:
 
     def _append_checkpoint(self, event: CheckpointSaved) -> None:
         type_id = "dev.orchestra.Checkpoint"
-        type_version = 2  # v2 has next_node_id + visited_outcomes + reroute_count
+        type_version = 3  # v3 adds workspace_snapshot
         data: dict = {
             "current_node": event.node_id,
             "completed_nodes": event.completed_nodes,
@@ -286,6 +286,7 @@ class CxdbObserver:
             "next_node_id": event.next_node_id,
             "visited_outcomes": event.visited_outcomes,
             "reroute_count": event.reroute_count,
+            "workspace_snapshot": event.workspace_snapshot,
         }
         self._client.append_turn(
             context_id=self._context_id,
