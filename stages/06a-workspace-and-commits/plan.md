@@ -135,23 +135,23 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 2. Create git operations layer
 
-- [ ] Create `src/orchestra/workspace/__init__.py` (empty package init)
-- [ ] Create `src/orchestra/workspace/git_ops.py` — thin subprocess wrapper around git CLI
-  - [ ] `run_git(*args, cwd: Path) -> str` — core runner, raises `GitError` on non-zero exit
-  - [ ] `GitError(Exception)` with `returncode`, `stderr`, `command` fields
-  - [ ] `rev_parse(ref: str, cwd: Path) -> str` — resolve ref to SHA
-  - [ ] `create_branch(name: str, cwd: Path) -> None` — `git checkout -b {name}`
-  - [ ] `checkout(ref: str, cwd: Path) -> None` — `git checkout {ref}`
-  - [ ] `add(paths: list[str], cwd: Path) -> None` — `git add` exactly the listed paths
-  - [ ] `commit(message: str, author: str, trailers: dict[str, str], cwd: Path) -> str` — `git commit` with `--author` and `--trailer` flags, returns commit SHA via `rev_parse("HEAD")`
-  - [ ] `status(cwd: Path) -> str` — `git status --porcelain`
-  - [ ] `log(n: int, format: str, cwd: Path) -> str` — `git log -n {n} --format={format}`
-  - [ ] `diff(staged: bool, cwd: Path) -> str` — `git diff` or `git diff --cached`
-  - [ ] `is_git_repo(path: Path) -> bool` — check if path is inside a git working tree
-  - [ ] `current_branch(cwd: Path) -> str` — `git rev-parse --abbrev-ref HEAD`
-  - [ ] Write unit tests: `tests/unit/test_git_ops.py` — use `git init` in tmp dirs to test each operation. Test: create_branch, checkout, add+commit, rev_parse, status, diff, is_git_repo, GitError on bad commands
-  - [ ] Run tests, verify passing
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Create `src/orchestra/workspace/__init__.py` (empty package init)
+- [x] Create `src/orchestra/workspace/git_ops.py` — thin subprocess wrapper around git CLI
+  - [x] `run_git(*args, cwd: Path) -> str` — core runner, raises `GitError` on non-zero exit
+  - [x] `GitError(Exception)` with `returncode`, `stderr`, `command` fields
+  - [x] `rev_parse(ref: str, cwd: Path) -> str` — resolve ref to SHA
+  - [x] `create_branch(name: str, cwd: Path) -> None` — `git checkout -b {name}`
+  - [x] `checkout(ref: str, cwd: Path) -> None` — `git checkout {ref}`
+  - [x] `add(paths: list[str], cwd: Path) -> None` — `git add` exactly the listed paths
+  - [x] `commit(message: str, author: str, trailers: dict[str, str], cwd: Path) -> str` — `git commit` with `--author` and `--trailer` flags, returns commit SHA via `rev_parse("HEAD")`
+  - [x] `status(cwd: Path) -> str` — `git status --porcelain`
+  - [x] `log(n: int, format: str, cwd: Path) -> str` — `git log -n {n} --format={format}`
+  - [x] `diff(staged: bool, cwd: Path) -> str` — `git diff` or `git diff --cached`
+  - [x] `is_git_repo(path: Path) -> bool` — check if path is inside a git working tree
+  - [x] `current_branch(cwd: Path) -> str` — `git rev-parse --abbrev-ref HEAD`
+  - [x] Write unit tests: `tests/unit/test_git_ops.py` — use `git init` in tmp dirs to test each operation. Test: create_branch, checkout, add+commit, rev_parse, status, diff, is_git_repo, GitError on bad commands
+  - [x] Run tests, verify passing
+  - [x] Mark TODO complete and commit the changes to git
 
 ### 3. Create session branch manager
 
