@@ -13,6 +13,7 @@ from orchestra.models.outcome import Outcome, OutcomeStatus
 if TYPE_CHECKING:
     from orchestra.engine.runner import EventEmitter
     from orchestra.handlers.registry import HandlerRegistry
+    from orchestra.workspace.workspace_manager import WorkspaceManager
 
 
 class ParallelHandler:
@@ -20,9 +21,11 @@ class ParallelHandler:
         self,
         handler_registry: HandlerRegistry,
         event_emitter: EventEmitter | None = None,
+        workspace_manager: WorkspaceManager | None = None,
     ) -> None:
         self._registry = handler_registry
         self._emitter = event_emitter
+        self._workspace_manager = workspace_manager
 
     def handle(self, node: Node, context: Context, graph: PipelineGraph) -> Outcome:
         fan_in_id = find_fan_in_node(graph, node.id)
@@ -68,9 +71,15 @@ class ParallelHandler:
             duration_ms=parallel_duration_ms,
         )
 
+        context_updates: dict[str, Any] = {
+            "parallel.results": {bid: o.model_dump() for bid, o in results.items()},
+        }
+        if self._workspace_manager is not None:
+            context_updates["parallel.branch_ids"] = list(branches.keys())
+
         return Outcome(
             status=OutcomeStatus.SUCCESS if success_count > 0 else OutcomeStatus.FAIL,
-            context_updates={"parallel.results": {bid: o.model_dump() for bid, o in results.items()}},
+            context_updates=context_updates,
             suggested_next_ids=[fan_in_id],
         )
 
@@ -101,6 +110,11 @@ class ParallelHandler:
 
             try:
                 branch_context = parent_context.clone()
+
+                # Create worktrees for this branch if workspace is configured
+                if self._workspace_manager is not None:
+                    self._workspace_manager.create_worktrees_for_branch(branch_id)
+
                 self._emit(
                     "ParallelBranchStarted",
                     node_id=fan_out_node_id,

@@ -12,6 +12,7 @@ from orchestra.workspace.session_branch import (
     create_session_branches,
     restore_original_branches,
 )
+from orchestra.workspace.worktree_manager import WorktreeMergeResult, WorktreeManager
 
 if TYPE_CHECKING:
     from orchestra.config.settings import OrchestraConfig
@@ -42,6 +43,8 @@ class WorkspaceManager:
         self._pipeline_name = ""
         self._session_id = ""
         self._current_node_id = ""
+        self._worktree_manager: WorktreeManager | None = None
+        self._active_worktrees: dict[str, dict[str, RepoContext]] = {}
 
     @property
     def has_workspace(self) -> bool:
@@ -83,6 +86,37 @@ class WorkspaceManager:
         if self._branch_infos:
             restore_original_branches(self._branch_infos)
 
+    def _ensure_worktree_manager(self) -> WorktreeManager:
+        if self._worktree_manager is None:
+            first_repo = next(iter(self._repo_contexts.values()), None)
+            branch_prefix = "orchestra/"
+            if first_repo:
+                repo_config = self._config.workspace.repos.get(first_repo.name)
+                if repo_config:
+                    branch_prefix = repo_config.branch_prefix
+            self._worktree_manager = WorktreeManager(
+                repo_contexts=self._repo_contexts,
+                session_id=self._session_id,
+                pipeline_name=self._pipeline_name,
+                branch_prefix=branch_prefix,
+                event_emitter=self._event_emitter,
+            )
+        return self._worktree_manager
+
+    def create_worktrees_for_branch(self, branch_id: str) -> dict[str, RepoContext]:
+        wt_mgr = self._ensure_worktree_manager()
+        wt_contexts = wt_mgr.create_worktrees(branch_id)
+        self._active_worktrees[branch_id] = wt_contexts
+        return wt_contexts
+
+    def merge_worktrees(self, branch_ids: list[str]) -> WorktreeMergeResult:
+        wt_mgr = self._ensure_worktree_manager()
+        result = wt_mgr.merge_worktrees(branch_ids)
+        if result.success:
+            for bid in branch_ids:
+                self._active_worktrees.pop(bid, None)
+        return result
+
     def on_event(self, event: Event) -> None:
         from orchestra.events.types import StageCompleted, StageFailed, StageStarted
 
@@ -101,14 +135,16 @@ class WorkspaceManager:
 
     def _commit_turn(self, turn: AgentTurn, node_id: str) -> None:
         for repo_name, repo_ctx in self._repo_contexts.items():
-            repo_files = self._match_files_to_repo(turn.files_written, repo_ctx.path)
+            # Determine the working directory: use worktree path if available
+            cwd = self._resolve_commit_cwd(repo_name, repo_ctx)
+            repo_files = self._match_files_to_repo(turn.files_written, cwd)
             if not repo_files:
                 continue
 
             try:
-                git_ops.add(repo_files, cwd=repo_ctx.path)
+                git_ops.add(repo_files, cwd=cwd)
 
-                staged_diff = git_ops.diff(staged=True, cwd=repo_ctx.path)
+                staged_diff = git_ops.diff(staged=True, cwd=cwd)
                 if not staged_diff:
                     continue
 
@@ -129,7 +165,7 @@ class WorkspaceManager:
                     message,
                     author=author,
                     trailers=trailers,
-                    cwd=repo_ctx.path,
+                    cwd=cwd,
                 )
 
                 turn.git_sha = sha
@@ -151,6 +187,16 @@ class WorkspaceManager:
                     repo_name,
                     exc_info=True,
                 )
+
+    def _resolve_commit_cwd(self, repo_name: str, repo_ctx: RepoContext) -> Path:
+        """Return the worktree path if the repo is currently in a worktree, else the repo path."""
+        for wt_contexts in self._active_worktrees.values():
+            wt_ctx = wt_contexts.get(repo_name)
+            if wt_ctx and wt_ctx.worktree_path:
+                return wt_ctx.worktree_path
+        if repo_ctx.worktree_path:
+            return repo_ctx.worktree_path
+        return repo_ctx.path
 
     def _emit_agent_turn_completed(self, turn: AgentTurn, node_id: str) -> None:
         self._event_emitter.emit(

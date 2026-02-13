@@ -209,33 +209,33 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ### Layer 4: Parallel Handler Integration
 
-- [ ] Integrate worktrees into the parallel handler
-    - [ ] Update `ParallelHandler.__init__()` to accept optional `workspace_manager: WorkspaceManager | None`
-    - [ ] In `_execute_branches()`, before running each branch: if `workspace_manager` is set, call `workspace_manager.create_worktrees_for_branch(branch_id)` to get worktree-aware `RepoContext`s
-    - [ ] Thread worktree `RepoContext` through the branch's context so that repo tools in branch execution use the worktree path
-    - [ ] Store `branch_id → worktree_info` mapping for fan-in merge
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Integrate worktrees into the parallel handler
+    - [x] Update `ParallelHandler.__init__()` to accept optional `workspace_manager: WorkspaceManager | None`
+    - [x] In `_execute_branches()`, before running each branch: if `workspace_manager` is set, call `workspace_manager.create_worktrees_for_branch(branch_id)` to get worktree-aware `RepoContext`s
+    - [x] Thread worktree `RepoContext` through the branch's context so that repo tools in branch execution use the worktree path
+    - [x] Store `branch_id → worktree_info` mapping for fan-in merge
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Integrate worktree merge into the fan-in handler
-    - [ ] Update `FanInHandler.__init__()` to accept optional `workspace_manager: WorkspaceManager | None`
-    - [ ] After join evaluation, if `workspace_manager` is set: call `workspace_manager.merge_worktrees(branch_ids)` to merge all worktree branches back into the session branch
-    - [ ] On merge success: add merged SHA to context, continue normally
-    - [ ] On merge conflict: serialize conflict details into `context_updates["parallel.merge_conflicts"]` with structure `{"repo_name": {"conflicting_files": [...], "conflicts": {"file": "markers"}}}`. Continue with `PARTIAL_SUCCESS` status so downstream node can see conflicts
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Integrate worktree merge into the fan-in handler
+    - [x] Update `FanInHandler.__init__()` to accept optional `workspace_manager: WorkspaceManager | None`
+    - [x] After join evaluation, if `workspace_manager` is set: call `workspace_manager.merge_worktrees(branch_ids)` to merge all worktree branches back into the session branch
+    - [x] On merge success: add merged SHA to context, continue normally
+    - [x] On merge conflict: serialize conflict details into `context_updates["parallel.merge_conflicts"]` with structure `{"repo_name": {"conflicting_files": [...], "conflicts": {"file": "markers"}}}`. Continue with `PARTIAL_SUCCESS` status so downstream node can see conflicts
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Update `WorkspaceManager` to track worktree state
-    - [ ] Add `_active_worktrees: dict[str, dict[str, RepoContext]]` to `WorkspaceManager` (branch_id → repo_name → RepoContext)
-    - [ ] Add `create_worktrees_for_branch(branch_id: str) -> dict[str, RepoContext]` method
-    - [ ] Add `merge_worktrees(branch_ids: list[str]) -> WorktreeMergeResult` method
-    - [ ] Update `on_turn_callback()` to use worktree path when committing if the agent is running in a worktree (match files against `worktree_path` when set)
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Update `WorkspaceManager` to track worktree state
+    - [x] Add `_active_worktrees: dict[str, dict[str, RepoContext]]` to `WorkspaceManager` (branch_id → repo_name → RepoContext)
+    - [x] Add `create_worktrees_for_branch(branch_id: str) -> dict[str, RepoContext]` method
+    - [x] Add `merge_worktrees(branch_ids: list[str]) -> WorktreeMergeResult` method
+    - [x] Update `on_turn_callback()` to use worktree path when committing if the agent is running in a worktree (match files against `worktree_path` when set)
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Wire workspace_manager through handler registry to parallel + fan-in handlers
-    - [ ] Update `default_registry()` in `registry.py` to accept optional `workspace_manager` parameter
-    - [ ] Pass `workspace_manager` to `ParallelHandler` and `FanInHandler` constructors
-    - [ ] Update `cli/run.py` to pass `workspace_manager` to `default_registry()`
-    - [ ] Update `cli/resume_cmd.py` to pass `workspace_manager` to `default_registry()`
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Wire workspace_manager through handler registry to parallel + fan-in handlers
+    - [x] Update `default_registry()` in `registry.py` to accept optional `workspace_manager` parameter
+    - [x] Pass `workspace_manager` to `ParallelHandler` and `FanInHandler` constructors
+    - [x] Update `cli/run.py` to pass `workspace_manager` to `default_registry()`
+    - [x] Update `cli/resume_cmd.py` to pass `workspace_manager` to `default_registry()`
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 5: Workspace Snapshots
 

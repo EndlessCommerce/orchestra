@@ -101,7 +101,12 @@ def resume(session_id: str) -> None:
 
     # Build backend and handler registry
     backend = build_backend(config)
-    registry = default_registry(backend=backend, config=config, interviewer=interviewer)
+    on_turn = None
+    workspace_manager = None
+    registry = default_registry(
+        backend=backend, config=config, interviewer=interviewer,
+        on_turn=on_turn, workspace_manager=workspace_manager,
+    )
 
     typer.echo(f"[Resume] Resuming session {session_id} from node '{resume_info.next_node_id}'")
 

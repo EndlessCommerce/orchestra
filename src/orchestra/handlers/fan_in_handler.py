@@ -9,6 +9,7 @@ from orchestra.models.outcome import Outcome, OutcomeStatus
 
 if TYPE_CHECKING:
     from orchestra.backends.protocol import CodergenBackend
+    from orchestra.workspace.workspace_manager import WorkspaceManager
 
 _STATUS_PRIORITY = {
     OutcomeStatus.SUCCESS: 0,
@@ -19,8 +20,13 @@ _STATUS_PRIORITY = {
 
 
 class FanInHandler:
-    def __init__(self, backend: CodergenBackend | None = None) -> None:
+    def __init__(
+        self,
+        backend: CodergenBackend | None = None,
+        workspace_manager: WorkspaceManager | None = None,
+    ) -> None:
         self._backend = backend
+        self._workspace_manager = workspace_manager
 
     def handle(self, node: Node, context: Context, graph: PipelineGraph) -> Outcome:
         raw_results: dict[str, Any] = context.get("parallel.results", {})
@@ -51,15 +57,29 @@ class FanInHandler:
         else:
             best_id, best_outcome = self._select_heuristic(join_result.selected_results)
 
+        context_updates: dict[str, Any] = {
+            "parallel.fan_in.best_id": best_id,
+            "parallel.fan_in.best_outcome": best_outcome.model_dump(),
+            "parallel.fan_in.selected_results": [
+                (bid, o.model_dump()) for bid, o in join_result.selected_results
+            ],
+        }
+
+        # Merge worktrees at fan-in if workspace is configured
+        if self._workspace_manager is not None:
+            branch_ids = context.get("parallel.branch_ids", [])
+            if branch_ids:
+                merge_result = self._workspace_manager.merge_worktrees(branch_ids)
+                if not merge_result.success:
+                    context_updates["parallel.merge_conflicts"] = merge_result.conflicts
+                    return Outcome(
+                        status=OutcomeStatus.PARTIAL_SUCCESS,
+                        context_updates=context_updates,
+                    )
+
         return Outcome(
             status=join_result.status,
-            context_updates={
-                "parallel.fan_in.best_id": best_id,
-                "parallel.fan_in.best_outcome": best_outcome.model_dump(),
-                "parallel.fan_in.selected_results": [
-                    (bid, o.model_dump()) for bid, o in join_result.selected_results
-                ],
-            },
+            context_updates=context_updates,
         )
 
     def _select_heuristic(

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from orchestra.config.settings import OrchestraConfig
     from orchestra.engine.runner import EventEmitter
     from orchestra.interviewer.base import Interviewer
+    from orchestra.workspace.workspace_manager import WorkspaceManager
 
 
 class HandlerRegistry:
@@ -36,6 +37,7 @@ def default_registry(
     interviewer: Interviewer | None = None,
     event_emitter: EventEmitter | None = None,
     on_turn: OnTurnCallback | None = None,
+    workspace_manager: WorkspaceManager | None = None,
 ) -> HandlerRegistry:
     registry = HandlerRegistry()
     registry.register("Mdiamond", StartHandler())
@@ -65,8 +67,8 @@ def default_registry(
 
     registry.register("box", box_handler)
     registry.register("diamond", ConditionalHandler())
-    registry.register("component", ParallelHandler(handler_registry=registry, event_emitter=event_emitter))
-    registry.register("tripleoctagon", FanInHandler(backend=backend))
+    registry.register("component", ParallelHandler(handler_registry=registry, event_emitter=event_emitter, workspace_manager=workspace_manager))
+    registry.register("tripleoctagon", FanInHandler(backend=backend, workspace_manager=workspace_manager))
 
     # Human gate handler
     if interviewer is not None:

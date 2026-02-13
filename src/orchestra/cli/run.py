@@ -109,11 +109,9 @@ def run(
 
         interviewer = ConsoleInterviewer(multiline=not single_line)
 
-    # Build backend
-    backend = build_backend(config)
-
-    # Set up workspace (if configured)
+    # Set up workspace (if configured) — must happen before backend so tools are available
     workspace_manager = None
+    repo_contexts: dict = {}
     if config.workspace.repos:
         if config.backend == "cli":
             typer.echo("Warning: Per-turn commits are not supported for CLI backend (deferred to Stage 6b)")
@@ -128,18 +126,38 @@ def run(
                     event_emitter=dispatcher,
                     commit_gen=commit_gen,
                 )
-                workspace_manager.setup_session(graph.name, display_id)
+                repo_contexts = workspace_manager.setup_session(graph.name, display_id)
                 dispatcher.add_observer(workspace_manager)
             except WorkspaceError as e:
                 typer.echo(f"Error: Workspace setup failed: {e}")
                 raise typer.Exit(code=1)
 
+    # Create repo tools (if workspace has repos)
+    repo_tools = None
+    write_tracker = None
+    if repo_contexts:
+        from orchestra.backends.write_tracker import WriteTracker
+        from orchestra.workspace.repo_tools import create_repo_tools, create_workspace_tools
+
+        write_tracker = WriteTracker()
+        repo_tools = create_repo_tools(repo_contexts, write_tracker)
+
+        # Add custom tools from workspace.tools config
+        if config.workspace.tools:
+            repo_tools.extend(create_workspace_tools(
+                config.workspace.tools, repo_contexts,
+            ))
+
+    # Build backend
+    backend = build_backend(config, tools=repo_tools, write_tracker=write_tracker)
+
     # Build on_turn callback (always wired, even without workspace)
     on_turn = build_on_turn_callback(dispatcher, workspace_manager)
 
-    # Build handler registry with on_turn
+    # Build handler registry with on_turn and workspace_manager
     registry = default_registry(
-        backend=backend, config=config, interviewer=interviewer, on_turn=on_turn
+        backend=backend, config=config, interviewer=interviewer, on_turn=on_turn,
+        workspace_manager=workspace_manager,
     )
 
     # Run pipeline with SIGINT handling
