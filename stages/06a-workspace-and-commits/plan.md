@@ -322,22 +322,22 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 12. Identify and run all specs that need updating
 
-- [ ] Look at all previous TODOs and changes in git to identify modified files
-- [ ] Run existing test suite: `pytest tests/` to catch any regressions
-  - [ ] Especially: `tests/unit/test_settings.py` (config changes), `tests/unit/test_observer.py` (event/observer changes), `tests/unit/test_type_bundle.py` (CXDB changes), `tests/unit/test_registry.py` (handler registry changes), `tests/unit/test_agent_turn.py` (model changes)
-- [ ] Fix any failing tests from modifications to existing modules
-- [ ] Identify any missing test coverage for edge cases:
-  - [ ] Workspace with no repos configured (should be no-op)
-  - [ ] Repo path that doesn't exist (clear error)
-  - [ ] Repo path that exists but isn't a git repo (clear error)
-  - [ ] Dirty working tree at session start (should still work — create branch from current state)
-  - [ ] Commit with empty diff (should not happen due to files_written check, but defensive)
-  - [ ] LLM commit message generation timeout/failure (fallback message)
-  - [ ] Branch restoration on success and on failure
-  - [ ] Branch restoration when original branch has been deleted externally (log warning, don't raise)
-  - [ ] CLI backend with workspace configured (warning logged, no git operations, AgentTurnCompleted still emitted)
-- [ ] Add any missing tests as new test cases
-- [ ] Mark TODO complete and commit the changes to git
+- [x] Look at all previous TODOs and changes in git to identify modified files
+- [x] Run existing test suite: `pytest tests/` to catch any regressions
+  - [x] Especially: `tests/unit/test_settings.py` (config changes), `tests/unit/test_observer.py` (event/observer changes), `tests/unit/test_type_bundle.py` (CXDB changes), `tests/unit/test_registry.py` (handler registry changes), `tests/unit/test_agent_turn.py` (model changes)
+- [x] Fix any failing tests from modifications to existing modules
+- [x] Identify any missing test coverage for edge cases:
+  - [x] Workspace with no repos configured (should be no-op)
+  - [x] Repo path that doesn't exist (clear error)
+  - [x] Repo path that exists but isn't a git repo (clear error)
+  - [x] Dirty working tree at session start (should still work — create branch from current state)
+  - [x] Commit with empty diff (should not happen due to files_written check, but defensive)
+  - [x] LLM commit message generation timeout/failure (fallback message)
+  - [x] Branch restoration on success and on failure
+  - [x] Branch restoration when original branch has been deleted externally (log warning, don't raise)
+  - [x] CLI backend with workspace configured (warning logged, no git operations, AgentTurnCompleted still emitted)
+- [x] Add any missing tests as new test cases
+- [x] Mark TODO complete and commit the changes to git
 
 ### 13. Identify unused code and clean up
 
