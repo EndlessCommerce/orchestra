@@ -259,3 +259,62 @@ def test_default_registry_registers_parallel_handlers() -> None:
     assert registry.get("tripleoctagon") is not None
     assert isinstance(registry.get("component"), ParallelHandler)
     assert isinstance(registry.get("tripleoctagon"), FanInHandler)
+
+
+def test_nested_parallel() -> None:
+    """Nested parallel: one branch of the outer fan-out contains its own fan-out/fan-in."""
+    graph = PipelineGraph(
+        name="nested_parallel",
+        nodes={
+            "start": Node(id="start", shape="Mdiamond"),
+            "outer_fan_out": Node(id="outer_fan_out", shape="component"),
+            # Branch 1: simple
+            "simple": Node(id="simple", shape="box", prompt="Simple branch"),
+            # Branch 2: contains inner parallel
+            "inner_fan_out": Node(id="inner_fan_out", shape="component"),
+            "X": Node(id="X", shape="box", prompt="Inner X"),
+            "Y": Node(id="Y", shape="box", prompt="Inner Y"),
+            "inner_fan_in": Node(id="inner_fan_in", shape="tripleoctagon"),
+            # Outer fan-in
+            "outer_fan_in": Node(id="outer_fan_in", shape="tripleoctagon"),
+            "exit": Node(id="exit", shape="Msquare"),
+        },
+        edges=[
+            Edge(from_node="start", to_node="outer_fan_out"),
+            # Outer branches
+            Edge(from_node="outer_fan_out", to_node="simple"),
+            Edge(from_node="outer_fan_out", to_node="inner_fan_out"),
+            Edge(from_node="simple", to_node="outer_fan_in"),
+            # Inner parallel
+            Edge(from_node="inner_fan_out", to_node="X"),
+            Edge(from_node="inner_fan_out", to_node="Y"),
+            Edge(from_node="X", to_node="inner_fan_in"),
+            Edge(from_node="Y", to_node="inner_fan_in"),
+            Edge(from_node="inner_fan_in", to_node="outer_fan_in"),
+            # After outer fan-in
+            Edge(from_node="outer_fan_in", to_node="exit"),
+        ],
+    )
+
+    emitter = RecordingEmitter()
+    registry = _build_registry(emitter)
+    runner = PipelineRunner(graph, registry, emitter)
+    outcome = runner.run()
+
+    assert outcome.status == OutcomeStatus.SUCCESS, f"Pipeline failed: {outcome.failure_reason}"
+
+    # Verify outer parallel events
+    outer_started = [
+        e for e in emitter.events
+        if e[0] == "ParallelStarted" and e[1]["node_id"] == "outer_fan_out"
+    ]
+    assert len(outer_started) == 1
+    assert outer_started[0][1]["branch_count"] == 2
+
+    # Verify inner parallel events
+    inner_started = [
+        e for e in emitter.events
+        if e[0] == "ParallelStarted" and e[1]["node_id"] == "inner_fan_out"
+    ]
+    assert len(inner_started) == 1
+    assert inner_started[0][1]["branch_count"] == 2

@@ -32,7 +32,6 @@ def find_fan_in_node(graph: PipelineGraph, fan_out_node_id: str) -> str | None:
             node = graph.get_node(nid)
             if node is not None and node.shape == "tripleoctagon":
                 reachable.add(nid)
-                continue
             for out_edge in graph.get_outgoing_edges(nid):
                 queue.append(out_edge.to_node)
         branch_reachable.append(reachable)
@@ -47,7 +46,21 @@ def find_fan_in_node(graph: PipelineGraph, fan_out_node_id: str) -> str | None:
     if not common:
         return None
 
-    return min(common)
+    # Pick the nearest common tripleoctagon by BFS distance from fan-out.
+    dist: dict[str, int] = {}
+    bfs_queue: deque[tuple[str, int]] = deque([(fan_out_node_id, 0)])
+    bfs_visited: set[str] = set()
+    while bfs_queue:
+        nid, d = bfs_queue.popleft()
+        if nid in bfs_visited:
+            continue
+        bfs_visited.add(nid)
+        if nid in common:
+            dist[nid] = d
+        for out_edge in graph.get_outgoing_edges(nid):
+            bfs_queue.append((out_edge.to_node, d + 1))
+
+    return min(common, key=lambda nid: (dist.get(nid, float("inf")), nid))
 
 
 def extract_branch_subgraphs(

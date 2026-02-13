@@ -180,13 +180,13 @@ For the 3-branch parallel pipeline:
 
 ## Success Criteria
 
-- [ ] Parallel handler fans out to multiple branches concurrently
-- [ ] Fan-in handler waits for all branches and consolidates results
-- [ ] Context isolation prevents parallel branches from affecting each other or the parent
-- [ ] Join policies (wait_all, first_success, k_of_n, quorum) work correctly
-- [ ] Error policies (fail_fast, continue, ignore) work correctly
-- [ ] Bounded parallelism respects `max_parallel` attribute
-- [ ] Parallel events emitted with correct sequence, counts, and timing
-- [ ] Fan-in selects best candidate via heuristic or LLM evaluation
-- [ ] A human can run a pipeline with parallel agents and see concurrent execution
-- [ ] All automated tests pass
+- [x] Parallel handler fans out to multiple branches concurrently
+- [x] Fan-in handler waits for all branches and consolidates results
+- [x] Context isolation prevents parallel branches from affecting each other or the parent
+- [x] Join policies (wait_all, first_success, k_of_n, quorum) work correctly
+- [x] Error policies (fail_fast, continue, ignore) work correctly
+- [x] Bounded parallelism respects `max_parallel` attribute
+- [x] Parallel events emitted with correct sequence, counts, and timing
+- [x] Fan-in selects best candidate via heuristic or LLM evaluation
+- [x] A human can run a pipeline with parallel agents and see concurrent execution
+- [x] All automated tests pass (437 tests, 0 failures)

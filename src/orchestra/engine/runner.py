@@ -128,13 +128,25 @@ class PipelineRunner:
             next_node_id = ""
             next_node_obj: Node | None = None
 
-            next_edge = select_edge(node.id, outcome, state.context, self._graph)
-            if next_edge is not None:
-                next_node_obj = self._graph.get_node(next_edge.to_node)
-                if next_node_obj is None:
-                    raise RuntimeError(f"Edge target node '{next_edge.to_node}' not found")
-                next_node_id = next_edge.to_node
-            elif outcome.status in (OutcomeStatus.FAIL, OutcomeStatus.RETRY):
+            # If the handler provided suggested_next_ids, try direct navigation
+            # first (e.g., parallel handler skipping to fan-in node).
+            if outcome.suggested_next_ids:
+                for sid in outcome.suggested_next_ids:
+                    candidate = self._graph.get_node(sid)
+                    if candidate is not None:
+                        next_node_obj = candidate
+                        next_node_id = sid
+                        break
+
+            if next_node_obj is None:
+                next_edge = select_edge(node.id, outcome, state.context, self._graph)
+                if next_edge is not None:
+                    next_node_obj = self._graph.get_node(next_edge.to_node)
+                    if next_node_obj is None:
+                        raise RuntimeError(f"Edge target node '{next_edge.to_node}' not found")
+                    next_node_id = next_edge.to_node
+
+            if next_node_obj is None and outcome.status in (OutcomeStatus.FAIL, OutcomeStatus.RETRY):
                 failure_next = self._find_failure_target(node, outcome, state)
                 if failure_next is not None:
                     next_node_obj = failure_next
