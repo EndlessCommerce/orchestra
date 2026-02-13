@@ -23,7 +23,11 @@ class FanInHandler:
         self._backend = backend
 
     def handle(self, node: Node, context: Context, graph: PipelineGraph) -> Outcome:
-        results: dict[str, Outcome] = context.get("parallel.results", {})
+        raw_results: dict[str, Any] = context.get("parallel.results", {})
+        results: dict[str, Outcome] = {
+            bid: Outcome.model_validate(v) if isinstance(v, dict) else v
+            for bid, v in raw_results.items()
+        }
 
         policy_str = node.attributes.get("join_policy", "wait_all")
         policy = JoinPolicy(policy_str)

@@ -15,8 +15,8 @@ digraph pr_review {
     exit  [shape=Msquare,  label="Done"]
 
     // ── parallel fan-out / fan-in ─────────────────────────────
-    fan_out [shape=component,     label="Fan Out Reviews"]
-    fan_in  [shape=tripleoctagon, label="Collect Reviews"]
+    fan_out [shape=component,     label="Fan Out Reviews", error_policy="continue"]
+    fan_in  [shape=tripleoctagon, label="Collect Reviews", join_policy="wait_all"]
 
     // ── specialist reviewers (all share role + critic trait) ──
     security    [label="Security Review",    agent="security-reviewer",    class="critic"]

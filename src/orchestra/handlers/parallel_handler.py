@@ -70,7 +70,7 @@ class ParallelHandler:
 
         return Outcome(
             status=OutcomeStatus.SUCCESS if success_count > 0 else OutcomeStatus.FAIL,
-            context_updates={"parallel.results": results},
+            context_updates={"parallel.results": {bid: o.model_dump() for bid, o in results.items()}},
             suggested_next_ids=[fan_in_id],
         )
 
