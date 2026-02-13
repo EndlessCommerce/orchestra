@@ -28,7 +28,7 @@ This is the second of three sub-stages decomposing Stage 6. It builds on Stage 6
 - **Workspace Snapshots at Two Granularities.** Fine-grained: each `dev.orchestra.AgentTurn` with file writes already includes the git SHA of that turn's commit (from Stage 6a). Coarse-grained: the `dev.orchestra.Checkpoint` at each node boundary includes a `workspace_snapshot` with the current HEAD SHA for each repo. Checkpoint turn version bumped to v3. Only recorded when repo state has changed.
 - **Resume at Node Boundary with Git State.** Extend existing `orchestra resume <session_id>` to restore git repos to the correct commit SHAs from the Checkpoint's `workspace_snapshot`. Checkout each repo to the recorded HEAD SHA before continuing execution.
 - **Resume at Agent Turn Granularity.** `orchestra resume <session_id> --turn <turn_id>` restores to a specific AgentTurn: pipeline state from the enclosing Checkpoint, git state from the AgentTurn's git_sha, LangGraph agent state from agent_state_ref. Standard `orchestra resume <session_id>` resumes from the latest node-boundary Checkpoint.
-- **Replay at Agent Turn Granularity.** `orchestra replay <session_id> --turn <turn_id>` creates a new CXDB context, copies turns from the source context up to the fork point, and starts new execution from that point. (CXDB does not support native forking — implemented as create_context + copy turns.)
+- **Replay at Agent Turn Granularity.** `orchestra replay <session_id> --turn <turn_id>` forks the CXDB context at the specified turn via `create_context(base_turn_id=turn_id)` — an O(1) operation that shares history up to the fork point without copying data. New execution appends turns to the forked context, diverging from the original.
 - **Workspace Events.** Events for worktree creation (`WorktreeCreated`), worktree merge (`WorktreeMerged`), merge conflict (`WorktreeMergeConflict`), snapshot recording (`WorkspaceSnapshotRecorded`).
 
 ### Excluded (deferred)
@@ -85,7 +85,7 @@ Tests use temporary git repositories created in a test fixture. No external git 
 
 | Test | Description |
 |------|-------------|
-| Replay from agent turn | `--turn <turn_id>` → new CXDB context created with turns copied up to fork point |
+| Replay from agent turn | `--turn <turn_id>` → CXDB context forked at turn_id via create_context(base_turn_id), new context shares history up to fork point |
 | Replay restores git state | New context + git at AgentTurn.git_sha → agent continues with correct code |
 | Replay diverges | New execution appends new AgentTurns to new context, original unchanged |
 
@@ -149,7 +149,207 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 - [ ] Workspace snapshots at two granularities: per-turn SHA in AgentTurn (from 6a), per-node HEAD SHAs in Checkpoint (v3)
 - [ ] Resume at node boundary restores pipeline state + git HEAD per repo
 - [ ] Resume at agent turn restores pipeline state + git to turn's SHA + LangGraph agent state
-- [ ] Replay at agent turn creates a new CXDB context with turns copied up to fork point
+- [ ] Replay at agent turn forks the CXDB context at the specified turn (O(1), no data copying)
 - [ ] Sequential nodes after fan-in work on session branch directly (no unnecessary worktrees)
 - [ ] Multi-repo workspaces work with independent snapshots per repo
 - [ ] All automated tests pass using temporary git repositories
+
+---
+
+## Investigation
+
+- [ ] Verify CXDB O(1) fork semantics work with current Python client
+    - [ ] Write a small test: create context A, append 3 turns, fork at turn 2, verify new context has turns 1-2, append to both, verify independence
+    - [ ] Confirm `create_context(base_turn_id=str(turn_id))` in `CxdbClient` works as expected
+    - [ ] Update the plan with findings
+    - [ ] Mark TODO complete and commit the changes to git
+
+## Plan
+
+### Layer 1: Git Worktree Operations
+
+- [ ] Add worktree git operations to `git_ops.py`
+    - [ ] Add `worktree_add(worktree_path: Path, branch: str, *, cwd: Path) -> None` — runs `git worktree add <worktree_path> -b <branch>`
+    - [ ] Add `worktree_remove(worktree_path: Path, *, cwd: Path) -> None` — runs `git worktree remove <worktree_path> --force`
+    - [ ] Add `worktree_list(*, cwd: Path) -> list[str]` — runs `git worktree list --porcelain`
+    - [ ] Add `merge(branch: str, *, cwd: Path) -> None` — runs `git merge --no-commit <branch>`
+    - [ ] Add `merge_abort(*, cwd: Path) -> None` — runs `git merge --abort`
+    - [ ] Add `merge_conflicts(*, cwd: Path) -> list[str]` — parses `git diff --name-only --diff-filter=U` to get conflicting files
+    - [ ] Add `read_file(path: Path) -> str` — reads file content (for conflict markers)
+    - [ ] Add `branch_delete(name: str, *, cwd: Path) -> None` — runs `git branch -D <name>`
+    - [ ] Write unit tests in `tests/test_git_ops_worktree.py` for each new operation using a tmp git repo fixture
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Layer 2: Worktree Lifecycle Manager
+
+- [ ] Add `worktree_path` field to `RepoContext`
+    - [ ] Update `src/orchestra/workspace/repo_context.py`: add `worktree_path: Path | None = None` to `RepoContext` dataclass
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Create `src/orchestra/workspace/worktree_manager.py`
+    - [ ] `WorktreeManager` class with `__init__(self, repo_contexts: dict[str, RepoContext], session_id: str, pipeline_name: str, branch_prefix: str, event_emitter: EventEmitter)`
+    - [ ] `create_worktrees(self, branch_id: str) -> dict[str, RepoContext]` — for each repo, calls `git_ops.worktree_add()` at `.orchestra/worktrees/{session_id}/{branch_id}`, creates worktree branch `{branch_prefix}{pipeline_name}/{session_id}/{branch_id}`, returns new `RepoContext` copies with `worktree_path` set. Emits `WorktreeCreated` per repo.
+    - [ ] `merge_worktrees(self, branch_ids: list[str]) -> WorktreeMergeResult` — for each repo: checkout session branch, for each branch_id run `git merge --no-commit`. On success: commit, clean up worktree dirs + delete branches. On conflict: capture file list + conflict markers, abort merge, preserve worktrees. Returns `WorktreeMergeResult(success: bool, conflicts: dict)`. Emits `WorktreeMerged` or `WorktreeMergeConflict`.
+    - [ ] `cleanup_worktrees(self, branch_ids: list[str]) -> None` — removes worktree dirs and branches (called after successful merge)
+    - [ ] `WorktreeMergeResult` dataclass: `success: bool`, `conflicts: dict[str, dict]` (repo_name → conflict info), `merged_shas: dict[str, str]` (repo_name → merged HEAD SHA)
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Layer 3: Workspace Events
+
+- [ ] Add new event types to `src/orchestra/events/types.py`
+    - [ ] `WorktreeCreated(Event)` — fields: `repo_name`, `branch_id`, `worktree_path`, `worktree_branch`
+    - [ ] `WorktreeMerged(Event)` — fields: `repo_name`, `branch_ids: list[str]`, `merged_sha`
+    - [ ] `WorktreeMergeConflict(Event)` — fields: `repo_name`, `branch_ids: list[str]`, `conflicting_files: list[str]`
+    - [ ] `WorkspaceSnapshotRecorded(Event)` — fields: `node_id`, `workspace_snapshot: dict[str, str]`
+    - [ ] Register all four in `EVENT_TYPE_MAP`
+    - [ ] Update `StdoutObserver` in `observer.py` to log new events
+    - [ ] Update `CxdbObserver` in `observer.py` to record `WorktreeCreated` and `WorktreeMerged` events (as `dev.orchestra.WorktreeEvent` v1)
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Layer 4: Parallel Handler Integration
+
+- [ ] Integrate worktrees into the parallel handler
+    - [ ] Update `ParallelHandler.__init__()` to accept optional `workspace_manager: WorkspaceManager | None`
+    - [ ] In `_execute_branches()`, before running each branch: if `workspace_manager` is set, call `workspace_manager.create_worktrees_for_branch(branch_id)` to get worktree-aware `RepoContext`s
+    - [ ] Thread worktree `RepoContext` through the branch's context so that repo tools in branch execution use the worktree path
+    - [ ] Store `branch_id → worktree_info` mapping for fan-in merge
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Integrate worktree merge into the fan-in handler
+    - [ ] Update `FanInHandler.__init__()` to accept optional `workspace_manager: WorkspaceManager | None`
+    - [ ] After join evaluation, if `workspace_manager` is set: call `workspace_manager.merge_worktrees(branch_ids)` to merge all worktree branches back into the session branch
+    - [ ] On merge success: add merged SHA to context, continue normally
+    - [ ] On merge conflict: serialize conflict details into `context_updates["parallel.merge_conflicts"]` with structure `{"repo_name": {"conflicting_files": [...], "conflicts": {"file": "markers"}}}`. Continue with `PARTIAL_SUCCESS` status so downstream node can see conflicts
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Update `WorkspaceManager` to track worktree state
+    - [ ] Add `_active_worktrees: dict[str, dict[str, RepoContext]]` to `WorkspaceManager` (branch_id → repo_name → RepoContext)
+    - [ ] Add `create_worktrees_for_branch(branch_id: str) -> dict[str, RepoContext]` method
+    - [ ] Add `merge_worktrees(branch_ids: list[str]) -> WorktreeMergeResult` method
+    - [ ] Update `on_turn_callback()` to use worktree path when committing if the agent is running in a worktree (match files against `worktree_path` when set)
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Wire workspace_manager through handler registry to parallel + fan-in handlers
+    - [ ] Update `default_registry()` in `registry.py` to accept optional `workspace_manager` parameter
+    - [ ] Pass `workspace_manager` to `ParallelHandler` and `FanInHandler` constructors
+    - [ ] Update `cli/run.py` to pass `workspace_manager` to `default_registry()`
+    - [ ] Update `cli/resume_cmd.py` to pass `workspace_manager` to `default_registry()`
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Layer 5: Workspace Snapshots
+
+- [ ] Add workspace snapshots to checkpoints
+    - [ ] Add `workspace_snapshot: dict[str, str]` field to `CheckpointSaved` event in `types.py` (default `{}`)
+    - [ ] Update `WorkspaceManager` to track whether repo state has changed since last checkpoint (compare HEAD SHAs)
+    - [ ] Add `get_workspace_snapshot() -> dict[str, str]` method to `WorkspaceManager` — returns `{repo_name: HEAD_SHA}` for each repo. Returns `{}` if no repos have changed since last snapshot.
+    - [ ] Update `PipelineRunner._save_checkpoint()` to include `workspace_snapshot` in the emitted event — this requires the runner to have access to the workspace manager or for the checkpoint event to be enriched by the workspace manager observer
+    - [ ] **Approach:** Have `WorkspaceManager.on_event()` listen for `CheckpointSaved` events and enrich them with `workspace_snapshot` before CXDB records them. Alternatively, have the runner query `workspace_manager.get_workspace_snapshot()` when saving checkpoints. **Decision:** Use the runner approach — add optional `workspace_manager` to `PipelineRunner.__init__()` and query it in `_save_checkpoint()`.
+    - [ ] Update `CxdbObserver._append_checkpoint()` to bump to v3 and include `workspace_snapshot` in data
+    - [ ] Update `src/orchestra/storage/type_bundle.py` to register `dev.orchestra.Checkpoint` v3 schema
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Layer 6: Resume with Git State
+
+- [ ] Extend resume at node boundary to restore git state
+    - [ ] Update `restore_from_turns()` in `engine/resume.py` to extract `workspace_snapshot` from the latest Checkpoint turn and include it in `ResumeInfo`
+    - [ ] Add `workspace_snapshot: dict[str, str]` field to `ResumeInfo` dataclass (default `{}`)
+    - [ ] Create `src/orchestra/workspace/restore.py` with function `restore_git_state(workspace_snapshot: dict[str, str], repos: dict[str, RepoConfig], config_dir: Path) -> None` — for each repo in snapshot: resolve repo path, checkout session branch, verify/checkout to the recorded SHA
+    - [ ] Update `cli/resume_cmd.py` to call `restore_git_state()` after `restore_from_turns()` succeeds, before starting the runner
+    - [ ] Set up workspace (session branches, repo tools, write tracker) in resume command, same as in `run.py`
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Layer 7: Resume at Agent Turn
+
+- [ ] Add `--turn` flag to resume command
+    - [ ] Update `cli/resume_cmd.py`: add `turn: str = typer.Option(None, "--turn", help="Resume from a specific agent turn ID")` parameter
+    - [ ] Create `engine/turn_resume.py` with function `restore_from_turn(turns: list[dict], turn_id: str, context_id: str) -> TurnResumeInfo`
+    - [ ] `TurnResumeInfo` dataclass: `state: _RunState` (from enclosing Checkpoint), `next_node_id: str`, `turn_number: int`, `git_sha: str`, `prior_messages: list[dict]` (reconstructed conversation history for the agent), `pipeline_name`, `dot_file_path`, `graph_hash`, `context_id`
+    - [ ] Logic: find the specified AgentTurn, find the most recent Checkpoint before it, restore pipeline state from Checkpoint, extract `git_sha` from the AgentTurn, collect all prior AgentTurns for the same node to reconstruct message history
+    - [ ] In `resume_cmd.py`: if `--turn` is provided, call `restore_from_turn()` instead of `restore_from_turns()`. Restore git state to the AgentTurn's `git_sha`. Initialize the backend with prior conversation history via `send_message()`. Resume the runner from the node containing the turn.
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Layer 8: Replay at Agent Turn
+
+- [ ] Add `replay` CLI command
+    - [ ] Create `src/orchestra/cli/replay_cmd.py` with function `replay(session_id: str, turn: str)`
+    - [ ] Register `replay` command in the CLI app (`src/orchestra/cli/app.py` or equivalent)
+    - [ ] Logic: resolve session_id → context_id, read turns, find specified turn, fork CXDB context via `client.create_context(base_turn_id=str(turn_id))`, restore git state from AgentTurn's `git_sha`, set up workspace + backend + dispatcher pointing at new forked context, resume execution from the turn's node
+    - [ ] The forked context shares history up to the fork point — new turns append only to the forked context, original is unchanged
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Layer 9: Tests
+
+- [ ] Write worktree lifecycle tests (`tests/test_worktree.py`)
+    - [ ] `test_worktree_created_for_parallel` — parallel fan-out with 2 codergen branches → 2 worktrees created at expected paths
+    - [ ] `test_worktree_isolation` — write file in worktree A, verify not visible in worktree B
+    - [ ] `test_worktree_path` — verify worktrees created at `.orchestra/worktrees/{session-id}/{agent-name}`
+    - [ ] `test_sequential_no_worktree` — sequential node after fan-in uses session branch directly, no worktree
+    - [ ] `test_per_turn_commits_in_worktree` — agent in worktree commits to worktree branch, not session branch
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Write worktree merge tests (`tests/test_worktree_merge.py`)
+    - [ ] `test_clean_merge` — two agents edit different files → merge succeeds, session branch has both changes
+    - [ ] `test_merge_conflict_surfaced` — two agents edit same file → conflict details serialized in context
+    - [ ] `test_worktree_cleanup_on_success` — after successful merge, worktree dirs removed
+    - [ ] `test_worktree_preserved_on_failure` — on merge conflict, worktree dirs preserved
+    - [ ] `test_merge_result_on_session_branch` — after merge, session branch HEAD contains changes from both agents
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Write workspace snapshot tests (`tests/test_workspace_snapshot.py`)
+    - [ ] `test_checkpoint_includes_workspace_snapshot` — checkpoint after node with file writes includes `workspace_snapshot` with HEAD SHAs
+    - [ ] `test_checkpoint_snapshot_only_on_change` — read-only node → checkpoint has empty `workspace_snapshot`
+    - [ ] `test_snapshot_per_repo` — multi-repo workspace → snapshot has separate SHA for each repo
+    - [ ] `test_snapshot_after_parallel` — after parallel + fan-in merge → snapshot reflects merged state
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Write resume with git state tests (`tests/test_resume_git.py`)
+    - [ ] `test_resume_at_node_boundary` — resume restores repo to checkpoint's workspace_snapshot SHA
+    - [ ] `test_resume_at_node_restores_multiple_repos` — both repos restored to correct SHAs
+    - [ ] `test_resume_at_agent_turn` — `--turn` restores repo to AgentTurn.git_sha
+    - [ ] `test_resume_at_agent_turn_restores_agent_state` — agent continues with correct prior context
+    - [ ] `test_resume_at_read_only_turn` — null git_sha → repo at most recent prior SHA
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Write replay tests (`tests/test_replay.py`)
+    - [ ] `test_replay_from_agent_turn` — fork creates new CXDB context sharing history up to fork point
+    - [ ] `test_replay_restores_git_state` — git at AgentTurn.git_sha after fork
+    - [ ] `test_replay_diverges` — new execution appends to new context, original unchanged
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Write end-to-end integration tests (`tests/test_worktree_e2e.py`)
+    - [ ] `test_parallel_with_worktrees` — full flow: fan-out → 2 agents write in isolated worktrees → per-turn commits → fan-in → merge → session branch has both agents' commits
+    - [ ] `test_resume_at_node_boundary_e2e` — run → pause → resume → git state correct → completes
+    - [ ] `test_resume_at_agent_turn_e2e` — run → pause mid-node → resume --turn → agent continues from that turn
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Layer 10: Review and Cleanup
+
+- [ ] Identify any code that is unused, or could be cleaned up
+    - [ ] Look at all previous TODOs and changes in git to identify changes
+    - [ ] Identify any code that is no longer used, and remove it
+    - [ ] Identify any unnecessary comments, and remove them (these are comments that explain "what" for a single line of code)
+    - [ ] If there are any obvious code smells of redundant code, add TODOs below to address them
+    - [ ] Mark TODO complete and commit the changes to git
+
+- [ ] Identify all specs that need to be run and updated
+    - [ ] Look at all previous TODOs and changes in git to identify changes
+    - [ ] Run the full test suite (`pytest tests/`) to verify no regressions
+    - [ ] Identify any existing tests that may need updates due to changed signatures (e.g., `default_registry()`, `PipelineRunner.__init__()`, `RepoContext`)
+    - [ ] Fix any failing tests
+    - [ ] Mark TODO complete and commit the changes to git
+
+### Key Design Decisions
+
+**Worktree branch naming:** `{branch_prefix}{pipeline_name}/{session_id}/{branch_id}` — extends the session branch naming from 6a.
+
+**Worktree creation trigger:** Create worktrees for all parallel branches that contain codergen nodes (shape=`box`). Check nodes in the branch subgraph via `extract_branch_subgraphs()`.
+
+**RepoContext threading:** Add optional `worktree_path` field. When set, repo tools use `worktree_path` for all file operations instead of `path`. Original `path` preserved for merge operations back to the main repo.
+
+**Agent state for turn resume:** Use messages-based reconstruction (Option B). Each AgentTurn already stores `messages`. On resume, reconstruct the full conversation from all prior AgentTurns for the same node and pass to `send_message()`. No LangGraph checkpointer dependency needed.
+
+**CXDB replay:** Native O(1) forking via `create_context(base_turn_id=turn_id)`. No turn copying needed. Contexts are branch head pointers in the turn DAG.
+
+**Mid-parallel resume:** Re-run the entire parallel node. Checkpoints only happen at node boundaries, so the last checkpoint before a parallel interruption is BEFORE the parallel node. Worktrees are created fresh on re-run.
+
+**Conflict serialization:** Structured dict with `conflicting_files` list and per-file conflict markers text. Passed via `context_updates["parallel.merge_conflicts"]` for downstream node consumption.
