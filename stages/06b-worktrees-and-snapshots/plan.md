@@ -271,12 +271,12 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ### Layer 8: Replay at Agent Turn
 
-- [ ] Add `replay` CLI command
-    - [ ] Create `src/orchestra/cli/replay_cmd.py` with function `replay(session_id: str, turn: str)`
-    - [ ] Register `replay` command in the CLI app (`src/orchestra/cli/app.py` or equivalent)
-    - [ ] Logic: resolve session_id → context_id, read turns, find specified turn, fork CXDB context via `client.create_context(base_turn_id=str(turn_id))`, restore git state from AgentTurn's `git_sha`, set up workspace + backend + dispatcher pointing at new forked context, resume execution from the turn's node
-    - [ ] The forked context shares history up to the fork point — new turns append only to the forked context, original is unchanged
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Add `replay` CLI command
+    - [x] Create `src/orchestra/cli/replay_cmd.py` with function `replay(session_id: str, turn: str)`
+    - [x] Register `replay` command in the CLI app (`src/orchestra/cli/main.py`)
+    - [x] Logic: resolve session_id → context_id, read turns, find specified turn, fork CXDB context via `client.create_context(base_turn_id=str(turn_id))`, restore git state from AgentTurn's `git_sha`, set up workspace + backend + dispatcher pointing at new forked context, resume execution from the turn's node
+    - [x] The forked context shares history up to the fork point — new turns append only to the forked context, original is unchanged
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 9: Tests
 
