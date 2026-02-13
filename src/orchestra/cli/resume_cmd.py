@@ -9,6 +9,7 @@ from orchestra.cli.backend_factory import build_backend
 from orchestra.config.settings import load_config
 from orchestra.engine.resume import (
     ResumeError,
+    ResumeInfo,
     load_graph_for_resume,
     restore_from_turns,
     verify_graph_hash,
@@ -22,7 +23,10 @@ from orchestra.storage.cxdb_client import CxdbClient, CxdbConnectionError, CxdbE
 from orchestra.storage.type_bundle import publish_orchestra_types
 
 
-def resume(session_id: str) -> None:
+def resume(
+    session_id: str,
+    turn: str = typer.Option(None, "--turn", help="Resume from a specific agent turn ID"),
+) -> None:
     """Resume a paused pipeline session."""
     config = load_config()
     client = CxdbClient(config.cxdb.url)
@@ -52,11 +56,36 @@ def resume(session_id: str) -> None:
         typer.echo(f"Error: Failed to read session: {e}")
         raise typer.Exit(code=1)
 
-    try:
-        resume_info = restore_from_turns(turns, context_id)
-    except ResumeError as e:
-        typer.echo(f"Error: {e}")
-        raise typer.Exit(code=1)
+    turn_resume_info = None
+    if turn is not None:
+        # Turn-level resume
+        from orchestra.engine.turn_resume import TurnResumeInfo, restore_from_turn
+
+        try:
+            turn_resume_info = restore_from_turn(turns, turn, context_id)
+        except ResumeError as e:
+            typer.echo(f"Error: {e}")
+            raise typer.Exit(code=1)
+
+        resume_info = ResumeInfo(
+            state=turn_resume_info.state,
+            next_node_id=turn_resume_info.next_node_id,
+            pipeline_name=turn_resume_info.pipeline_name,
+            dot_file_path=turn_resume_info.dot_file_path,
+            graph_hash=turn_resume_info.graph_hash,
+            context_id=context_id,
+            workspace_snapshot=None,
+        )
+
+        # Restore git to the turn's specific SHA
+        if turn_resume_info.git_sha:
+            resume_info.workspace_snapshot = {"_turn_sha": turn_resume_info.git_sha}
+    else:
+        try:
+            resume_info = restore_from_turns(turns, context_id)
+        except ResumeError as e:
+            typer.echo(f"Error: {e}")
+            raise typer.Exit(code=1)
 
     # Verify graph hasn't changed
     try:

@@ -261,13 +261,13 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ### Layer 7: Resume at Agent Turn
 
-- [ ] Add `--turn` flag to resume command
-    - [ ] Update `cli/resume_cmd.py`: add `turn: str = typer.Option(None, "--turn", help="Resume from a specific agent turn ID")` parameter
-    - [ ] Create `engine/turn_resume.py` with function `restore_from_turn(turns: list[dict], turn_id: str, context_id: str) -> TurnResumeInfo`
-    - [ ] `TurnResumeInfo` dataclass: `state: _RunState` (from enclosing Checkpoint), `next_node_id: str`, `turn_number: int`, `git_sha: str`, `prior_messages: list[dict]` (reconstructed conversation history for the agent), `pipeline_name`, `dot_file_path`, `graph_hash`, `context_id`
-    - [ ] Logic: find the specified AgentTurn, find the most recent Checkpoint before it, restore pipeline state from Checkpoint, extract `git_sha` from the AgentTurn, collect all prior AgentTurns for the same node to reconstruct message history
-    - [ ] In `resume_cmd.py`: if `--turn` is provided, call `restore_from_turn()` instead of `restore_from_turns()`. Restore git state to the AgentTurn's `git_sha`. Initialize the backend with prior conversation history via `send_message()`. Resume the runner from the node containing the turn.
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Add `--turn` flag to resume command
+    - [x] Update `cli/resume_cmd.py`: add `turn: str = typer.Option(None, "--turn", help="Resume from a specific agent turn ID")` parameter
+    - [x] Create `engine/turn_resume.py` with function `restore_from_turn(turns: list[dict], turn_id: str, context_id: str) -> TurnResumeInfo`
+    - [x] `TurnResumeInfo` dataclass: `state: _RunState` (from enclosing Checkpoint), `next_node_id: str`, `turn_number: int`, `git_sha: str`, `prior_messages: list[dict]` (reconstructed conversation history for the agent), `pipeline_name`, `dot_file_path`, `graph_hash`, `context_id`
+    - [x] Logic: find the specified AgentTurn, find the most recent Checkpoint before it, restore pipeline state from Checkpoint, extract `git_sha` from the AgentTurn, collect all prior AgentTurns for the same node to reconstruct message history
+    - [x] In `resume_cmd.py`: if `--turn` is provided, call `restore_from_turn()` instead of `restore_from_turns()`. Restore git state to the AgentTurn's `git_sha`. Initialize the backend with prior conversation history via `send_message()`. Resume the runner from the node containing the turn.
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 8: Replay at Agent Turn
 
