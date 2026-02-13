@@ -155,16 +155,16 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 3. Create session branch manager
 
-- [ ] Create `src/orchestra/workspace/session_branch.py`
-  - [ ] `create_session_branches(repos: dict[str, RepoConfig], pipeline_name: str, session_id: str, config_dir: Path) -> dict[str, SessionBranchInfo]`
-  - [ ] `SessionBranchInfo` dataclass: `repo_name: str`, `repo_path: Path`, `branch_name: str`, `base_sha: str`, `original_branch: str`
-  - [ ] For each repo: resolve path (relative to config_dir), validate it's a git repo, record original branch (`current_branch()`), record base SHA (`rev_parse("HEAD")`), create branch `{prefix}{pipeline_name}/{session_id}`, checkout branch
-  - [ ] `restore_original_branches(branch_infos: dict[str, SessionBranchInfo]) -> None` — for each repo, checkout the `original_branch`. Called on pipeline completion or failure. Logs warnings on checkout failures (e.g., conflicts) but does not raise.
-  - [ ] Branch naming: sanitize pipeline_name (replace spaces/special chars with hyphens)
-  - [ ] Validation: raise `WorkspaceError` if repo path doesn't exist, isn't a git repo, or HEAD is invalid
-  - [ ] Write unit tests: `tests/unit/test_session_branch.py` — branch creation, naming convention, base SHA recording, original branch recorded, multi-repo, branch persists after function returns, validation errors for bad paths, original branch restored after restore call
-  - [ ] Run tests, verify passing
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Create `src/orchestra/workspace/session_branch.py`
+  - [x] `create_session_branches(repos: dict[str, RepoConfig], pipeline_name: str, session_id: str, config_dir: Path) -> dict[str, SessionBranchInfo]`
+  - [x] `SessionBranchInfo` dataclass: `repo_name: str`, `repo_path: Path`, `branch_name: str`, `base_sha: str`, `original_branch: str`
+  - [x] For each repo: resolve path (relative to config_dir), validate it's a git repo, record original branch (`current_branch()`), record base SHA (`rev_parse("HEAD")`), create branch `{prefix}{pipeline_name}/{session_id}`, checkout branch
+  - [x] `restore_original_branches(branch_infos: dict[str, SessionBranchInfo]) -> None` — for each repo, checkout the `original_branch`. Called on pipeline completion or failure. Logs warnings on checkout failures (e.g., conflicts) but does not raise.
+  - [x] Branch naming: sanitize pipeline_name (replace spaces/special chars with hyphens)
+  - [x] Validation: raise `WorkspaceError` if repo path doesn't exist, isn't a git repo, or HEAD is invalid
+  - [x] Write unit tests: `tests/unit/test_session_branch.py` — branch creation, naming convention, base SHA recording, original branch recorded, multi-repo, branch persists after function returns, validation errors for bad paths, original branch restored after restore call
+  - [x] Run tests, verify passing
+  - [x] Mark TODO complete and commit the changes to git
 
 ### 4. Add workspace events
 
