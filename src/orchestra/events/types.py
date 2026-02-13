@@ -137,6 +137,24 @@ class ParallelCompleted(Event):
     duration_ms: int = 0
 
 
+class SessionBranchCreated(Event):
+    event_type: str = "SessionBranchCreated"
+    repo_name: str
+    branch_name: str
+    base_sha: str
+    repo_path: str
+
+
+class AgentCommitCreated(Event):
+    event_type: str = "AgentCommitCreated"
+    repo_name: str
+    node_id: str
+    sha: str
+    message: str
+    files: list[str] = Field(default_factory=list)
+    turn_number: int = 0
+
+
 EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "PipelineStarted": PipelineStarted,
     "PipelineCompleted": PipelineCompleted,
@@ -153,4 +171,6 @@ EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "ParallelBranchStarted": ParallelBranchStarted,
     "ParallelBranchCompleted": ParallelBranchCompleted,
     "ParallelCompleted": ParallelCompleted,
+    "SessionBranchCreated": SessionBranchCreated,
+    "AgentCommitCreated": AgentCommitCreated,
 }

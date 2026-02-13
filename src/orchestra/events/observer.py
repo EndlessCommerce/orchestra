@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Protocol
 import typer
 
 from orchestra.events.types import (
+    AgentCommitCreated,
     AgentTurnCompleted,
     CheckpointSaved,
     Event,
@@ -14,6 +15,7 @@ from orchestra.events.types import (
     PipelineFailed,
     PipelinePaused,
     PipelineStarted,
+    SessionBranchCreated,
     StageCompleted,
     StageFailed,
     StageRetrying,
@@ -54,6 +56,11 @@ class StdoutObserver:
             typer.echo(f"  [AgentTurn] {event.node_id} turn {event.turn_number} ({event.model})")
         elif isinstance(event, CheckpointSaved):
             typer.echo(f"  [Checkpoint] Saved at: {event.node_id}")
+        elif isinstance(event, SessionBranchCreated):
+            typer.echo(f"  [Workspace] Branch created: {event.branch_name} in {event.repo_name}")
+        elif isinstance(event, AgentCommitCreated):
+            summary = event.message.split("\n")[0][:60]
+            typer.echo(f"  [Commit] {event.sha[:8]} {summary} ({len(event.files)} files)")
 
 
 class CxdbObserver:

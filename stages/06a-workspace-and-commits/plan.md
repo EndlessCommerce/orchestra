@@ -168,16 +168,16 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 4. Add workspace events
 
-- [ ] Update `src/orchestra/events/types.py`
-  - [ ] Add `SessionBranchCreated(Event)` — fields: `repo_name: str`, `branch_name: str`, `base_sha: str`, `repo_path: str`
-  - [ ] Add `AgentCommitCreated(Event)` — fields: `repo_name: str`, `node_id: str`, `sha: str`, `message: str`, `files: list[str]`, `turn_number: int`
-  - [ ] Add both to `EVENT_TYPE_MAP`
-- [ ] Update `src/orchestra/events/observer.py`
-  - [ ] `StdoutObserver.on_event()` — handle `SessionBranchCreated` (log branch name) and `AgentCommitCreated` (log SHA and message summary)
-  - [ ] `CxdbObserver.on_event()` — no CXDB recording needed for these events (they're informational; the git data flows through AgentTurn v2)
-- [ ] Write unit tests: test event construction, StdoutObserver output for new events
-- [ ] Run tests, verify passing
-- [ ] Mark TODO complete and commit the changes to git
+- [x] Update `src/orchestra/events/types.py`
+  - [x] Add `SessionBranchCreated(Event)` — fields: `repo_name: str`, `branch_name: str`, `base_sha: str`, `repo_path: str`
+  - [x] Add `AgentCommitCreated(Event)` — fields: `repo_name: str`, `node_id: str`, `sha: str`, `message: str`, `files: list[str]`, `turn_number: int`
+  - [x] Add both to `EVENT_TYPE_MAP`
+- [x] Update `src/orchestra/events/observer.py`
+  - [x] `StdoutObserver.on_event()` — handle `SessionBranchCreated` (log branch name) and `AgentCommitCreated` (log SHA and message summary)
+  - [x] `CxdbObserver.on_event()` — no CXDB recording needed for these events (they're informational; the git data flows through AgentTurn v2)
+- [x] Write unit tests: test event construction, StdoutObserver output for new events
+- [x] Run tests, verify passing
+- [x] Mark TODO complete and commit the changes to git
 
 ### 5. Extend AgentTurn model and CXDB type bundle
 
