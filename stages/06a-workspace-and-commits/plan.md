@@ -275,26 +275,26 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 10. Integrate workspace into CLI run command
 
-- [ ] Create `src/orchestra/workspace/on_turn.py`
-  - [ ] `build_on_turn_callback(event_emitter: EventEmitter, workspace_manager: WorkspaceManager | None = None) -> OnTurnCallback`
-    - [ ] Returns a callback function that:
+- [x] Create `src/orchestra/workspace/on_turn.py`
+  - [x] `build_on_turn_callback(event_emitter: EventEmitter, workspace_manager: WorkspaceManager | None = None) -> OnTurnCallback`
+    - [x] Returns a callback function that:
       1. If `workspace_manager` is not None: calls `workspace_manager.on_turn_callback(turn)` (which does git commit AND emits `AgentTurnCompleted`)
       2. If `workspace_manager` is None: emits `AgentTurnCompleted` event directly via `event_emitter` with data from the `AgentTurn` (no git fields)
-    - [ ] This ensures `AgentTurnCompleted` is always emitted regardless of workspace config, fixing the existing dead-code gap where `CxdbObserver._append_agent_turn()` was never triggered
-  - [ ] Write unit tests: callback emits AgentTurnCompleted with workspace=None, callback delegates to workspace_manager when present
-- [ ] Update `src/orchestra/cli/run.py`
-  - [ ] After `build_backend(config)` and before `default_registry()`:
-    - [ ] If `config.workspace.repos` is non-empty:
-      - [ ] If `config.backend == "cli"`: log warning that per-turn commits are not supported for CLI backend (deferred to 6b), skip workspace setup, set `workspace_manager = None`
-      - [ ] Otherwise: build commit message generator via `build_commit_message_generator(config)`, construct `WorkspaceManager`, call `workspace_manager.setup_session(pipeline_name, display_id)` to create branches, generate repo-scoped tools via `create_repo_tools()`, add `WorkspaceManager` as an `EventObserver` to `dispatcher`
-    - [ ] If `config.workspace.repos` is empty: set `workspace_manager = None`
-  - [ ] Build on_turn callback via `build_on_turn_callback(dispatcher, workspace_manager)` — always returns a callback, never None
-  - [ ] Pass `on_turn` to `default_registry()`
-  - [ ] Wrap `runner.run()` in try/finally to call `workspace_manager.teardown_session()` on completion or failure (restores original branches)
-  - [ ] Handle `WorkspaceError` with clear error messages and `typer.Exit(code=1)`
-- [ ] Write integration test: `tests/integration/test_workspace_cli_integration.py` — verify that running the CLI with a workspace-configured orchestra.yaml creates branches and commits, and restores original branch on completion
-- [ ] Run tests, verify passing
-- [ ] Mark TODO complete and commit the changes to git
+    - [x] This ensures `AgentTurnCompleted` is always emitted regardless of workspace config, fixing the existing dead-code gap where `CxdbObserver._append_agent_turn()` was never triggered
+  - [x] Write unit tests: callback emits AgentTurnCompleted with workspace=None, callback delegates to workspace_manager when present
+- [x] Update `src/orchestra/cli/run.py`
+  - [x] After `build_backend(config)` and before `default_registry()`:
+    - [x] If `config.workspace.repos` is non-empty:
+      - [x] If `config.backend == "cli"`: log warning that per-turn commits are not supported for CLI backend (deferred to 6b), skip workspace setup, set `workspace_manager = None`
+      - [x] Otherwise: build commit message generator via `build_commit_message_generator(config)`, construct `WorkspaceManager`, call `workspace_manager.setup_session(pipeline_name, display_id)` to create branches, generate repo-scoped tools via `create_repo_tools()`, add `WorkspaceManager` as an `EventObserver` to `dispatcher`
+    - [x] If `config.workspace.repos` is empty: set `workspace_manager = None`
+  - [x] Build on_turn callback via `build_on_turn_callback(dispatcher, workspace_manager)` — always returns a callback, never None
+  - [x] Pass `on_turn` to `default_registry()`
+  - [x] Wrap `runner.run()` in try/finally to call `workspace_manager.teardown_session()` on completion or failure (restores original branches)
+  - [x] Handle `WorkspaceError` with clear error messages and `typer.Exit(code=1)`
+- [x] Write integration test: `tests/integration/test_workspace_cli_integration.py` — verify that running the CLI with a workspace-configured orchestra.yaml creates branches and commits, and restores original branch on completion
+- [x] Run tests, verify passing
+- [x] Mark TODO complete and commit the changes to git
 
 ### 11. Write integration tests for per-turn commits and CXDB
 

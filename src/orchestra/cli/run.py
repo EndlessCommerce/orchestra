@@ -20,6 +20,8 @@ from orchestra.storage.type_bundle import publish_orchestra_types
 from orchestra.transforms.model_stylesheet import apply_model_stylesheet
 from orchestra.transforms.variable_expansion import expand_variables
 from orchestra.validation.validator import ValidationError, validate_or_raise
+from orchestra.workspace.on_turn import build_on_turn_callback
+from orchestra.workspace.session_branch import WorkspaceError
 
 
 def run(
@@ -107,9 +109,38 @@ def run(
 
         interviewer = ConsoleInterviewer(multiline=not single_line)
 
-    # Build backend and handler registry
+    # Build backend
     backend = build_backend(config)
-    registry = default_registry(backend=backend, config=config, interviewer=interviewer)
+
+    # Set up workspace (if configured)
+    workspace_manager = None
+    if config.workspace.repos:
+        if config.backend == "cli":
+            typer.echo("Warning: Per-turn commits are not supported for CLI backend (deferred to Stage 6b)")
+        else:
+            try:
+                from orchestra.workspace.commit_message import build_commit_message_generator
+                from orchestra.workspace.workspace_manager import WorkspaceManager
+
+                commit_gen = build_commit_message_generator(config)
+                workspace_manager = WorkspaceManager(
+                    config=config,
+                    event_emitter=dispatcher,
+                    commit_gen=commit_gen,
+                )
+                workspace_manager.setup_session(graph.name, display_id)
+                dispatcher.add_observer(workspace_manager)
+            except WorkspaceError as e:
+                typer.echo(f"Error: Workspace setup failed: {e}")
+                raise typer.Exit(code=1)
+
+    # Build on_turn callback (always wired, even without workspace)
+    on_turn = build_on_turn_callback(dispatcher, workspace_manager)
+
+    # Build handler registry with on_turn
+    registry = default_registry(
+        backend=backend, config=config, interviewer=interviewer, on_turn=on_turn
+    )
 
     # Run pipeline with SIGINT handling
     runner = PipelineRunner(graph, registry, dispatcher)
@@ -129,6 +160,8 @@ def run(
         )
     finally:
         signal.signal(signal.SIGINT, original_handler)
+        if workspace_manager is not None:
+            workspace_manager.teardown_session()
 
     typer.echo(f"\nSession: {display_id} (CXDB context: {context_id})")
 
