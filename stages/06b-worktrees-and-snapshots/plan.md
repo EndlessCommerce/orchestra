@@ -169,17 +169,17 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ### Layer 1: Git Worktree Operations
 
-- [ ] Add worktree git operations to `git_ops.py`
-    - [ ] Add `worktree_add(worktree_path: Path, branch: str, *, cwd: Path) -> None` — runs `git worktree add <worktree_path> -b <branch>`
-    - [ ] Add `worktree_remove(worktree_path: Path, *, cwd: Path) -> None` — runs `git worktree remove <worktree_path> --force`
-    - [ ] Add `worktree_list(*, cwd: Path) -> list[str]` — runs `git worktree list --porcelain`
-    - [ ] Add `merge(branch: str, *, cwd: Path) -> None` — runs `git merge --no-commit <branch>`
-    - [ ] Add `merge_abort(*, cwd: Path) -> None` — runs `git merge --abort`
-    - [ ] Add `merge_conflicts(*, cwd: Path) -> list[str]` — parses `git diff --name-only --diff-filter=U` to get conflicting files
-    - [ ] Add `read_file(path: Path) -> str` — reads file content (for conflict markers)
-    - [ ] Add `branch_delete(name: str, *, cwd: Path) -> None` — runs `git branch -D <name>`
-    - [ ] Write unit tests in `tests/test_git_ops_worktree.py` for each new operation using a tmp git repo fixture
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Add worktree git operations to `git_ops.py`
+    - [x] Add `worktree_add(worktree_path: Path, branch: str, *, cwd: Path) -> None` — runs `git worktree add <worktree_path> -b <branch>`
+    - [x] Add `worktree_remove(worktree_path: Path, *, cwd: Path) -> None` — runs `git worktree remove <worktree_path> --force`
+    - [x] Add `worktree_list(*, cwd: Path) -> list[str]` — runs `git worktree list --porcelain`
+    - [x] Add `merge(branch: str, *, cwd: Path) -> None` — runs `git merge --no-ff --no-commit <branch>`
+    - [x] Add `merge_abort(*, cwd: Path) -> None` — runs `git merge --abort`
+    - [x] Add `merge_conflicts(*, cwd: Path) -> list[str]` — parses `git diff --name-only --diff-filter=U` to get conflicting files
+    - [x] Add `read_file(path: Path) -> str` — reads file content (for conflict markers)
+    - [x] Add `branch_delete(name: str, *, cwd: Path) -> None` — runs `git branch -D <name>`
+    - [x] Write unit tests in `tests/test_git_ops_worktree.py` for each new operation using a tmp git repo fixture
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 2: Worktree Lifecycle Manager
 

@@ -82,3 +82,40 @@ def is_git_repo(path: Path) -> bool:
         return True
     except (GitError, FileNotFoundError):
         return False
+
+
+# --- Worktree operations (Stage 6b) ---
+
+
+def worktree_add(worktree_path: Path, branch: str, *, cwd: Path) -> None:
+    run_git("worktree", "add", str(worktree_path), "-b", branch, cwd=cwd)
+
+
+def worktree_remove(worktree_path: Path, *, cwd: Path) -> None:
+    run_git("worktree", "remove", str(worktree_path), "--force", cwd=cwd)
+
+
+def worktree_list(*, cwd: Path) -> list[str]:
+    output = run_git("worktree", "list", "--porcelain", cwd=cwd)
+    return output.splitlines() if output else []
+
+
+def merge(branch: str, *, cwd: Path) -> None:
+    run_git("merge", "--no-ff", "--no-commit", branch, cwd=cwd)
+
+
+def merge_abort(*, cwd: Path) -> None:
+    run_git("merge", "--abort", cwd=cwd)
+
+
+def merge_conflicts(*, cwd: Path) -> list[str]:
+    output = run_git("diff", "--name-only", "--diff-filter=U", cwd=cwd)
+    return output.splitlines() if output else []
+
+
+def read_file(path: Path) -> str:
+    return path.read_text()
+
+
+def branch_delete(name: str, *, cwd: Path) -> None:
+    run_git("branch", "-D", name, cwd=cwd)
