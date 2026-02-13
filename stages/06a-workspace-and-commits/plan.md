@@ -264,14 +264,14 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 9. Wire on_turn callback through handler registry
 
-- [ ] Update `src/orchestra/handlers/registry.py`
-  - [ ] Add `on_turn: OnTurnCallback | None = None` parameter to `default_registry()`
-  - [ ] Pass `on_turn` to `CodergenHandler(backend=backend, config=config, on_turn=on_turn)` at line 44
-  - [ ] Also pass to `CodergenDispatcher` and `InteractiveHandler` if they accept on_turn (check if needed — both route to backends that accept on_turn)
-- [ ] Update existing tests that call `default_registry()` to ensure they still pass (parameter is optional, defaults to None)
-- [ ] Write unit test: verify that when `on_turn` is provided, `CodergenHandler` receives it and passes it to `backend.run()`
-- [ ] Run tests, verify passing
-- [ ] Mark TODO complete and commit the changes to git
+- [x] Update `src/orchestra/handlers/registry.py`
+  - [x] Add `on_turn: OnTurnCallback | None = None` parameter to `default_registry()`
+  - [x] Pass `on_turn` to `CodergenHandler(backend=backend, config=config, on_turn=on_turn)` at line 44
+  - [x] Also pass to `CodergenDispatcher` and `InteractiveHandler` if they accept on_turn (check if needed — both route to backends that accept on_turn)
+- [x] Update existing tests that call `default_registry()` to ensure they still pass (parameter is optional, defaults to None)
+- [x] Write unit test: verify that when `on_turn` is provided, `CodergenHandler` receives it and passes it to `backend.run()`
+- [x] Run tests, verify passing
+- [x] Mark TODO complete and commit the changes to git
 
 ### 10. Integrate workspace into CLI run command
 

@@ -13,7 +13,7 @@ from orchestra.handlers.start import StartHandler
 from orchestra.handlers.wait_human import WaitHumanHandler
 
 if TYPE_CHECKING:
-    from orchestra.backends.protocol import CodergenBackend
+    from orchestra.backends.protocol import CodergenBackend, OnTurnCallback
     from orchestra.config.settings import OrchestraConfig
     from orchestra.engine.runner import EventEmitter
     from orchestra.interviewer.base import Interviewer
@@ -35,13 +35,14 @@ def default_registry(
     config: OrchestraConfig | None = None,
     interviewer: Interviewer | None = None,
     event_emitter: EventEmitter | None = None,
+    on_turn: OnTurnCallback | None = None,
 ) -> HandlerRegistry:
     registry = HandlerRegistry()
     registry.register("Mdiamond", StartHandler())
     registry.register("Msquare", ExitHandler())
 
     if backend is not None:
-        standard_handler = CodergenHandler(backend=backend, config=config)
+        standard_handler = CodergenHandler(backend=backend, config=config, on_turn=on_turn)
 
         if interviewer is not None:
             from orchestra.backends.protocol import ConversationalBackend
