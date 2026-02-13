@@ -55,7 +55,7 @@ class TestCxdbObserverAgentTurn:
         mock_client.append_turn.assert_called_once()
         call_kwargs = mock_client.append_turn.call_args
         assert call_kwargs.kwargs["type_id"] == "dev.orchestra.AgentTurn"
-        assert call_kwargs.kwargs["type_version"] == 1
+        assert call_kwargs.kwargs["type_version"] == 2
         assert call_kwargs.kwargs["context_id"] == "ctx-123"
 
     def test_multiple_turns_persisted(self):

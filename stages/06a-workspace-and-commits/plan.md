@@ -181,18 +181,18 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 5. Extend AgentTurn model and CXDB type bundle
 
-- [ ] Update `src/orchestra/models/agent_turn.py`
-  - [ ] Add `git_sha: str = ""` and `commit_message: str = ""` fields to `AgentTurn` dataclass
-  - [ ] Update `to_dict()` to include new fields
-- [ ] Update `src/orchestra/events/types.py`
-  - [ ] Add `git_sha: str = ""` and `commit_message: str = ""` to `AgentTurnCompleted` event
-- [ ] Update `src/orchestra/storage/type_bundle.py`
-  - [ ] Add `dev.orchestra.AgentTurn` v2 with fields 1-9 (same as v1) plus field `10: git_sha (string, optional)` and field `11: commit_message (string, optional)`
-- [ ] Update `src/orchestra/events/observer.py`
-  - [ ] `CxdbObserver._append_agent_turn()` — emit v2 with `git_sha` and `commit_message` fields; use `type_version=2`
-- [ ] Write unit tests: verify AgentTurn.to_dict() includes new fields, verify CxdbObserver emits v2 data
-- [ ] Run existing tests to ensure backward compatibility
-- [ ] Mark TODO complete and commit the changes to git
+- [x] Update `src/orchestra/models/agent_turn.py`
+  - [x] Add `git_sha: str = ""` and `commit_message: str = ""` fields to `AgentTurn` dataclass
+  - [x] Update `to_dict()` to include new fields
+- [x] Update `src/orchestra/events/types.py`
+  - [x] Add `git_sha: str = ""` and `commit_message: str = ""` to `AgentTurnCompleted` event
+- [x] Update `src/orchestra/storage/type_bundle.py`
+  - [x] Add `dev.orchestra.AgentTurn` v2 with fields 1-9 (same as v1) plus field `10: git_sha (string, optional)` and field `11: commit_message (string, optional)`
+- [x] Update `src/orchestra/events/observer.py`
+  - [x] `CxdbObserver._append_agent_turn()` — emit v2 with `git_sha` and `commit_message` fields; use `type_version=2`
+- [x] Write unit tests: verify AgentTurn.to_dict() includes new fields, verify CxdbObserver emits v2 data
+- [x] Run existing tests to ensure backward compatibility
+- [x] Mark TODO complete and commit the changes to git
 
 ### 6. Create commit message generator
 

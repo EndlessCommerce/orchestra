@@ -56,6 +56,8 @@ class TestAgentTurnSerialization:
             "files_written": ["out.txt"],
             "token_usage": {"input": 10},
             "agent_state": {},
+            "git_sha": "",
+            "commit_message": "",
         }
 
     def test_to_dict_defaults(self):

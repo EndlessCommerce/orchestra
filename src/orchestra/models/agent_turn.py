@@ -14,6 +14,8 @@ class AgentTurn:
     files_written: list[str] = field(default_factory=list)
     token_usage: dict[str, int] = field(default_factory=dict)
     agent_state: dict[str, Any] = field(default_factory=dict)
+    git_sha: str = ""
+    commit_message: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -25,4 +27,6 @@ class AgentTurn:
             "files_written": self.files_written,
             "token_usage": self.token_usage,
             "agent_state": self.agent_state,
+            "git_sha": self.git_sha,
+            "commit_message": self.commit_message,
         }

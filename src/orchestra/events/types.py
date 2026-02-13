@@ -95,6 +95,8 @@ class AgentTurnCompleted(Event):
     files_written: list[str] = Field(default_factory=list)
     token_usage: dict[str, int] = Field(default_factory=dict)
     agent_state: str = ""
+    git_sha: str = ""
+    commit_message: str = ""
 
 
 class HumanInteraction(Event):

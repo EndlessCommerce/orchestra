@@ -163,6 +163,7 @@ class CxdbObserver:
 
     def _append_agent_turn(self, event: AgentTurnCompleted) -> None:
         type_id = "dev.orchestra.AgentTurn"
+        type_version = 2
         data = {
             "turn_number": event.turn_number,
             "node_id": event.node_id,
@@ -173,12 +174,14 @@ class CxdbObserver:
             "files_written": event.files_written,
             "token_usage": event.token_usage,
             "agent_state": event.agent_state,
+            "git_sha": event.git_sha,
+            "commit_message": event.commit_message,
         }
         self._client.append_turn(
             context_id=self._context_id,
             type_id=type_id,
-            type_version=1,
-            data=to_tagged_data(type_id, 1, data),
+            type_version=type_version,
+            data=to_tagged_data(type_id, type_version, data),
         )
 
     def _append_parallel_execution(self, event: Event) -> None:
