@@ -341,13 +341,13 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 13. Identify unused code and clean up
 
-- [ ] Look at all previous TODOs and changes in git to identify changes
-- [ ] Identify any code that is no longer used, and remove it
-- [ ] Identify any unnecessary comments, and remove them (comments that explain "what" for a single line of code)
-- [ ] If there are any obvious code smells of redundant code, add TODOs below to address them (for example, multiple new classes include private methods that perform similar functions, or are large with many private methods that could be extracted)
-- [ ] Verify imports are clean — no unused imports in modified files
-- [ ] Ensure consistent code style across new modules (type annotations, docstrings for public APIs only)
-- [ ] Mark TODO complete and commit the changes to git
+- [x] Look at all previous TODOs and changes in git to identify changes
+- [x] Identify any code that is no longer used, and remove it
+- [x] Identify any unnecessary comments, and remove them (comments that explain "what" for a single line of code)
+- [x] If there are any obvious code smells of redundant code, add TODOs below to address them (for example, multiple new classes include private methods that perform similar functions, or are large with many private methods that could be extracted)
+- [x] Verify imports are clean — no unused imports in modified files
+- [x] Ensure consistent code style across new modules (type annotations, docstrings for public APIs only)
+- [x] Mark TODO complete and commit the changes to git
 
 ## Automated End-to-End Tests
 
