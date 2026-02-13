@@ -40,11 +40,24 @@ class ToolConfig(BaseModel):
     description: str = ""
 
 
+class RepoConfig(BaseModel):
+    path: str
+    branch_prefix: str = "orchestra/"
+    remote: str = ""
+    push: str = ""
+    clone_depth: int = 0
+
+
+class WorkspaceConfig(BaseModel):
+    repos: dict[str, RepoConfig] = Field(default_factory=dict)
+
+
 class OrchestraConfig(BaseModel):
     cxdb: CxdbConfig = CxdbConfig()
     providers: ProvidersConfig = ProvidersConfig()
     agents: dict[str, AgentConfig] = Field(default_factory=dict)
     tools: list[ToolConfig] = Field(default_factory=list)
+    workspace: WorkspaceConfig = WorkspaceConfig()
     backend: str = "simulation"
     config_dir: Path | None = None
 
