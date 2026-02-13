@@ -196,19 +196,19 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 6. Create commit message generator
 
-- [ ] Create `src/orchestra/workspace/commit_message.py`
-  - [ ] `CommitMessageGenerator` protocol/ABC with `generate(diff: str, intent: str) -> str`
-  - [ ] `LLMCommitMessageGenerator` — uses `resolve_model("cheap", ...)` and a LangChain ChatModel to generate messages
-    - [ ] Prompt template: given a git diff and a summary of the agent's intent, produce a conventional commit message with imperative summary line (under 72 chars) and brief description
-    - [ ] Extracts intent from the agent turn's most recent human message (or a summary of tool calls)
-    - [ ] On any error (API failure, timeout, malformed response): logs a warning, returns fallback message
-  - [ ] `DeterministicCommitMessageGenerator` — returns `"chore: auto-commit agent changes\n\nFiles: {file_list}"`. Used in tests and as fallback.
-  - [ ] `build_commit_message_generator(config: OrchestraConfig) -> CommitMessageGenerator` factory function
-    - [ ] Resolves `cheap` model alias; if it can't resolve (literal "cheap" returned), raise `WorkspaceError` with clear message to configure the alias
-    - [ ] Builds a LangChain ChatModel for the cheap tier (reuse pattern from `backend_factory.build_chat_model()` but with the cheap alias)
-  - [ ] Write unit tests: `tests/unit/test_commit_message_generator.py` — test LLM generator with mocked model, test deterministic generator, test fallback on error, test message format validation (summary line length, imperative mood heuristic), test intent extraction from messages
-  - [ ] Run tests, verify passing
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Create `src/orchestra/workspace/commit_message.py`
+  - [x] `CommitMessageGenerator` protocol/ABC with `generate(diff: str, intent: str) -> str`
+  - [x] `LLMCommitMessageGenerator` — uses `resolve_model("cheap", ...)` and a LangChain ChatModel to generate messages
+    - [x] Prompt template: given a git diff and a summary of the agent's intent, produce a conventional commit message with imperative summary line (under 72 chars) and brief description
+    - [x] Extracts intent from the agent turn's most recent human message (or a summary of tool calls)
+    - [x] On any error (API failure, timeout, malformed response): logs a warning, returns fallback message
+  - [x] `DeterministicCommitMessageGenerator` — returns `"chore: auto-commit agent changes\n\nFiles: {file_list}"`. Used in tests and as fallback.
+  - [x] `build_commit_message_generator(config: OrchestraConfig) -> CommitMessageGenerator` factory function
+    - [x] Resolves `cheap` model alias; if it can't resolve (literal "cheap" returned), raise `WorkspaceError` with clear message to configure the alias
+    - [x] Builds a LangChain ChatModel for the cheap tier (reuse pattern from `backend_factory.build_chat_model()` but with the cheap alias)
+  - [x] Write unit tests: `tests/unit/test_commit_message_generator.py` — test LLM generator with mocked model, test deterministic generator, test fallback on error, test message format validation (summary line length, imperative mood heuristic), test intent extraction from messages
+  - [x] Run tests, verify passing
+  - [x] Mark TODO complete and commit the changes to git
 
 ### 7. Create RepoContext and repo-scoped tool factory
 
