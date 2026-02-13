@@ -183,17 +183,17 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ### Layer 2: Worktree Lifecycle Manager
 
-- [ ] Add `worktree_path` field to `RepoContext`
-    - [ ] Update `src/orchestra/workspace/repo_context.py`: add `worktree_path: Path | None = None` to `RepoContext` dataclass
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Add `worktree_path` field to `RepoContext`
+    - [x] Update `src/orchestra/workspace/repo_context.py`: add `worktree_path: Path | None = None` to `RepoContext` dataclass
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Create `src/orchestra/workspace/worktree_manager.py`
-    - [ ] `WorktreeManager` class with `__init__(self, repo_contexts: dict[str, RepoContext], session_id: str, pipeline_name: str, branch_prefix: str, event_emitter: EventEmitter)`
-    - [ ] `create_worktrees(self, branch_id: str) -> dict[str, RepoContext]` — for each repo, calls `git_ops.worktree_add()` at `.orchestra/worktrees/{session_id}/{branch_id}`, creates worktree branch `{branch_prefix}{pipeline_name}/{session_id}/{branch_id}`, returns new `RepoContext` copies with `worktree_path` set. Emits `WorktreeCreated` per repo.
-    - [ ] `merge_worktrees(self, branch_ids: list[str]) -> WorktreeMergeResult` — for each repo: checkout session branch, for each branch_id run `git merge --no-commit`. On success: commit, clean up worktree dirs + delete branches. On conflict: capture file list + conflict markers, abort merge, preserve worktrees. Returns `WorktreeMergeResult(success: bool, conflicts: dict)`. Emits `WorktreeMerged` or `WorktreeMergeConflict`.
-    - [ ] `cleanup_worktrees(self, branch_ids: list[str]) -> None` — removes worktree dirs and branches (called after successful merge)
-    - [ ] `WorktreeMergeResult` dataclass: `success: bool`, `conflicts: dict[str, dict]` (repo_name → conflict info), `merged_shas: dict[str, str]` (repo_name → merged HEAD SHA)
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Create `src/orchestra/workspace/worktree_manager.py`
+    - [x] `WorktreeManager` class with `__init__(self, repo_contexts: dict[str, RepoContext], session_id: str, pipeline_name: str, branch_prefix: str, event_emitter: EventEmitter)`
+    - [x] `create_worktrees(self, branch_id: str) -> dict[str, RepoContext]` — for each repo, calls `git_ops.worktree_add()` at `.orchestra/worktrees/{session_id}/{branch_id}`, creates worktree branch `{branch_prefix}{pipeline_name}/{session_id}/{branch_id}`, returns new `RepoContext` copies with `worktree_path` set. Emits `WorktreeCreated` per repo.
+    - [x] `merge_worktrees(self, branch_ids: list[str]) -> WorktreeMergeResult` — for each repo: checkout session branch, for each branch_id run `git merge --no-commit`. On success: commit, clean up worktree dirs + delete branches. On conflict: capture file list + conflict markers, abort merge, preserve worktrees. Returns `WorktreeMergeResult(success: bool, conflicts: dict)`. Emits `WorktreeMerged` or `WorktreeMergeConflict`.
+    - [x] `cleanup_worktrees(self, branch_ids: list[str]) -> None` — removes worktree dirs and branches (called after successful merge)
+    - [x] `WorktreeMergeResult` dataclass: `success: bool`, `conflicts: dict[str, dict]` (repo_name → conflict info), `merged_shas: dict[str, str]` (repo_name → merged HEAD SHA)
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 3: Workspace Events
 

@@ -10,3 +10,4 @@ class RepoContext:
     path: Path
     branch: str
     base_sha: str
+    worktree_path: Path | None = None
