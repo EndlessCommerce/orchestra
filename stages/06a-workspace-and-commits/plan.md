@@ -212,18 +212,18 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 7. Create RepoContext and repo-scoped tool factory
 
-- [ ] Create `src/orchestra/workspace/repo_context.py`
-  - [ ] `RepoContext` dataclass: `name: str`, `path: Path`, `branch: str`, `base_sha: str`
-- [ ] Create `src/orchestra/workspace/repo_tools.py`
-  - [ ] `create_repo_tools(repos: dict[str, RepoContext], write_tracker: WriteTracker) -> list[Tool]`
-  - [ ] For each repo, generate: `{repo}:read-file`, `{repo}:write-file`, `{repo}:edit-file`, `{repo}:search-code`
-  - [ ] Read tools resolve `path` argument relative to `repo.path`
-  - [ ] Write tools resolve path relative to `repo.path` AND call `write_tracker.record(absolute_path)`
-  - [ ] Path validation: reject paths that escape the repo directory (no `../` traversal)
-  - [ ] Return list of `Tool` instances for registration
-- [ ] Write unit tests: `tests/unit/test_repo_tools.py` — tool naming, path resolution, write tracking, path traversal rejection, multi-repo generates correct tool set
-- [ ] Run tests, verify passing
-- [ ] Mark TODO complete and commit the changes to git
+- [x] Create `src/orchestra/workspace/repo_context.py`
+  - [x] `RepoContext` dataclass: `name: str`, `path: Path`, `branch: str`, `base_sha: str`
+- [x] Create `src/orchestra/workspace/repo_tools.py`
+  - [x] `create_repo_tools(repos: dict[str, RepoContext], write_tracker: WriteTracker) -> list[Tool]`
+  - [x] For each repo, generate: `{repo}:read-file`, `{repo}:write-file`, `{repo}:edit-file`, `{repo}:search-code`
+  - [x] Read tools resolve `path` argument relative to `repo.path`
+  - [x] Write tools resolve path relative to `repo.path` AND call `write_tracker.record(absolute_path)`
+  - [x] Path validation: reject paths that escape the repo directory (no `../` traversal)
+  - [x] Return list of `Tool` instances for registration
+- [x] Write unit tests: `tests/unit/test_repo_tools.py` — tool naming, path resolution, write tracking, path traversal rejection, multi-repo generates correct tool set
+- [x] Run tests, verify passing
+- [x] Mark TODO complete and commit the changes to git
 
 ### 8. Create WorkspaceManager
 
