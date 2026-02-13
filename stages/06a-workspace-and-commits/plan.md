@@ -227,40 +227,40 @@ Note: `remote`, `push`, and `clone_depth` fields are recognized but ignored in 6
 
 ### 8. Create WorkspaceManager
 
-- [ ] Create `src/orchestra/workspace/workspace_manager.py`
-  - [ ] `WorkspaceManager` class — the central orchestrator for workspace operations
-  - [ ] `__init__(config: OrchestraConfig, event_emitter: EventEmitter, commit_gen: CommitMessageGenerator)`
-  - [ ] `setup_session(pipeline_name: str, session_id: str) -> dict[str, RepoContext]`
-    - [ ] Validate workspace config (repo paths exist, are git repos, HEAD valid)
-    - [ ] Create session branches in each repo via `session_branch.create_session_branches()`
-    - [ ] Emit `SessionBranchCreated` events
-    - [ ] Store session metadata: pipeline_name, session_id, repo contexts, branch infos
-    - [ ] Return repo contexts for tool generation
-  - [ ] `teardown_session() -> None` — restore original branches in each repo
-    - [ ] Calls `session_branch.restore_original_branches(self._branch_infos)`
-    - [ ] Safe to call multiple times (idempotent)
-    - [ ] Logs warnings on failure but does not raise — pipeline completion/failure should not be blocked by branch restoration issues
-  - [ ] `on_turn_callback(turn: AgentTurn) -> None` — the on_turn callback passed to CodergenHandler
-    - [ ] `_current_node_id` tracked via EventObserver (see below). Note: `AgentTurn` does not have a `node_id` field — the node_id for git trailers comes from `_current_node_id` which is set by `StageStarted` events before `on_turn` fires.
-    - [ ] If `turn.files_written` is empty: emit `AgentTurnCompleted` event (with empty `git_sha`), return
-    - [ ] For each repo that has modified files (match `files_written` paths to repo directories):
-      - [ ] `git_ops.add(files, cwd=repo_path)` — stage exactly the written files
-      - [ ] `git_ops.diff(staged=True, cwd=repo_path)` — get staged diff for commit message
-      - [ ] Generate commit message via `commit_gen.generate(diff, intent)`
-      - [ ] Build author string: `{node_id} ({turn.model}) <orchestra@local>`
-      - [ ] Build trailers dict: `Orchestra-Model`, `Orchestra-Provider`, `Orchestra-Node`, `Orchestra-Pipeline`, `Orchestra-Session`, `Orchestra-Turn`
-      - [ ] `git_ops.commit(message, author, trailers, cwd=repo_path)` — commit with metadata
-      - [ ] Get SHA via return value of commit
-      - [ ] Set `turn.git_sha = sha`, `turn.commit_message = message`
-      - [ ] Emit `AgentCommitCreated` event
-    - [ ] After git operations (or if no files_written): emit `AgentTurnCompleted` event via `event_emitter` with all turn data including `git_sha` and `commit_message`. This is what triggers `CxdbObserver._append_agent_turn()` and `StdoutObserver` logging.
-  - [ ] Implement `EventObserver` protocol (`on_event(event: Event)`)
-    - [ ] On `StageStarted`: update `_current_node_id = event.node_id`
-    - [ ] On `StageCompleted`/`StageFailed`: clear `_current_node_id`
-  - [ ] `has_workspace` property — True if workspace config has repos
-  - [ ] Write unit tests: `tests/unit/test_workspace_manager.py` — setup creates branches, on_turn with writes commits, on_turn without writes skips, on_turn always emits AgentTurnCompleted, correct author/trailers, event emission, node tracking via EventObserver, teardown restores branches, teardown is idempotent
-  - [ ] Run tests, verify passing
-  - [ ] Mark TODO complete and commit the changes to git
+- [x] Create `src/orchestra/workspace/workspace_manager.py`
+  - [x] `WorkspaceManager` class — the central orchestrator for workspace operations
+  - [x] `__init__(config: OrchestraConfig, event_emitter: EventEmitter, commit_gen: CommitMessageGenerator)`
+  - [x] `setup_session(pipeline_name: str, session_id: str) -> dict[str, RepoContext]`
+    - [x] Validate workspace config (repo paths exist, are git repos, HEAD valid)
+    - [x] Create session branches in each repo via `session_branch.create_session_branches()`
+    - [x] Emit `SessionBranchCreated` events
+    - [x] Store session metadata: pipeline_name, session_id, repo contexts, branch infos
+    - [x] Return repo contexts for tool generation
+  - [x] `teardown_session() -> None` — restore original branches in each repo
+    - [x] Calls `session_branch.restore_original_branches(self._branch_infos)`
+    - [x] Safe to call multiple times (idempotent)
+    - [x] Logs warnings on failure but does not raise — pipeline completion/failure should not be blocked by branch restoration issues
+  - [x] `on_turn_callback(turn: AgentTurn) -> None` — the on_turn callback passed to CodergenHandler
+    - [x] `_current_node_id` tracked via EventObserver (see below). Note: `AgentTurn` does not have a `node_id` field — the node_id for git trailers comes from `_current_node_id` which is set by `StageStarted` events before `on_turn` fires.
+    - [x] If `turn.files_written` is empty: emit `AgentTurnCompleted` event (with empty `git_sha`), return
+    - [x] For each repo that has modified files (match `files_written` paths to repo directories):
+      - [x] `git_ops.add(files, cwd=repo_path)` — stage exactly the written files
+      - [x] `git_ops.diff(staged=True, cwd=repo_path)` — get staged diff for commit message
+      - [x] Generate commit message via `commit_gen.generate(diff, intent)`
+      - [x] Build author string: `{node_id} ({turn.model}) <orchestra@local>`
+      - [x] Build trailers dict: `Orchestra-Model`, `Orchestra-Provider`, `Orchestra-Node`, `Orchestra-Pipeline`, `Orchestra-Session`, `Orchestra-Turn`
+      - [x] `git_ops.commit(message, author, trailers, cwd=repo_path)` — commit with metadata
+      - [x] Get SHA via return value of commit
+      - [x] Set `turn.git_sha = sha`, `turn.commit_message = message`
+      - [x] Emit `AgentCommitCreated` event
+    - [x] After git operations (or if no files_written): emit `AgentTurnCompleted` event via `event_emitter` with all turn data including `git_sha` and `commit_message`. This is what triggers `CxdbObserver._append_agent_turn()` and `StdoutObserver` logging.
+  - [x] Implement `EventObserver` protocol (`on_event(event: Event)`)
+    - [x] On `StageStarted`: update `_current_node_id = event.node_id`
+    - [x] On `StageCompleted`/`StageFailed`: clear `_current_node_id`
+  - [x] `has_workspace` property — True if workspace config has repos
+  - [x] Write unit tests: `tests/unit/test_workspace_manager.py` — setup creates branches, on_turn with writes commits, on_turn without writes skips, on_turn always emits AgentTurnCompleted, correct author/trailers, event emission, node tracking via EventObserver, teardown restores branches, teardown is idempotent
+  - [x] Run tests, verify passing
+  - [x] Mark TODO complete and commit the changes to git
 
 ### 9. Wire on_turn callback through handler registry
 
