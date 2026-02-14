@@ -94,12 +94,18 @@ def build_commit_message_generator(config: Any) -> CommitMessageGenerator:
             **{k: v for k, v in settings.items() if k in ("max_tokens",)},
         )
     else:
+        import os
+
         from langchain_openai import ChatOpenAI
 
         api_base = settings.get("api_base", "")
         kwargs: dict[str, Any] = {"model": model_name}
         if api_base:
             kwargs["base_url"] = api_base
+        if provider_name == "openrouter":
+            api_key = os.environ.get("OPEN_ROUTER_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+            if api_key:
+                kwargs["api_key"] = api_key
         chat_model = ChatOpenAI(**kwargs)
 
     return LLMCommitMessageGenerator(chat_model)

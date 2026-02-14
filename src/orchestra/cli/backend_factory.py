@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import typer
 
@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from orchestra.config.settings import OrchestraConfig
 
 
-def build_backend(config: OrchestraConfig):
+def build_backend(config: OrchestraConfig, tools: list | None = None, write_tracker: object | None = None):
     """Construct the appropriate backend based on config."""
     from orchestra.backends.simulation import SimulationBackend
 
@@ -27,7 +27,12 @@ def build_backend(config: OrchestraConfig):
         from orchestra.backends.langgraph_backend import LangGraphBackend
 
         chat_model = build_chat_model(config)
-        return LangGraphBackend(chat_model=chat_model)
+        return LangGraphBackend(
+            chat_model=chat_model,
+            tools=tools,
+            write_tracker=write_tracker,
+            recursion_limit=config.recursion_limit,
+        )
 
     if backend_name == "cli":
         from orchestra.backends.cli_agent import CLIAgentBackend
@@ -62,10 +67,20 @@ def build_chat_model(config: OrchestraConfig):
             **{k: v for k, v in settings.items() if k in ("max_tokens",)},
         )
 
+    import os
+
     from langchain_openai import ChatOpenAI
 
     api_base = settings.get("api_base", "")
-    kwargs = {"model": model_name}
+    kwargs: dict[str, Any] = {"model": model_name}
     if api_base:
         kwargs["base_url"] = api_base
+
+    if provider_name == "openrouter":
+        api_key = os.environ.get("OPEN_ROUTER_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+        if not api_key:
+            typer.echo("Error: Set OPEN_ROUTER_API_KEY to use the openrouter provider.")
+            raise typer.Exit(code=1)
+        kwargs["api_key"] = api_key
+
     return ChatOpenAI(**kwargs)
