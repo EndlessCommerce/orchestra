@@ -313,12 +313,12 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 9: Review and cleanup
 
-- [ ] Identify any code that is unused, or could be cleaned up
-    - [ ] Look at all previous TODOs and changes in git to identify changes
-    - [ ] Identify any code that is no longer used, and remove it
-    - [ ] Identify any unnecessary comments, and remove them (these are comments that explain "what" for a single line of code)
-    - [ ] If there are any obvious code smells of redundant code, add TODOs below to address them
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Identify any code that is unused, or could be cleaned up
+    - [x] Look at all previous TODOs and changes in git to identify changes
+    - [x] Identify any code that is no longer used, and remove it
+    - [x] Identify any unnecessary comments, and remove them (these are comments that explain "what" for a single line of code)
+    - [x] If there are any obvious code smells of redundant code, add TODOs below to address them
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 10: Run full test suite and fix regressions
 
