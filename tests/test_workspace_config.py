@@ -4,6 +4,7 @@ from orchestra.config.settings import (
     OrchestraConfig,
     RepoConfig,
     WorkspaceConfig,
+    WorkspaceToolConfig,
     load_config,
 )
 
@@ -123,3 +124,50 @@ class TestOrchestraConfigWorkspace:
         config_file.write_text("backend: langgraph\n")
         config = load_config(start=tmp_path)
         assert config.workspace.repos == {}
+
+    def test_workspace_tools_from_yaml(self, tmp_path: Path) -> None:
+        config_file = tmp_path / "orchestra.yaml"
+        config_file.write_text(
+            "workspace:\n"
+            "  repos:\n"
+            "    project:\n"
+            "      path: ./my-project\n"
+            "  tools:\n"
+            "    project:\n"
+            "      run-tests:\n"
+            '        command: "python -m pytest -v"\n'
+            '        description: "Run pytest"\n'
+            "      lint:\n"
+            '        command: "ruff check ."\n'
+        )
+        config = load_config(start=tmp_path)
+        assert "project" in config.workspace.tools
+        assert "run-tests" in config.workspace.tools["project"]
+        assert config.workspace.tools["project"]["run-tests"].command == "python -m pytest -v"
+        assert config.workspace.tools["project"]["run-tests"].description == "Run pytest"
+        assert config.workspace.tools["project"]["lint"].command == "ruff check ."
+
+    def test_workspace_tools_default_empty(self) -> None:
+        ws = WorkspaceConfig()
+        assert ws.tools == {}
+
+    def test_workspace_tools_multi_repo(self, tmp_path: Path) -> None:
+        config_file = tmp_path / "orchestra.yaml"
+        config_file.write_text(
+            "workspace:\n"
+            "  repos:\n"
+            "    backend:\n"
+            "      path: ./backend\n"
+            "    frontend:\n"
+            "      path: ./frontend\n"
+            "  tools:\n"
+            "    backend:\n"
+            "      run-tests:\n"
+            '        command: "bundle exec rspec"\n'
+            "    frontend:\n"
+            "      run-tests:\n"
+            '        command: "npm test"\n'
+        )
+        config = load_config(start=tmp_path)
+        assert config.workspace.tools["backend"]["run-tests"].command == "bundle exec rspec"
+        assert config.workspace.tools["frontend"]["run-tests"].command == "npm test"

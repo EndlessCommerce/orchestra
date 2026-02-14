@@ -9,6 +9,7 @@ from orchestra.workspace.repo_context import RepoContext
 
 if TYPE_CHECKING:
     from orchestra.backends.write_tracker import WriteTracker
+    from orchestra.config.settings import WorkspaceToolConfig
 
 
 def _resolve_path(repo_path: Path, relative_path: str) -> Path:
@@ -88,7 +89,7 @@ def _tools_for_repo(
 
     return [
         Tool(
-            name=f"{repo_name}:read-file",
+            name=f"{repo_name}__read-file",
             description=f"Read a file in the {repo_name} repo",
             fn=read_file,
             schema={
@@ -98,7 +99,7 @@ def _tools_for_repo(
             },
         ),
         Tool(
-            name=f"{repo_name}:write-file",
+            name=f"{repo_name}__write-file",
             description=f"Write content to a file in the {repo_name} repo",
             fn=write_file,
             schema={
@@ -111,7 +112,7 @@ def _tools_for_repo(
             },
         ),
         Tool(
-            name=f"{repo_name}:edit-file",
+            name=f"{repo_name}__edit-file",
             description=f"Replace text in a file in the {repo_name} repo",
             fn=edit_file,
             schema={
@@ -125,7 +126,7 @@ def _tools_for_repo(
             },
         ),
         Tool(
-            name=f"{repo_name}:search-code",
+            name=f"{repo_name}__search-code",
             description=f"Search for a pattern in the {repo_name} repo",
             fn=search_code,
             schema={
@@ -138,3 +139,58 @@ def _tools_for_repo(
             },
         ),
     ]
+
+
+def create_workspace_tools(
+    workspace_tools: dict[str, dict[str, WorkspaceToolConfig]],
+    repos: dict[str, RepoContext],
+) -> list[Tool]:
+    """Create repo-scoped custom tools from workspace.tools config."""
+    tools: list[Tool] = []
+    for repo_name, tool_defs in workspace_tools.items():
+        repo_ctx = repos.get(repo_name)
+        if repo_ctx is None:
+            continue
+        for tool_name, tool_config in tool_defs.items():
+            tools.append(_make_workspace_tool(
+                repo_name, tool_name, tool_config, repo_ctx.path,
+            ))
+    return tools
+
+
+def _make_workspace_tool(
+    repo_name: str,
+    tool_name: str,
+    tool_config: WorkspaceToolConfig,
+    repo_path: Path,
+) -> Tool:
+    command = tool_config.command
+
+    def run_command() -> str:
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(repo_path),
+            )
+            output = result.stdout
+            if result.returncode != 0:
+                output += f"\nSTDERR: {result.stderr}" if result.stderr else ""
+                output += f"\nExit code: {result.returncode}"
+            return output or "No output."
+        except subprocess.TimeoutExpired:
+            return f"Error: '{repo_name}__{tool_name}' timed out after 120s"
+
+    return Tool(
+        name=f"{repo_name}__{tool_name}",
+        description=tool_config.description or f"Run `{command}` in the {repo_name} repo",
+        fn=run_command,
+        schema={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    )

@@ -48,8 +48,14 @@ class RepoConfig(BaseModel):
     clone_depth: int = 0
 
 
+class WorkspaceToolConfig(BaseModel):
+    command: str
+    description: str = ""
+
+
 class WorkspaceConfig(BaseModel):
     repos: dict[str, RepoConfig] = Field(default_factory=dict)
+    tools: dict[str, dict[str, WorkspaceToolConfig]] = Field(default_factory=dict)
 
 
 class OrchestraConfig(BaseModel):
@@ -59,6 +65,7 @@ class OrchestraConfig(BaseModel):
     tools: list[ToolConfig] = Field(default_factory=list)
     workspace: WorkspaceConfig = WorkspaceConfig()
     backend: str = "simulation"
+    recursion_limit: int = 1000
     config_dir: Path | None = None
 
 
