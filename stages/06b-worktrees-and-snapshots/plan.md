@@ -317,11 +317,11 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
     - [x] `test_replay_diverges` — new execution appends to new context, original unchanged
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write end-to-end integration tests (`tests/test_worktree_e2e.py`)
-    - [ ] `test_parallel_with_worktrees` — full flow: fan-out → 2 agents write in isolated worktrees → per-turn commits → fan-in → merge → session branch has both agents' commits
-    - [ ] `test_resume_at_node_boundary_e2e` — run → pause → resume → git state correct → completes
-    - [ ] `test_resume_at_agent_turn_e2e` — run → pause mid-node → resume --turn → agent continues from that turn
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Write end-to-end integration tests (`tests/test_worktree_e2e.py`)
+    - [x] `test_parallel_with_worktrees` — full flow: fan-out → 2 agents write in isolated worktrees → per-turn commits → fan-in → merge → session branch has both agents' commits
+    - [x] `test_resume_at_node_boundary_e2e` — run → pause → resume → git state correct → completes
+    - [x] `test_resume_at_agent_turn_e2e` — run → pause mid-node → resume --turn → agent continues from that turn
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 10: Review and Cleanup
 
