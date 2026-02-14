@@ -186,6 +186,43 @@ class WorkspaceSnapshotRecorded(Event):
     workspace_snapshot: dict[str, str] = Field(default_factory=dict)
 
 
+class RepoCloned(Event):
+    event_type: str = "RepoCloned"
+    repo_name: str
+    remote_url: str
+    clone_path: str
+    depth: int = 0
+
+
+class RepoFetched(Event):
+    event_type: str = "RepoFetched"
+    repo_name: str
+    remote_url: str
+    depth: int = 0
+
+
+class SessionBranchPushed(Event):
+    event_type: str = "SessionBranchPushed"
+    repo_name: str
+    branch_name: str
+    remote_url: str
+
+
+class SessionBranchPushFailed(Event):
+    event_type: str = "SessionBranchPushFailed"
+    repo_name: str
+    branch_name: str
+    remote_url: str
+    error: str = ""
+
+
+class CleanupCompleted(Event):
+    event_type: str = "CleanupCompleted"
+    removed_branches: list[str] = Field(default_factory=list)
+    removed_worktrees: list[str] = Field(default_factory=list)
+    preserved_branches: list[str] = Field(default_factory=list)
+
+
 EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "PipelineStarted": PipelineStarted,
     "PipelineCompleted": PipelineCompleted,
@@ -208,4 +245,9 @@ EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "WorktreeMerged": WorktreeMerged,
     "WorktreeMergeConflict": WorktreeMergeConflict,
     "WorkspaceSnapshotRecorded": WorkspaceSnapshotRecorded,
+    "RepoCloned": RepoCloned,
+    "RepoFetched": RepoFetched,
+    "SessionBranchPushed": SessionBranchPushed,
+    "SessionBranchPushFailed": SessionBranchPushFailed,
+    "CleanupCompleted": CleanupCompleted,
 }

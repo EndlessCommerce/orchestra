@@ -206,15 +206,15 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 2: New event types for remote operations
 
-- [ ] Add event types to `src/orchestra/events/types.py`
-    - [ ] `RepoCloned(Event)` — fields: `repo_name`, `remote_url`, `clone_path`, `depth` (optional)
-    - [ ] `RepoFetched(Event)` — fields: `repo_name`, `remote_url`, `depth` (optional)
-    - [ ] `SessionBranchPushed(Event)` — fields: `repo_name`, `branch_name`, `remote_url`
-    - [ ] `SessionBranchPushFailed(Event)` — fields: `repo_name`, `branch_name`, `remote_url`, `error`
-    - [ ] `CleanupCompleted(Event)` — fields: `removed_branches` (list[str]), `removed_worktrees` (list[str]), `preserved_branches` (list[str])
-    - [ ] Register all new types in `EVENT_TYPE_MAP`
-    - [ ] Add stdout handling in `StdoutObserver.on_event()` in `src/orchestra/events/observer.py`
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Add event types to `src/orchestra/events/types.py`
+    - [x] `RepoCloned(Event)` — fields: `repo_name`, `remote_url`, `clone_path`, `depth` (optional)
+    - [x] `RepoFetched(Event)` — fields: `repo_name`, `remote_url`, `depth` (optional)
+    - [x] `SessionBranchPushed(Event)` — fields: `repo_name`, `branch_name`, `remote_url`
+    - [x] `SessionBranchPushFailed(Event)` — fields: `repo_name`, `branch_name`, `remote_url`, `error`
+    - [x] `CleanupCompleted(Event)` — fields: `removed_branches` (list[str]), `removed_worktrees` (list[str]), `preserved_branches` (list[str])
+    - [x] Register all new types in `EVENT_TYPE_MAP`
+    - [x] Add stdout handling in `StdoutObserver.on_event()` in `src/orchestra/events/observer.py`
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 3: Clone/fetch on session start
 

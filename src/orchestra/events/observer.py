@@ -9,6 +9,7 @@ from orchestra.events.types import (
     AgentCommitCreated,
     AgentTurnCompleted,
     CheckpointSaved,
+    CleanupCompleted,
     Event,
     ParallelCompleted,
     ParallelStarted,
@@ -16,7 +17,11 @@ from orchestra.events.types import (
     PipelineFailed,
     PipelinePaused,
     PipelineStarted,
+    RepoCloned,
+    RepoFetched,
     SessionBranchCreated,
+    SessionBranchPushFailed,
+    SessionBranchPushed,
     StageCompleted,
     StageFailed,
     StageRetrying,
@@ -98,6 +103,18 @@ class StdoutObserver:
         elif isinstance(event, WorkspaceSnapshotRecorded):
             repos = ", ".join(f"{k}={v[:8]}" for k, v in event.workspace_snapshot.items())
             typer.echo(f"  [Snapshot] {event.node_id}: {repos}")
+        elif isinstance(event, RepoCloned):
+            depth_str = f" (depth={event.depth})" if event.depth else ""
+            typer.echo(f"  [Remote] Cloned: {event.repo_name} from {event.remote_url}{depth_str}")
+        elif isinstance(event, RepoFetched):
+            depth_str = f" (depth={event.depth})" if event.depth else ""
+            typer.echo(f"  [Remote] Fetched: {event.repo_name} from {event.remote_url}{depth_str}")
+        elif isinstance(event, SessionBranchPushed):
+            typer.echo(f"  [Remote] Pushed: {event.branch_name} to {event.remote_url}")
+        elif isinstance(event, SessionBranchPushFailed):
+            typer.echo(f"  [Remote] Push FAILED: {event.branch_name} to {event.remote_url} — {event.error}")
+        elif isinstance(event, CleanupCompleted):
+            typer.echo(f"  [Cleanup] Removed {len(event.removed_branches)} branches, {len(event.removed_worktrees)} worktrees; preserved {len(event.preserved_branches)} active")
 
 
 class CxdbObserver:
