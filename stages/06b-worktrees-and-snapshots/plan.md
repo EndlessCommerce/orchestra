@@ -332,12 +332,12 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
     - [x] If there are any obvious code smells of redundant code, add TODOs below to address them
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Identify all specs that need to be run and updated
-    - [ ] Look at all previous TODOs and changes in git to identify changes
-    - [ ] Run the full test suite (`pytest tests/`) to verify no regressions
-    - [ ] Identify any existing tests that may need updates due to changed signatures (e.g., `default_registry()`, `PipelineRunner.__init__()`, `RepoContext`)
-    - [ ] Fix any failing tests
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Identify all specs that need to be run and updated
+    - [x] Look at all previous TODOs and changes in git to identify changes
+    - [x] Run the full test suite (`pytest tests/`) to verify no regressions
+    - [x] Identify any existing tests that may need updates due to changed signatures (e.g., `default_registry()`, `PipelineRunner.__init__()`, `RepoContext`)
+    - [x] Fix any failing tests
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Key Design Decisions
 
