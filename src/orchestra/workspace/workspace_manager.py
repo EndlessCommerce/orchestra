@@ -10,6 +10,7 @@ from orchestra.workspace import git_ops
 from orchestra.workspace.repo_context import RepoContext
 from orchestra.workspace.session_branch import (
     create_session_branches,
+    prepare_repos,
     restore_original_branches,
 )
 from orchestra.workspace.worktree_manager import WorktreeMergeResult, WorktreeManager
@@ -58,6 +59,27 @@ class WorkspaceManager:
         self._session_id = session_id
 
         config_dir = self._config.config_dir or Path.cwd()
+
+        # Clone/fetch repos as needed before creating session branches
+        prepare_results = prepare_repos(self._config.workspace.repos, config_dir)
+        for result in prepare_results:
+            repo_config = self._config.workspace.repos[result.repo_name]
+            if result.action == "cloned":
+                self._event_emitter.emit(
+                    "RepoCloned",
+                    repo_name=result.repo_name,
+                    remote_url=repo_config.remote,
+                    clone_path=str(result.repo_path),
+                    depth=repo_config.clone_depth,
+                )
+            elif result.action == "fetched":
+                self._event_emitter.emit(
+                    "RepoFetched",
+                    repo_name=result.repo_name,
+                    remote_url=repo_config.remote,
+                    depth=repo_config.clone_depth,
+                )
+
         self._branch_infos = create_session_branches(
             self._config.workspace.repos,
             pipeline_name,

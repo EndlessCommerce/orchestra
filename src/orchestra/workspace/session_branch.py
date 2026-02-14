@@ -24,8 +24,50 @@ class SessionBranchInfo:
     original_branch: str
 
 
+@dataclass
+class PrepareResult:
+    repo_name: str
+    repo_path: Path
+    action: str  # "cloned", "fetched", "none"
+
+
 def _sanitize_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_/.-]", "-", name)
+
+
+def prepare_repos(
+    repos: dict[str, RepoConfig],
+    config_dir: Path,
+) -> list[PrepareResult]:
+    results: list[PrepareResult] = []
+
+    for repo_name, repo_config in repos.items():
+        repo_path = Path(repo_config.path)
+        if not repo_path.is_absolute():
+            repo_path = (config_dir / repo_path).resolve()
+
+        has_remote = bool(repo_config.remote)
+        path_exists = repo_path.exists()
+
+        if not path_exists and not has_remote:
+            raise WorkspaceError(
+                f"Repo '{repo_name}' path does not exist ({repo_path}) "
+                f"and no remote is configured. Either create the directory "
+                f"or set 'remote' in workspace.repos.{repo_name}."
+            )
+
+        depth = repo_config.clone_depth if repo_config.clone_depth > 0 else None
+
+        if not path_exists and has_remote:
+            git_ops.clone(repo_config.remote, repo_path, depth=depth)
+            results.append(PrepareResult(repo_name, repo_path, "cloned"))
+        elif path_exists and has_remote:
+            git_ops.fetch("origin", cwd=repo_path, depth=depth)
+            results.append(PrepareResult(repo_name, repo_path, "fetched"))
+        else:
+            results.append(PrepareResult(repo_name, repo_path, "none"))
+
+    return results
 
 
 def create_session_branches(

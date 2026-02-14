@@ -218,15 +218,15 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 3: Clone/fetch on session start
 
-- [ ] Add clone/fetch logic to workspace startup in `src/orchestra/workspace/session_branch.py`
-    - [ ] Before `create_session_branches()` creates branches, check each repo config:
+- [x] Add clone/fetch logic to workspace startup in `src/orchestra/workspace/session_branch.py`
+    - [x] Before `create_session_branches()` creates branches, check each repo config:
         - If `path` does not exist and `remote` is set → clone (with `clone_depth` if configured)
         - If `path` exists and `remote` is set → fetch (with `clone_depth` if configured for shallow fetch)
         - If `path` does not exist and `remote` is not set → raise `WorkspaceError` with clear message
         - If `path` exists and `remote` is not set → existing behavior (no-op)
-    - [ ] Extract this into a `prepare_repos()` function called from `WorkspaceManager.setup_session()` before `create_session_branches()`
-    - [ ] Emit `RepoCloned` / `RepoFetched` events from `WorkspaceManager.setup_session()`
-    - [ ] Write tests in `tests/test_remote_git.py`:
+    - [x] Extract this into a `prepare_repos()` function called from `WorkspaceManager.setup_session()` before `create_session_branches()`
+    - [x] Emit `RepoCloned` / `RepoFetched` events from `WorkspaceManager.setup_session()`
+    - [x] Write tests in `tests/test_remote_git.py`:
         - `test_clone_on_start` — remote + path missing → cloned
         - `test_fetch_on_start` — remote + path exists → fetched
         - `test_no_clone_without_remote` — no remote + path exists → no clone/fetch
@@ -234,7 +234,7 @@ Run: `orchestra cleanup --older-than 0`
         - `test_shallow_clone` — `clone_depth: 50` → `git clone --depth 50`
         - `test_shallow_clone_default` — no `clone_depth` → full clone
         - `test_shallow_fetch` — fetch with `clone_depth` uses `--depth N`
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 4: Push policy resolution and config defaults
 
