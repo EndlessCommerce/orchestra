@@ -282,8 +282,8 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 7: Cleanup CLI command
 
-- [ ] Implement `orchestra cleanup` command
-    - [ ] Create `src/orchestra/cli/cleanup.py` with a `cleanup` function:
+- [x] Implement `orchestra cleanup` command
+    - [x] Create `src/orchestra/cli/cleanup.py` with a `cleanup` function:
         - `--older-than` option (default 7 days)
         - `--config` option for config path (optional)
         - Discover all session branches matching `branch_prefix` pattern in configured repos
@@ -294,14 +294,14 @@ Run: `orchestra cleanup --older-than 0`
         - Remove orphaned worktrees via `git_ops.worktree_remove()` (worktrees in `.orchestra/worktrees/` with no active session)
         - Report what was removed to stdout
         - Emit `CleanupCompleted` event
-    - [ ] Register command in `src/orchestra/cli/main.py`
-    - [ ] Write tests in `tests/test_cleanup.py`:
+    - [x] Register command in `src/orchestra/cli/main.py`
+    - [x] Write tests in `tests/test_cleanup.py`:
         - `test_cleanup_removes_old_branches` — branches older than threshold removed
         - `test_cleanup_removes_orphaned_worktrees` — worktrees from crashed sessions removed
         - `test_cleanup_preserves_active_sessions` — running/paused session branches preserved
         - `test_cleanup_reports_removed` — CLI output lists what was removed
         - `test_cleanup_age_threshold` — `--older-than 0` removes all; `--older-than 30` keeps recent
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 8: End-to-end integration tests
 
