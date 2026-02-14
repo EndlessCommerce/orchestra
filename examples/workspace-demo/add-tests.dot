@@ -1,0 +1,18 @@
+digraph add_tests {
+    graph [
+        goal="Add comprehensive unit tests for the calculator module",
+        label="Add Tests Pipeline"
+    ]
+
+    node [shape=box]
+
+    // ── lifecycle ──────────────────────────────────────────────
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare,  label="Done"]
+
+    // ── agent writes tests ─────────────────────────────────────
+    write_tests [label="Write Tests", agent="test-writer"]
+
+    // ── edges ──────────────────────────────────────────────────
+    start -> write_tests -> exit
+}

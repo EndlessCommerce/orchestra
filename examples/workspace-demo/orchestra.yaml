@@ -1,0 +1,30 @@
+backend: langgraph
+
+providers:
+  default: openrouter
+  openrouter:
+    models:
+      smart: moonshotai/kimi-k2.5
+      worker: moonshotai/kimi-k2.5
+      cheap: moonshotai/kimi-k2.5
+    settings:
+      api_base: https://openrouter.ai/api/v1
+
+agents:
+  test-writer:
+    role: prompts/roles/python-developer.yaml
+    persona: prompts/personas/test-engineer.yaml
+    personality: prompts/personalities/methodical.yaml
+    task: prompts/tasks/add-tests.yaml
+    model: worker
+
+workspace:
+  repos:
+    project:
+      path: ./sample-project
+      branch_prefix: orchestra/
+  tools:
+    project:
+      run-tests:
+        command: "python -m pytest -v"
+        description: "Run pytest in the project repo"

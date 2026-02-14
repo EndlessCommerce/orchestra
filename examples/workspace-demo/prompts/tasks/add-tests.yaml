@@ -1,0 +1,13 @@
+content: |
+  Use the `project__read-file` tool to read `calculator.py`, then write comprehensive pytest tests for it.
+
+  Your tests should cover:
+  1. Basic operations (add, subtract, multiply, divide) with positive numbers
+  2. Operations with negative numbers and zero
+  3. The divide-by-zero error case
+  4. Large numbers and floating-point precision
+
+  Use the `project__write-file` tool to write the tests to `test_calculator.py`.
+  Use descriptive test names that explain what is being tested.
+
+  After writing the tests, use the `project__run-tests` tool to run them and verify they pass.
