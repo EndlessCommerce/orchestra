@@ -117,3 +117,41 @@ def read_file(path: Path) -> str:
 
 def branch_delete(name: str, *, cwd: Path) -> None:
     run_git("branch", "-D", name, cwd=cwd)
+
+
+def clone(url: str, path: Path, *, depth: int | None = None) -> None:
+    args = ["clone"]
+    if depth is not None:
+        args.extend(["--depth", str(depth)])
+    args.extend([url, str(path)])
+    cmd = ["git", *args]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise GitError(cmd, result.returncode, result.stderr.strip())
+
+
+def fetch(remote: str, *, cwd: Path, depth: int | None = None) -> None:
+    args = ["fetch"]
+    if depth is not None:
+        args.extend(["--depth", str(depth)])
+    args.append(remote)
+    run_git(*args, cwd=cwd)
+
+
+def push(remote: str, branch: str, *, cwd: Path, set_upstream: bool = False) -> None:
+    args = ["push"]
+    if set_upstream:
+        args.append("-u")
+    args.extend([remote, branch])
+    run_git(*args, cwd=cwd)
+
+
+def list_branches(pattern: str, *, cwd: Path) -> list[str]:
+    output = run_git("branch", "--list", pattern, cwd=cwd)
+    if not output:
+        return []
+    return [line.strip().lstrip("* ") for line in output.splitlines()]
+
+
+def branch_date(branch: str, *, cwd: Path) -> str:
+    return run_git("log", "-1", f"--format=%ci", branch, cwd=cwd)

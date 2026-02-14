@@ -195,14 +195,14 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 1: New git_ops functions (clone, fetch, push, branch listing)
 
-- [ ] Add `clone`, `fetch`, `push`, `list_branches`, and `branch_date` to `src/orchestra/workspace/git_ops.py`
-    - [ ] `clone(url: str, path: Path, *, depth: int | None = None) -> None` — runs `git clone [--depth N] <url> <path>`
-    - [ ] `fetch(remote: str, *, cwd: Path, depth: int | None = None) -> None` — runs `git fetch [--depth N] <remote>`
-    - [ ] `push(remote: str, branch: str, *, cwd: Path, set_upstream: bool = False) -> None` — runs `git push [-u] <remote> <branch>`
-    - [ ] `list_branches(pattern: str, *, cwd: Path) -> list[str]` — runs `git branch --list <pattern>` and returns branch names
-    - [ ] `branch_date(branch: str, *, cwd: Path) -> str` — runs `git log -1 --format=%ci <branch>` and returns the date string
-    - [ ] Write unit tests for all new functions in `tests/test_git_ops_remote.py` (use local bare repos as remotes)
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Add `clone`, `fetch`, `push`, `list_branches`, and `branch_date` to `src/orchestra/workspace/git_ops.py`
+    - [x] `clone(url: str, path: Path, *, depth: int | None = None) -> None` — runs `git clone [--depth N] <url> <path>`
+    - [x] `fetch(remote: str, *, cwd: Path, depth: int | None = None) -> None` — runs `git fetch [--depth N] <remote>`
+    - [x] `push(remote: str, branch: str, *, cwd: Path, set_upstream: bool = False) -> None` — runs `git push [-u] <remote> <branch>`
+    - [x] `list_branches(pattern: str, *, cwd: Path) -> list[str]` — runs `git branch --list <pattern>` and returns branch names
+    - [x] `branch_date(branch: str, *, cwd: Path) -> str` — runs `git log -1 --format=%ci <branch>` and returns the date string
+    - [x] Write unit tests for all new functions in `tests/test_git_ops_remote.py` (use local bare repos as remotes)
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 2: New event types for remote operations
 
