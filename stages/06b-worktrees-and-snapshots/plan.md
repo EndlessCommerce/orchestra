@@ -280,42 +280,42 @@ Run: `orchestra resume <session_id> --turn <turn_id>`
 
 ### Layer 9: Tests
 
-- [ ] Write worktree lifecycle tests (`tests/test_worktree.py`)
-    - [ ] `test_worktree_created_for_parallel` — parallel fan-out with 2 codergen branches → 2 worktrees created at expected paths
-    - [ ] `test_worktree_isolation` — write file in worktree A, verify not visible in worktree B
-    - [ ] `test_worktree_path` — verify worktrees created at `.orchestra/worktrees/{session-id}/{agent-name}`
-    - [ ] `test_sequential_no_worktree` — sequential node after fan-in uses session branch directly, no worktree
-    - [ ] `test_per_turn_commits_in_worktree` — agent in worktree commits to worktree branch, not session branch
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Write worktree lifecycle tests (`tests/test_worktree.py`)
+    - [x] `test_worktree_created_for_parallel` — parallel fan-out with 2 codergen branches → 2 worktrees created at expected paths
+    - [x] `test_worktree_isolation` — write file in worktree A, verify not visible in worktree B
+    - [x] `test_worktree_path` — verify worktrees created at `.orchestra/worktrees/{session-id}/{agent-name}`
+    - [x] `test_sequential_no_worktree` — sequential node after fan-in uses session branch directly, no worktree
+    - [x] `test_per_turn_commits_in_worktree` — agent in worktree commits to worktree branch, not session branch
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write worktree merge tests (`tests/test_worktree_merge.py`)
-    - [ ] `test_clean_merge` — two agents edit different files → merge succeeds, session branch has both changes
-    - [ ] `test_merge_conflict_surfaced` — two agents edit same file → conflict details serialized in context
-    - [ ] `test_worktree_cleanup_on_success` — after successful merge, worktree dirs removed
-    - [ ] `test_worktree_preserved_on_failure` — on merge conflict, worktree dirs preserved
-    - [ ] `test_merge_result_on_session_branch` — after merge, session branch HEAD contains changes from both agents
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Write worktree merge tests (`tests/test_worktree_merge.py`)
+    - [x] `test_clean_merge` — two agents edit different files → merge succeeds, session branch has both changes
+    - [x] `test_merge_conflict_surfaced` — two agents edit same file → conflict details serialized in context
+    - [x] `test_worktree_cleanup_on_success` — after successful merge, worktree dirs removed
+    - [x] `test_worktree_preserved_on_failure` — on merge conflict, worktree dirs preserved
+    - [x] `test_merge_result_on_session_branch` — after merge, session branch HEAD contains changes from both agents
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write workspace snapshot tests (`tests/test_workspace_snapshot.py`)
-    - [ ] `test_checkpoint_includes_workspace_snapshot` — checkpoint after node with file writes includes `workspace_snapshot` with HEAD SHAs
-    - [ ] `test_checkpoint_snapshot_only_on_change` — read-only node → checkpoint has empty `workspace_snapshot`
-    - [ ] `test_snapshot_per_repo` — multi-repo workspace → snapshot has separate SHA for each repo
-    - [ ] `test_snapshot_after_parallel` — after parallel + fan-in merge → snapshot reflects merged state
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Write workspace snapshot tests (`tests/test_workspace_snapshot.py`)
+    - [x] `test_checkpoint_includes_workspace_snapshot` — checkpoint after node with file writes includes `workspace_snapshot` with HEAD SHAs
+    - [x] `test_checkpoint_snapshot_only_on_change` — read-only node → checkpoint has empty `workspace_snapshot`
+    - [x] `test_snapshot_per_repo` — multi-repo workspace → snapshot has separate SHA for each repo
+    - [x] `test_snapshot_after_parallel` — after parallel + fan-in merge → snapshot reflects merged state
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write resume with git state tests (`tests/test_resume_git.py`)
-    - [ ] `test_resume_at_node_boundary` — resume restores repo to checkpoint's workspace_snapshot SHA
-    - [ ] `test_resume_at_node_restores_multiple_repos` — both repos restored to correct SHAs
-    - [ ] `test_resume_at_agent_turn` — `--turn` restores repo to AgentTurn.git_sha
-    - [ ] `test_resume_at_agent_turn_restores_agent_state` — agent continues with correct prior context
-    - [ ] `test_resume_at_read_only_turn` — null git_sha → repo at most recent prior SHA
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Write resume with git state tests (`tests/test_resume_git.py`)
+    - [x] `test_resume_at_node_boundary` — resume restores repo to checkpoint's workspace_snapshot SHA
+    - [x] `test_resume_at_node_restores_multiple_repos` — both repos restored to correct SHAs
+    - [x] `test_resume_at_agent_turn` — `--turn` restores repo to AgentTurn.git_sha
+    - [x] `test_resume_at_agent_turn_restores_agent_state` — agent continues with correct prior context
+    - [x] `test_resume_at_read_only_turn` — null git_sha → repo at most recent prior SHA
+    - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write replay tests (`tests/test_replay.py`)
-    - [ ] `test_replay_from_agent_turn` — fork creates new CXDB context sharing history up to fork point
-    - [ ] `test_replay_restores_git_state` — git at AgentTurn.git_sha after fork
-    - [ ] `test_replay_diverges` — new execution appends to new context, original unchanged
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Write replay tests (`tests/test_replay.py`)
+    - [x] `test_replay_from_agent_turn` — fork creates new CXDB context sharing history up to fork point
+    - [x] `test_replay_restores_git_state` — git at AgentTurn.git_sha after fork
+    - [x] `test_replay_diverges` — new execution appends to new context, original unchanged
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Write end-to-end integration tests (`tests/test_worktree_e2e.py`)
     - [ ] `test_parallel_with_worktrees` — full flow: fan-out → 2 agents write in isolated worktrees → per-turn commits → fan-in → merge → session branch has both agents' commits
