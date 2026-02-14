@@ -238,17 +238,17 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 4: Push policy resolution and config defaults
 
-- [ ] Add push policy defaults to `RepoConfig` validation
-    - [ ] In `src/orchestra/config/settings.py`, add a `@model_validator` or property that resolves the effective push policy:
+- [x] Add push policy defaults to `RepoConfig` validation
+    - [x] In `src/orchestra/config/settings.py`, add a `@model_validator` or property that resolves the effective push policy:
         - If `push` is explicitly set → use it
         - If `remote` is set and `push` is empty → default to `on_completion`
         - If `remote` is not set and `push` is empty → default to `never`
-    - [ ] Add `effective_push_policy` property (or resolve in validator) returning `"never"` | `"on_completion"` | `"on_checkpoint"`
-    - [ ] Write tests for default resolution in `tests/test_push_policy.py`:
+    - [x] Add `effective_push_policy` property (or resolve in validator) returning `"never"` | `"on_completion"` | `"on_checkpoint"`
+    - [x] Write tests for default resolution in `tests/test_push_policy.py`:
         - `test_default_push_with_remote` — remote set, no push → `on_completion`
         - `test_default_push_without_remote` — no remote → `never`
         - `test_explicit_push_override` — explicit `push: never` with remote → `never`
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 5: Push on completion
 

@@ -47,6 +47,14 @@ class RepoConfig(BaseModel):
     push: str = ""
     clone_depth: int = 0
 
+    @property
+    def effective_push_policy(self) -> str:
+        if self.push:
+            return self.push
+        if self.remote:
+            return "on_completion"
+        return "never"
+
 
 class WorkspaceToolConfig(BaseModel):
     command: str
