@@ -190,3 +190,100 @@ class TestPushOnCompletion:
         event_types = [call.args[0] for call in emitter.emit.call_args_list]
         assert "SessionBranchPushed" not in event_types
         assert "SessionBranchPushFailed" not in event_types
+
+
+class TestPushOnCheckpoint:
+    def test_push_on_checkpoint(self, workspace_repo: Path, bare_remote: Path, tmp_path: Path) -> None:
+        """Checkpoint saved → session branch pushed for repos with on_checkpoint policy."""
+        from orchestra.events.observer import PushObserver
+        from orchestra.events.types import CheckpointSaved
+
+        mgr, emitter = _make_manager(workspace_repo, bare_remote, tmp_path, push_policy="on_checkpoint")
+        mgr.setup_session("test-pipe", "chk123")
+
+        observer = PushObserver(mgr)
+        event = CheckpointSaved(node_id="node_a", completed_nodes=["node_a"])
+        observer.on_event(event)
+
+        # Verify push happened
+        remote_branches = run_git("branch", cwd=bare_remote)
+        assert "orchestra/test-pipe/chk123" in remote_branches
+
+        event_types = [call.args[0] for call in emitter.emit.call_args_list]
+        assert "SessionBranchPushed" in event_types
+
+    def test_checkpoint_push_per_repo(self, tmp_path: Path) -> None:
+        """Repo A on_checkpoint, Repo B on_completion → only A pushed at checkpoint."""
+        from orchestra.events.observer import PushObserver
+        from orchestra.events.types import CheckpointSaved
+
+        repos_config = {}
+        for name, policy in [("repo_a", "on_checkpoint"), ("repo_b", "on_completion")]:
+            source = tmp_path / f"src-{name}"
+            source.mkdir()
+            run_git("init", cwd=source)
+            run_git("config", "user.email", "test@test.com", cwd=source)
+            run_git("config", "user.name", "Test", cwd=source)
+            (source / "README.md").write_text(f"# {name}\n")
+            run_git("add", "README.md", cwd=source)
+            run_git("commit", "-m", "Initial commit", cwd=source)
+
+            bare = tmp_path / f"{name}-remote.git"
+            run_git("clone", "--bare", str(source), str(bare), cwd=tmp_path)
+
+            workspace = tmp_path / "workspace" / name
+            clone(str(bare), workspace)
+            run_git("config", "user.email", "test@test.com", cwd=workspace)
+            run_git("config", "user.name", "Test", cwd=workspace)
+
+            repos_config[name] = RepoConfig(
+                path=str(workspace),
+                remote=str(bare),
+                push=policy,
+            )
+
+        emitter = MagicMock()
+        config = OrchestraConfig(
+            workspace=WorkspaceConfig(repos=repos_config),
+            config_dir=tmp_path,
+        )
+        commit_gen = MagicMock()
+        mgr = WorkspaceManager(config=config, event_emitter=emitter, commit_gen=commit_gen)
+        mgr.setup_session("multi", "cp123")
+
+        observer = PushObserver(mgr)
+        event = CheckpointSaved(node_id="node_a", completed_nodes=["node_a"])
+        observer.on_event(event)
+
+        # Only repo_a should have been pushed (on_checkpoint)
+        push_events = [
+            call for call in emitter.emit.call_args_list
+            if call.args[0] == "SessionBranchPushed"
+        ]
+        assert len(push_events) == 1
+        assert push_events[0].kwargs["repo_name"] == "repo_a"
+
+        # repo_b remote should NOT have the branch
+        bare_b = tmp_path / "repo_b-remote.git"
+        remote_branches_b = run_git("branch", cwd=bare_b)
+        assert "orchestra/multi/cp123" not in remote_branches_b
+
+    def test_checkpoint_push_failure_non_fatal(self, workspace_repo: Path, bare_remote: Path, tmp_path: Path) -> None:
+        """Push fails at checkpoint → warning, pipeline continues."""
+        from orchestra.events.observer import PushObserver
+        from orchestra.events.types import CheckpointSaved
+
+        mgr, emitter = _make_manager(workspace_repo, bare_remote, tmp_path, push_policy="on_checkpoint")
+        mgr.setup_session("test-pipe", "cpfail")
+
+        # Break the origin remote
+        run_git("remote", "set-url", "origin", "/nonexistent/remote.git", cwd=workspace_repo)
+
+        observer = PushObserver(mgr)
+        event = CheckpointSaved(node_id="node_a", completed_nodes=["node_a"])
+
+        # Should not raise
+        observer.on_event(event)
+
+        event_types = [call.args[0] for call in emitter.emit.call_args_list]
+        assert "SessionBranchPushFailed" in event_types

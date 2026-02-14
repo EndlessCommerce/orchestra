@@ -268,17 +268,17 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 6: Push on checkpoint (PushObserver)
 
-- [ ] Add `PushObserver` to `src/orchestra/events/observer.py`
-    - [ ] Create `PushObserver` class implementing `EventObserver`
-    - [ ] Constructor takes `workspace_manager: WorkspaceManager` and `config: OrchestraConfig`
-    - [ ] `on_event()` listens for `CheckpointSaved` events
-    - [ ] On `CheckpointSaved`: call `workspace_manager.push_session_branches(policy_filter="on_checkpoint")`
-    - [ ] Register `PushObserver` in `cli/run.py` after `CxdbObserver` so CXDB write completes first
-    - [ ] Write tests in `tests/test_push_policy.py`:
+- [x] Add `PushObserver` to `src/orchestra/events/observer.py`
+    - [x] Create `PushObserver` class implementing `EventObserver`
+    - [x] Constructor takes `workspace_manager: WorkspaceManager` and `config: OrchestraConfig`
+    - [x] `on_event()` listens for `CheckpointSaved` events
+    - [x] On `CheckpointSaved`: call `workspace_manager.push_session_branches(policy_filter="on_checkpoint")`
+    - [x] Register `PushObserver` in `cli/run.py` after `CxdbObserver` so CXDB write completes first
+    - [x] Write tests in `tests/test_push_policy.py`:
         - `test_push_on_checkpoint` — checkpoint saved → session branch pushed for repos with `on_checkpoint` policy
         - `test_checkpoint_push_per_repo` — repo A `on_checkpoint`, repo B `on_completion` → only A pushed at checkpoint
         - `test_checkpoint_push_failure_non_fatal` — push fails → warning, pipeline continues
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 7: Cleanup CLI command
 

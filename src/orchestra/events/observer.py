@@ -36,6 +36,7 @@ from orchestra.storage.type_bundle import to_tagged_data
 
 if TYPE_CHECKING:
     from orchestra.storage.cxdb_client import CxdbClient
+    from orchestra.workspace.workspace_manager import WorkspaceManager
 
 
 def _truncate(s: str, max_len: int = 80) -> str:
@@ -311,3 +312,14 @@ class CxdbObserver:
             type_version=type_version,
             data=to_tagged_data(type_id, type_version, data),
         )
+
+
+class PushObserver:
+    """Pushes session branches on CheckpointSaved for repos with on_checkpoint policy."""
+
+    def __init__(self, workspace_manager: WorkspaceManager) -> None:
+        self._workspace_manager = workspace_manager
+
+    def on_event(self, event: Event) -> None:
+        if isinstance(event, CheckpointSaved):
+            self._workspace_manager.push_session_branches("on_checkpoint")

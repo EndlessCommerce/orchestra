@@ -128,6 +128,10 @@ def run(
                 )
                 repo_contexts = workspace_manager.setup_session(graph.name, display_id)
                 dispatcher.add_observer(workspace_manager)
+
+                # Register PushObserver for on_checkpoint push (after CxdbObserver)
+                from orchestra.events.observer import PushObserver
+                dispatcher.add_observer(PushObserver(workspace_manager))
             except WorkspaceError as e:
                 typer.echo(f"Error: Workspace setup failed: {e}")
                 raise typer.Exit(code=1)
