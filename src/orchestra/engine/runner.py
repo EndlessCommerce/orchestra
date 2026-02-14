@@ -127,7 +127,6 @@ class PipelineRunner:
             outcome = self._execute_node(node, handler, state)
             last_outcome = outcome
 
-            # Determine next node
             next_node_id = ""
             next_node_obj: Node | None = None
 
@@ -155,7 +154,6 @@ class PipelineRunner:
                     next_node_obj = failure_next
                     next_node_id = failure_next.id
 
-            # Save checkpoint with next_node_id
             self._save_checkpoint(node, state, next_node_id)
 
             # Check for pause request

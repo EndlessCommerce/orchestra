@@ -3,14 +3,11 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from orchestra.workspace import git_ops
 from orchestra.workspace.git_ops import GitError
 from orchestra.workspace.repo_context import RepoContext
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +124,6 @@ class WorktreeManager:
             wt_branch = self._worktree_branch_name(branch_id)
             try:
                 git_ops.merge(wt_branch, cwd=repo_ctx.path)
-                # Complete the merge
                 git_ops.commit(
                     f"Merge {branch_id} into session branch",
                     author="Orchestra <orchestra@local>",

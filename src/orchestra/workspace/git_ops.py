@@ -84,8 +84,6 @@ def is_git_repo(path: Path) -> bool:
         return False
 
 
-# --- Worktree operations (Stage 6b) ---
-
 
 def worktree_add(worktree_path: Path, branch: str, *, cwd: Path) -> None:
     run_git("worktree", "add", str(worktree_path), "-b", branch, cwd=cwd)
