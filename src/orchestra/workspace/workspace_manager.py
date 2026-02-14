@@ -105,6 +105,46 @@ class WorkspaceManager:
 
         return self._repo_contexts
 
+    def push_session_branches(self, policy_filter: str) -> None:
+        """Push session branches to remote for repos matching the given push policy."""
+        for repo_name, repo_config in self._config.workspace.repos.items():
+            if repo_config.effective_push_policy != policy_filter:
+                continue
+            if not repo_config.remote:
+                continue
+
+            branch_info = self._branch_infos.get(repo_name)
+            if not branch_info:
+                continue
+
+            try:
+                git_ops.push(
+                    "origin",
+                    branch_info.branch_name,
+                    cwd=branch_info.repo_path,
+                    set_upstream=True,
+                )
+                self._event_emitter.emit(
+                    "SessionBranchPushed",
+                    repo_name=repo_name,
+                    branch_name=branch_info.branch_name,
+                    remote_url=repo_config.remote,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to push branch '%s' in repo '%s': %s",
+                    branch_info.branch_name,
+                    repo_name,
+                    e,
+                )
+                self._event_emitter.emit(
+                    "SessionBranchPushFailed",
+                    repo_name=repo_name,
+                    branch_name=branch_info.branch_name,
+                    remote_url=repo_config.remote,
+                    error=str(e),
+                )
+
     def teardown_session(self) -> None:
         if self._branch_infos:
             restore_original_branches(self._branch_infos)

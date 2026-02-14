@@ -176,6 +176,10 @@ def run(
             graph_hash=graph_hash,
             session_display_id=display_id,
         )
+
+        # Push on completion (before teardown restores original branches)
+        if workspace_manager is not None and outcome.status == OutcomeStatus.SUCCESS:
+            workspace_manager.push_session_branches("on_completion")
     finally:
         signal.signal(signal.SIGINT, original_handler)
         if workspace_manager is not None:

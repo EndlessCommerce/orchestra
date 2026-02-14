@@ -252,19 +252,19 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 5: Push on completion
 
-- [ ] Add push-on-completion logic to `src/orchestra/cli/run.py`
-    - [ ] After `runner.run()` returns and before `workspace_manager.teardown_session()`, if `outcome.status == SUCCESS`:
+- [x] Add push-on-completion logic to `src/orchestra/cli/run.py`
+    - [x] After `runner.run()` returns and before `workspace_manager.teardown_session()`, if `outcome.status == SUCCESS`:
         - Iterate over repos with effective push policy `on_completion`
         - For each: call `git_ops.push("origin", branch_name, cwd=repo_path, set_upstream=True)`
         - Wrap in try/except: on failure, log warning via `logger.warning()` and emit `SessionBranchPushFailed`
         - On success, emit `SessionBranchPushed`
-    - [ ] Extract push logic into a method on `WorkspaceManager` (e.g., `push_session_branches(policy_filter: str)`) so `cli/run.py` stays clean
-    - [ ] Write tests in `tests/test_push_policy.py`:
+    - [x] Extract push logic into a method on `WorkspaceManager` (e.g., `push_session_branches(policy_filter: str)`) so `cli/run.py` stays clean
+    - [x] Write tests in `tests/test_push_policy.py`:
         - `test_push_on_completion` — pipeline succeeds → session branch pushed
         - `test_no_push_on_pipeline_failure` — pipeline fails → no push
         - `test_push_failure_non_fatal` — push fails (bad remote) → warning logged, no exception
         - `test_multi_repo_push` — 2 repos with `on_completion` → both pushed
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 6: Push on checkpoint (PushObserver)
 
