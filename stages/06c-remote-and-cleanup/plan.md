@@ -305,11 +305,11 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 8: End-to-end integration tests
 
-- [ ] Write E2E tests in `tests/test_remote_e2e.py`
-    - [ ] `test_full_remote_lifecycle` — clone from bare remote → pipeline runs → agent modifies files → auto-committed → pushed to remote on completion → remote has session branch with agent commits
-    - [ ] `test_ephemeral_container_simulation` — clone from remote → run pipeline → push on checkpoint → delete local clone → re-clone → resume from CXDB checkpoint → git state restored from remote
-    - [ ] `test_remote_with_parallel_worktrees` — clone → fan-out → worktrees → fan-in → merge → push → remote has merged session branch
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Write E2E tests in `tests/test_remote_e2e.py`
+    - [x] `test_full_remote_lifecycle` — clone from bare remote → pipeline runs → agent modifies files → auto-committed → pushed to remote on completion → remote has session branch with agent commits
+    - [x] `test_ephemeral_container_simulation` — clone from remote → run pipeline → push on checkpoint → delete local clone → re-clone → resume from CXDB checkpoint → git state restored from remote
+    - [x] `test_remote_with_parallel_worktrees` — clone → fan-out → worktrees → fan-in → merge → push → remote has merged session branch
+    - [x] Mark TODO complete and commit the changes to git
 
 ### Layer 9: Review and cleanup
 
