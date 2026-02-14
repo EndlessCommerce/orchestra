@@ -322,11 +322,11 @@ Run: `orchestra cleanup --older-than 0`
 
 ### Layer 10: Run full test suite and fix regressions
 
-- [ ] Identify all specs that need to be run and updated
-    - [ ] Look at all previous TODOs and changes in git to identify changes
-    - [ ] Run the full test suite: `pytest tests/ --tb=short`
-    - [ ] Identify any specs that cover these changes that need to be run, and run these specs
-    - [ ] Add any specs that failed to a new TODO to fix these
-    - [ ] Identify any missing specs that need to be added or updated
-    - [ ] Add these specs to a new TODO
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Identify all specs that need to be run and updated
+    - [x] Look at all previous TODOs and changes in git to identify changes
+    - [x] Run the full test suite: `pytest tests/ --tb=short` — 703 tests passed, 0 failures
+    - [x] Identify any specs that cover these changes that need to be run, and run these specs
+    - [x] Add any specs that failed to a new TODO to fix these — no failures
+    - [x] Identify any missing specs that need to be added or updated — no missing specs
+    - [x] Add these specs to a new TODO — N/A
+    - [x] Mark TODO complete and commit the changes to git
