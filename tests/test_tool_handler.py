@@ -1,9 +1,5 @@
-import sys
-from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
-
-import pytest
 
 from orchestra.engine.runner import PipelineRunner
 from orchestra.handlers.exit import ExitHandler

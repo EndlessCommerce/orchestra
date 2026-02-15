@@ -12,7 +12,7 @@ from orchestra.handlers.parallel_handler import ParallelHandler
 from orchestra.handlers.registry import HandlerRegistry
 from orchestra.handlers.start import StartHandler
 from orchestra.handlers.tool_handler import ToolHandler
-from orchestra.interviewer.models import Answer, AnswerValue, Option
+from orchestra.interviewer.models import Answer, Option
 from orchestra.interviewer.queue import QueueInterviewer
 from orchestra.handlers.wait_human import WaitHumanHandler
 from orchestra.models.context import Context

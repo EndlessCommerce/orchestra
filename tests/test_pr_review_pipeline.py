@@ -4,7 +4,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from orchestra.backends.simulation import SimulationBackend
 from orchestra.engine.runner import PipelineRunner, _RunState
 from orchestra.handlers.codergen import SimulationCodergenHandler
 from orchestra.handlers.conditional import ConditionalHandler

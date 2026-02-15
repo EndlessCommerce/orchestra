@@ -168,12 +168,12 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Verify checkpoints are loadable and contain correct state
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Review and cleanup
-    - [ ] Look at all previous TODOs and changes in git to identify changes
-    - [ ] Identify any code that is no longer used, and remove it
-    - [ ] Identify any unnecessary comments, and remove them
-    - [ ] If there are any obvious code smells or redundant code, add TODOs below to address them
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Review and cleanup
+    - [x] Look at all previous TODOs and changes in git to identify changes
+    - [x] Identify any code that is no longer used, and remove it
+    - [x] Identify any unnecessary comments, and remove them
+    - [x] If there are any obvious code smells or redundant code, add TODOs below to address them
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Identify all specs that need to be run and updated
     - [ ] Look at all previous TODOs and changes in git to identify changes
