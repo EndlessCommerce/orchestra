@@ -169,6 +169,22 @@ def condition_syntax(graph: PipelineGraph) -> list[Diagnostic]:
     return diagnostics
 
 
+def tool_command_on_tool_nodes(graph: PipelineGraph) -> list[Diagnostic]:
+    diagnostics = []
+    for node in graph.nodes.values():
+        if node.shape == "parallelogram" and not node.attributes.get("tool_command"):
+            diagnostics.append(
+                Diagnostic(
+                    rule="tool_command_on_tool_nodes",
+                    severity=Severity.WARNING,
+                    message=f"Tool node '{node.id}' has no tool_command attribute",
+                    node_id=node.id,
+                    suggestion=f"Add a tool_command attribute to node '{node.id}' (e.g., tool_command=\"echo hello\")",
+                )
+            )
+    return diagnostics
+
+
 ALL_RULES = [
     start_node,
     terminal_node,
@@ -178,4 +194,5 @@ ALL_RULES = [
     exit_no_outgoing,
     prompt_on_llm_nodes,
     condition_syntax,
+    tool_command_on_tool_nodes,
 ]

@@ -26,6 +26,7 @@ from orchestra.events.types import (
     StageFailed,
     StageRetrying,
     StageStarted,
+    ToolExecuted,
     WorktreeCreated,
     WorktreeMergeConflict,
     WorktreeMerged,
@@ -114,6 +115,9 @@ class StdoutObserver:
             typer.echo(f"  [Remote] Pushed: {event.branch_name} to {event.remote_url}")
         elif isinstance(event, SessionBranchPushFailed):
             typer.echo(f"  [Remote] Push FAILED: {event.branch_name} to {event.remote_url} — {event.error}")
+        elif isinstance(event, ToolExecuted):
+            status = "OK" if event.exit_code == 0 else f"FAIL (exit {event.exit_code})"
+            typer.echo(f"  [Tool] {event.node_id}: {_truncate(event.command)} — {status} ({event.duration_ms}ms)")
         elif isinstance(event, CleanupCompleted):
             typer.echo(f"  [Cleanup] Removed {len(event.removed_branches)} branches, {len(event.removed_worktrees)} worktrees; preserved {len(event.preserved_branches)} active")
 
@@ -132,6 +136,8 @@ class CxdbObserver:
             self._append_checkpoint(event)
         elif isinstance(event, AgentTurnCompleted):
             self._append_agent_turn(event)
+        elif isinstance(event, ToolExecuted):
+            self._append_tool_execution(event)
         elif isinstance(event, (ParallelStarted, ParallelCompleted)):
             self._append_parallel_execution(event)
         elif isinstance(event, (WorktreeCreated, WorktreeMerged)):
@@ -239,6 +245,22 @@ class CxdbObserver:
             type_id=type_id,
             type_version=type_version,
             data=to_tagged_data(type_id, type_version, data),
+        )
+
+    def _append_tool_execution(self, event: ToolExecuted) -> None:
+        type_id = "dev.orchestra.ToolExecution"
+        data = {
+            "node_id": event.node_id,
+            "command": event.command,
+            "exit_code": event.exit_code,
+            "stdout": event.stdout,
+            "duration_ms": event.duration_ms,
+        }
+        self._client.append_turn(
+            context_id=self._context_id,
+            type_id=type_id,
+            type_version=1,
+            data=to_tagged_data(type_id, 1, data),
         )
 
     def _append_parallel_execution(self, event: Event) -> None:

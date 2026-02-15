@@ -10,6 +10,7 @@ from orchestra.handlers.exit import ExitHandler
 from orchestra.handlers.fan_in_handler import FanInHandler
 from orchestra.handlers.parallel_handler import ParallelHandler
 from orchestra.handlers.start import StartHandler
+from orchestra.handlers.tool_handler import ToolHandler
 from orchestra.handlers.wait_human import WaitHumanHandler
 
 if TYPE_CHECKING:
@@ -69,6 +70,8 @@ def default_registry(
     registry.register("diamond", ConditionalHandler())
     registry.register("component", ParallelHandler(handler_registry=registry, event_emitter=event_emitter, workspace_manager=workspace_manager))
     registry.register("tripleoctagon", FanInHandler(backend=backend, workspace_manager=workspace_manager))
+
+    registry.register("parallelogram", ToolHandler(workspace_manager=workspace_manager))
 
     # Human gate handler
     if interviewer is not None:

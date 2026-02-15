@@ -216,6 +216,15 @@ class SessionBranchPushFailed(Event):
     error: str = ""
 
 
+class ToolExecuted(Event):
+    event_type: str = "ToolExecuted"
+    node_id: str
+    command: str = ""
+    exit_code: int = 0
+    stdout: str = ""
+    duration_ms: int = 0
+
+
 class CleanupCompleted(Event):
     event_type: str = "CleanupCompleted"
     removed_branches: list[str] = Field(default_factory=list)
@@ -249,5 +258,6 @@ EVENT_TYPE_MAP: dict[str, type[Event]] = {
     "RepoFetched": RepoFetched,
     "SessionBranchPushed": SessionBranchPushed,
     "SessionBranchPushFailed": SessionBranchPushFailed,
+    "ToolExecuted": ToolExecuted,
     "CleanupCompleted": CleanupCompleted,
 }

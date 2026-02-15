@@ -271,6 +271,24 @@ ORCHESTRA_TYPE_BUNDLE: dict[str, Any] = {
                 }
             }
         },
+        "dev.orchestra.ToolExecution": {
+            "versions": {
+                "1": {
+                    "fields": {
+                        "1": {"name": "node_id", "type": "string"},
+                        "2": {"name": "command", "type": "string"},
+                        "3": {"name": "exit_code", "type": "u64"},
+                        "4": {"name": "stdout", "type": "string", "optional": True},
+                        "5": {
+                            "name": "duration_ms",
+                            "type": "u64",
+                            "optional": True,
+                            "semantic": "unix_ms",
+                        },
+                    }
+                }
+            }
+        },
         "dev.orchestra.ParallelExecution": {
             "versions": {
                 "1": {

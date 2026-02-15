@@ -43,8 +43,8 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
 
 ## Plan
 
-- [ ] Implement Tool Handler (`parallelogram` shape)
-    - [ ] Create `src/orchestra/handlers/tool_handler.py` implementing `NodeHandler` protocol
+- [x] Implement Tool Handler (`parallelogram` shape)
+    - [x] Create `src/orchestra/handlers/tool_handler.py` implementing `NodeHandler` protocol
         - Read `tool_command` from `node.attributes`
         - Execute via `subprocess.run()` with `shell=True`, `capture_output=True`
         - NOTE: `shell=True` used for flexibility (pipes, redirects, env vars). Document that `tool_command` values should be static pipeline-developer-authored strings, not derived from LLM-generated context values
@@ -53,22 +53,22 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Return `Outcome(SUCCESS)` with `context_updates={"tool.output": stdout}`
         - Return `Outcome(FAIL)` with `failure_reason` on non-zero exit, missing command, or timeout
         - Scope `cwd` to workspace repo path if workspace_manager is configured, otherwise pipeline directory
-    - [ ] Create `ToolExecuted` event type in `src/orchestra/events/types.py`
+    - [x] Create `ToolExecuted` event type in `src/orchestra/events/types.py`
         - Fields: `node_id`, `command`, `exit_code`, `stdout`, `duration_ms`
         - Add to `EVENT_TYPE_MAP`
-    - [ ] Add `dev.orchestra.ToolExecution` type to CXDB type bundle in `src/orchestra/storage/type_bundle.py`
-    - [ ] Map `ToolExecuted` event to CXDB turn in `src/orchestra/events/observer.py` (CxdbObserver)
-    - [ ] Register `parallelogram` → `ToolHandler` in `src/orchestra/handlers/registry.py`
+    - [x] Add `dev.orchestra.ToolExecution` type to CXDB type bundle in `src/orchestra/storage/type_bundle.py`
+    - [x] Map `ToolExecuted` event to CXDB turn in `src/orchestra/events/observer.py` (CxdbObserver)
+    - [x] Register `parallelogram` → `ToolHandler` in `src/orchestra/handlers/registry.py`
         - `ToolHandler` needs `workspace_manager` param (optional) for cwd resolution
-    - [ ] Add validation rule: `tool_command_on_tool_nodes` — parallelogram nodes should have `tool_command` attribute (WARNING severity)
-    - [ ] Write tests in `tests/test_tool_handler.py`:
+    - [x] Add validation rule: `tool_command_on_tool_nodes` — parallelogram nodes should have `tool_command` attribute (WARNING severity)
+    - [x] Write tests in `tests/test_tool_handler.py`:
         - Execute shell command (`echo hello`) → SUCCESS, `tool.output` = "hello"
         - Command failure (`false`) → FAIL
         - Command timeout → FAIL with timeout message
         - Output in context → `tool.output` key set correctly
         - No command specified → FAIL with "No tool_command specified"
         - Workspace cwd scoping → command runs in repo directory
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Implement CLI: `orchestra replay --checkpoint`
     - [ ] Update `src/orchestra/cli/replay_cmd.py`
