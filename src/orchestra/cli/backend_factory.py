@@ -20,18 +20,19 @@ def build_backend(config: OrchestraConfig, tools: list | None = None, write_trac
     if backend_name == "direct":
         from orchestra.backends.direct_llm import DirectLLMBackend
 
-        chat_model = build_chat_model(config)
+        chat_model, _provider = build_chat_model(config)
         return DirectLLMBackend(chat_model=chat_model)
 
     if backend_name == "langgraph":
         from orchestra.backends.langgraph_backend import LangGraphBackend
 
-        chat_model = build_chat_model(config)
+        chat_model, provider_name = build_chat_model(config)
         return LangGraphBackend(
             chat_model=chat_model,
             tools=tools,
             write_tracker=write_tracker,
             recursion_limit=config.recursion_limit,
+            provider_name=provider_name,
         )
 
     if backend_name == "cli":
@@ -44,7 +45,10 @@ def build_backend(config: OrchestraConfig, tools: list | None = None, write_trac
 
 
 def build_chat_model(config: OrchestraConfig):
-    """Build a LangChain chat model from config."""
+    """Build a LangChain chat model from config.
+
+    Returns a (chat_model, provider_name) tuple.
+    """
     from orchestra.config.providers import get_provider_settings, resolve_model, resolve_provider
 
     provider_name = resolve_provider("", config.providers)
@@ -57,7 +61,7 @@ def build_chat_model(config: OrchestraConfig):
         return ChatAnthropic(
             model=model_name,
             **{k: v for k, v in settings.items() if k in ("max_tokens",)},
-        )
+        ), provider_name
 
     if provider_name == "openai":
         from langchain_openai import ChatOpenAI
@@ -65,7 +69,7 @@ def build_chat_model(config: OrchestraConfig):
         return ChatOpenAI(
             model=model_name,
             **{k: v for k, v in settings.items() if k in ("max_tokens",)},
-        )
+        ), provider_name
 
     import os
 
@@ -83,4 +87,4 @@ def build_chat_model(config: OrchestraConfig):
             raise typer.Exit(code=1)
         kwargs["api_key"] = api_key
 
-    return ChatOpenAI(**kwargs)
+    return ChatOpenAI(**kwargs), provider_name

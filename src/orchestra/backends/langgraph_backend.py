@@ -39,11 +39,13 @@ class LangGraphBackend:
         tools: list[Tool] | None = None,
         write_tracker: WriteTracker | None = None,
         recursion_limit: int = DEFAULT_RECURSION_LIMIT,
+        provider_name: str = "",
     ) -> None:
         self._chat_model = chat_model
         self._tools = tools or []
         self._write_tracker = write_tracker or WriteTracker()
         self._recursion_limit = recursion_limit
+        self._provider_name = provider_name
         self._conversation_messages: list[Any] = []
 
     def run(
@@ -170,7 +172,7 @@ class LangGraphBackend:
                         agent_turn = AgentTurn(
                             turn_number=turn_number,
                             model=getattr(self._chat_model, "model_name", ""),
-                            provider="",
+                            provider=self._provider_name,
                             messages=[{"role": "assistant", "content": str(msg.content)}],
                             tool_calls=tool_calls,
                             files_written=files_written,
