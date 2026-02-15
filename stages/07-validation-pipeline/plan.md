@@ -2,7 +2,7 @@
 
 ## Overview
 
-Build the adversarial PR review pipeline as a capstone that exercises all Orchestra features together. Implement the remaining components: manager loop handler, tool handler, CLI commands (`attach`, `replay`), and the full PR review workflow with parallel reviewers, adversarial critique, conditional routing, human interaction, and workspace management. This stage validates that all prior stages compose correctly under a realistic workload.
+Build the adversarial PR review pipeline as a capstone that exercises all Orchestra features together. Implement the remaining components: tool handler, CLI commands (`attach`, `replay --checkpoint`), `status --detail`, and the full PR review workflow with parallel reviewers, adversarial critique, conditional routing, human interaction, and workspace management. This stage validates that all prior stages compose correctly under a realistic workload.
 
 ## What a Human Can Do After This Stage
 
@@ -10,237 +10,218 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
 2. Attach to a running session's event stream or interactive agent
 3. Replay from any checkpoint in any past session
 4. Use the tool handler for non-LLM pipeline nodes (shell commands, API calls)
-5. Use the manager loop handler for supervising child pipelines
-6. Run Orchestra's own validation suite as a confidence check
+5. Run Orchestra's own validation suite as a confidence check
 
 ## Prerequisites
 
 - All prior stages complete (Stages 1-6)
 
-## Scope
+## Investigation
 
-### Included
+- [x] Review the existing PR review pipeline (`examples/pr-review/pr-review.dot`) — it has parallel fan-out/fan-in, synthesis, human gate, and rework loop but lacks adversarial critic, tool handler node, and conditional looping
+- [x] Review handler registry (`handlers/registry.py`) — no parallelogram or house shape registered
+- [x] Review CLI commands (`cli/main.py`) — attach is missing; replay exists but only has `--turn` flag
+- [x] Review status command (`cli/status.py`) — basic table only, no `--detail` flag
+- [x] Review validation rules (`validation/rules.py`) — no rule for parallelogram nodes needing `tool_command`
+- [x] Review event types (`events/types.py`) — 25 event types exist, no `ToolExecuted` event type
+- [x] Review CXDB type bundle (`storage/type_bundle.py`) — all core types registered, no tool execution type
+- [x] Review interviewer base (`interviewer/base.py`) — Protocol with `ask`, `ask_multiple`, `inform` methods
+- [x] Review Outcome model (`models/outcome.py`) — no `token_usage` field (confirmed); observability must come from AgentTurn CXDB turns
+- [x] Review replay_cmd.py — full replay with CXDB fork + git restore already works for `--turn`; need to add `--checkpoint` filter
 
-- **Tool Handler.** Execute shell commands or API calls as pipeline nodes (parallelogram shape). `tool_command` attribute. Stdout captured to `tool.output` context key. Error handling with timeout support. Per attractor Section 4.10.
-- **Manager Loop Handler.** Supervisor loop for child pipelines (house shape). Observe/steer/wait cycles. Auto-start child pipeline. Configurable poll interval, max cycles, stop conditions. Per attractor Section 4.11.
-- **CLI: `orchestra attach <session_id>`.** Connect to a running session's event stream. If the active node is interactive, forward stdin/stdout for human participation.
-- **CLI: `orchestra replay <session_id> --checkpoint <id>`.** Restore specific checkpoint including git state and re-execute from that point. (Session-level resume was in Stage 2; this adds checkpoint-specific replay with git.)
-- **Adversarial PR Review Pipeline.** The full pipeline from the exploration document:
-  - Parallel fan-out: security reviewer + architecture reviewer
-  - Fan-in: collect reviews
-  - Adversarial critic with goal gate and conditional loop
-  - Conditional routing: if critique insufficient, re-run reviews
-  - Interactive synthesizer: human collaborates on the final review
-  - Workspace integration: operates on git repos
-- **PR Review Agent Configurations.** Full agent YAML files for security-reviewer, architecture-reviewer, critic (adversarial), and synthesizer (interactive). Role, persona, personality, task layers for each.
-- **PR Review Tools.** `local:get-git-diff` built-in tool (primary input). Optional `github:get-pr-diff` tool (swappable, requires credentials).
-- **Custom Handler Registration.** Validate that the handler registry supports custom handlers per attractor Section 4.12. Document the extension point.
-- **Observability via CXDB.** Per-node token usage (prompt/completion), tool invocation counts, and wall-clock timing stored as fields in `dev.orchestra.NodeExecution` turn payloads. Queryable via CXDB API and visible in CXDB UI. `orchestra status --detail` reads from CXDB turns.
-- **CXDB UI Renderers.** Custom renderers for Orchestra turn types: pipeline lifecycle timeline, node execution detail views with prompt/response, parallel execution branch visualization, human interaction Q&A display.
-- **Real LLM Integration Test.** Gated behind `ORCHESTRA_REAL_LLM=1` environment variable. Uses cheap models (Haiku-tier). Validates the full flow with real AI responses.
+## Resolved Decisions
 
-### Excluded
+- **Manager loop handler**: DEFERRED — not needed for PR pipeline (uses parallel + conditional routing instead)
+- **CXDB UI renderers**: DESCOPED — replaced with `orchestra status --detail` CLI command
+- **Attach mechanism**: CXDB polling for event stream + Unix socket for interactive I/O
+- **Replay --checkpoint**: Add `--checkpoint` flag alongside existing `--turn` (filters for Checkpoint turns only)
+- **Tool handler security**: No sandbox; scope working directory to workspace repo if configured
+- **Observability aggregation**: Read-time aggregation from AgentTurn turns grouped by node_id
+- **PR diff delivery**: Tool handler node as first pipeline node runs `git diff` → context `tool.output`
 
-- HTTP server mode (deferred to post-CLI, per attractor Section 9.5)
-- Token budgets / cost limits (deferred)
-- Web UI (deferred)
-- Team/shared use features (deferred)
+## Plan
 
-## Automated End-to-End Tests
+- [ ] Implement Tool Handler (`parallelogram` shape)
+    - [ ] Create `src/orchestra/handlers/tool_handler.py` implementing `NodeHandler` protocol
+        - Read `tool_command` from `node.attributes`
+        - Execute via `subprocess.run()` with `shell=True`, `capture_output=True`
+        - Support `timeout` attribute (parse duration string from node attributes, default 60s)
+        - Set `tool.output` context key with stdout
+        - Return `Outcome(SUCCESS)` with `context_updates={"tool.output": stdout}`
+        - Return `Outcome(FAIL)` with `failure_reason` on non-zero exit, missing command, or timeout
+        - Scope `cwd` to workspace repo path if workspace_manager is configured, otherwise pipeline directory
+    - [ ] Create `ToolExecuted` event type in `src/orchestra/events/types.py`
+        - Fields: `node_id`, `command`, `exit_code`, `stdout` (truncated), `duration_ms`
+        - Add to `EVENT_TYPE_MAP`
+    - [ ] Add `dev.orchestra.ToolExecution` type to CXDB type bundle in `src/orchestra/storage/type_bundle.py`
+    - [ ] Map `ToolExecuted` event to CXDB turn in `src/orchestra/events/observer.py` (CxdbObserver)
+    - [ ] Register `parallelogram` → `ToolHandler` in `src/orchestra/handlers/registry.py`
+        - `ToolHandler` needs `workspace_manager` param (optional) for cwd resolution
+    - [ ] Add validation rule: `tool_command_on_tool_nodes` — parallelogram nodes should have `tool_command` attribute (WARNING severity)
+    - [ ] Write tests in `tests/test_tool_handler.py`:
+        - Execute shell command (`echo hello`) → SUCCESS, `tool.output` = "hello"
+        - Command failure (`false`) → FAIL
+        - Command timeout → FAIL with timeout message
+        - Output in context → `tool.output` key set correctly
+        - No command specified → FAIL with "No tool_command specified"
+        - Workspace cwd scoping → command runs in repo directory
+    - [ ] Mark TODO complete and commit the changes to git
 
-All tests use mocked LLMs unless gated behind `ORCHESTRA_REAL_LLM=1`.
+- [ ] Implement CLI: `orchestra attach <session_id>`
+    - [ ] Create `src/orchestra/cli/attach.py`
+        - Accept `session_id` argument
+        - Resolve session via `_resolve_session_id` (reuse from resume_cmd)
+        - Poll CXDB for new turns at ~1s interval (`client.get_turns()` with increasing offset)
+        - Format and display turns as they arrive (pipeline events, node starts/completes, agent turns)
+        - Detect interactive node (HumanInteraction turn with question) → connect to Unix socket
+        - Ctrl-C → clean detach (does not affect running pipeline)
+        - Exit when PipelineCompleted or PipelineFailed turn is received
+    - [ ] Create `src/orchestra/cli/attach_socket.py` (Unix socket server/client)
+        - `AttachSocketServer`: opened by InteractiveHandler/WaitHumanHandler when entering interactive mode
+        - Socket path: `/tmp/orchestra/{session_id}.sock`
+        - Protocol: newline-delimited JSON messages (`{"type": "question", ...}` / `{"type": "answer", ...}`)
+        - `AttachSocketClient`: connects from attach command, forwards stdin/stdout
+        - Multiple simultaneous connections supported
+    - [ ] Create `SocketForwardingInterviewer` that wraps the primary Interviewer and broadcasts to connected socket clients
+        - When `ask()` is called, also write question to connected sockets
+        - Read answer from socket if remote client responds, otherwise use local interviewer
+    - [ ] Wire socket server into pipeline runner: open socket at session start, close on completion
+        - Update `src/orchestra/cli/run.py` to create socket server and pass to interviewer wrapper
+    - [ ] Register `attach` command in `src/orchestra/cli/main.py`
+    - [ ] Write tests in `tests/test_attach.py`:
+        - Attach to running session → receives events from CXDB polling
+        - Attach to interactive node → stdin/stdout forwarded via socket
+        - Attach to completed session → immediately shows final status
+        - Detach (Ctrl-C) → does not affect running pipeline
+    - [ ] Mark TODO complete and commit the changes to git
 
-### Tool Handler Tests
+- [ ] Implement CLI: `orchestra replay --checkpoint`
+    - [ ] Update `src/orchestra/cli/replay_cmd.py`
+        - Add `--checkpoint` option (mutually exclusive with `--turn`)
+        - When `--checkpoint` given, filter turns for `dev.orchestra.Checkpoint` type
+        - Find the matching checkpoint turn by ID
+        - Extract `next_node_id`, `workspace_snapshot`, `context_snapshot` from checkpoint data
+        - Restore workspace repos from `workspace_snapshot` SHAs (not single `git_sha`)
+        - Otherwise reuse existing fork-and-resume logic
+    - [ ] Write tests in `tests/test_replay_checkpoint.py`:
+        - Replay from specific checkpoint → restores correct node and context
+        - Replay with workspace snapshot → git repos restored to checkpoint SHAs
+        - Invalid checkpoint ID → error message
+        - `--checkpoint` and `--turn` both provided → error
+    - [ ] Mark TODO complete and commit the changes to git
 
-| Test | Description |
-|------|-------------|
-| Execute shell command | `tool_command="echo hello"` → outcome SUCCESS, `tool.output` = "hello" |
-| Command failure | `tool_command="false"` → outcome FAIL |
-| Command timeout | Long-running command exceeds `timeout` → FAIL with timeout message |
-| Output in context | `tool.output` context key set with command stdout |
-| No command specified | Missing `tool_command` → FAIL with "No tool_command specified" |
+- [ ] Implement CLI: `orchestra status --detail`
+    - [ ] Update `src/orchestra/cli/status.py`
+        - Add `--detail` flag and optional `session_id` argument
+        - When `--detail` given with session_id:
+            - Read all turns for the session from CXDB
+            - Group `dev.orchestra.AgentTurn` turns by `node_id`
+            - Aggregate token usage (sum `input_tokens` + `output_tokens` per node)
+            - Extract timing from `dev.orchestra.NodeExecution` turns (`duration_ms`)
+            - Count tool invocations from `tool_calls` field in AgentTurn turns
+            - Display structured table: Node | Status | Tokens (In/Out) | Tools | Duration
+        - When `--detail` given without session_id: show detail for most recent session
+    - [ ] Write tests in `tests/test_status_detail.py`:
+        - `--detail` shows per-node token usage aggregated from AgentTurn turns
+        - `--detail` shows timing from NodeExecution turns
+        - `--detail` shows tool invocation counts from AgentTurn turns
+        - `--detail` with no session → shows most recent
+    - [ ] Mark TODO complete and commit the changes to git
 
-### Manager Loop Handler Tests
+- [ ] Update Adversarial PR Review Pipeline
+    - [ ] Update `examples/pr-review/pr-review.dot` to match Stage 7 spec:
+        - Add `get_diff` tool handler node (shape=parallelogram) as first node after start: `tool_command="git diff HEAD~1"`
+        - Change reviewers from 3 to 2: security reviewer + architecture reviewer (per Stage 7 spec)
+        - Add adversarial `critic` node after fan-in with `goal_gate=true`
+        - Add `gate` conditional node (shape=diamond) after critic for routing
+        - Add conditional edge: gate → fan_out when `context.critic_verdict="insufficient"`
+        - Add conditional edge: gate → synthesizer when `context.critic_verdict="sufficient"`
+        - Make synthesizer interactive: `agent.mode="interactive"`
+        - Keep human approval gate and rework loop
+    - [ ] Update `examples/pr-review/orchestra.yaml`
+        - Change from `direct` to `langgraph` backend (supports interactive mode)
+        - Replace quality-reviewer + correctness-reviewer with architecture-reviewer
+        - Add critic agent configuration (adversarial persona)
+        - Update synthesizer to interactive mode
+    - [ ] Create agent YAML configs for new agents:
+        - `prompts/personas/architecture-specialist.yaml` — architecture, design patterns, coupling focus
+        - `prompts/personas/adversarial-critic.yaml` — adversarial, finds gaps, demands rigor
+        - `prompts/roles/review-critic.yaml` — evaluates review quality, outputs verdict
+        - `prompts/tasks/critique-reviews.yaml` — evaluate reviews, set `critic_verdict` context key
+    - [ ] Update existing task prompts to reference `{{ tool.output }}` for the diff content
+    - [ ] Create test fixture `tests/fixtures/pr-review-adversarial.dot` (simplified version for testing)
+    - [ ] Mark TODO complete and commit the changes to git
 
-| Test | Description |
-|------|-------------|
-| Auto-start child | `stack.child_autostart=true` → child pipeline started |
-| Observe cycle | Child telemetry ingested into parent context |
-| Stop on child completion | Child status=completed → manager returns SUCCESS |
-| Stop on child failure | Child status=failed → manager returns FAIL |
-| Max cycles exceeded | No stop condition met within max_cycles → FAIL |
-| Custom stop condition | `manager.stop_condition` evaluates to true → manager returns SUCCESS |
+- [ ] Write PR Review Pipeline Tests (Mocked LLM)
+    - [ ] Create `tests/test_pr_review_pipeline.py` with mocked LLM (SimulationBackend or mock):
+        - Full pipeline execution: start → get_diff → fan_out → [security, architecture] → fan_in → critic → gate → synthesizer → exit
+        - Parallel reviewers execute concurrently, produce distinct outputs
+        - Critic loop: critic returns insufficient → loops back to reviewers → critic re-evaluates
+        - Critic accepts: critic returns sufficient → proceeds to synthesizer
+        - Goal gate on critic: critic has `goal_gate=true` → must succeed before exit
+        - Interactive synthesizer: QueueInterviewer provides responses → produces final review
+        - Model stylesheet applied: different models assigned to different roles
+        - Workspace integration: session branches created, agents commit
+        - Checkpoint at every node: every node transition produces a valid checkpoint
+        - Resume mid-pipeline: stop after fan-in → resume → critic and synthesizer execute correctly
+    - [ ] Mark TODO complete and commit the changes to git
 
-### CLI Attach/Replay Tests
+- [ ] Write Cross-Feature Integration Tests
+    - [ ] Create `tests/test_cross_feature.py` with 5 scenarios:
+        - Conditional + retry + goal gate: pipeline with branching, retries on failure, goal gate enforcement
+        - Parallel + human gate: parallel branches → fan-in → human gate → routing
+        - Parallel + worktrees + resume: parallel agents with worktrees → pause → resume → worktrees restored → fan-in merges
+        - Agent config + stylesheet + tools: agent with layered prompts, stylesheet model override, and tools
+        - Full 10+ node pipeline: large pipeline with mixed node types executes without errors
+    - [ ] Mark TODO complete and commit the changes to git
 
-| Test | Description |
-|------|-------------|
-| Attach to running session | Connects and receives events from the active session |
-| Attach to interactive node | Stdin/stdout forwarded for human interaction |
-| Replay from checkpoint | Restores specific checkpoint, re-executes from that point |
-| Replay with git restore | Git repos restored to the checkpoint's workspace snapshot SHAs |
+- [ ] Write Custom Handler Registration Test
+    - [ ] Add test to `tests/test_tool_handler.py` or separate file:
+        - Register custom handler via `registry.register("custom_shape", CustomHandler())`
+        - Build pipeline with custom_shape node
+        - Execute → custom handler is dispatched
+    - [ ] Mark TODO complete and commit the changes to git
 
-### PR Review Pipeline Tests (Mocked LLM)
+- [ ] Write Real LLM Integration Test (Gated)
+    - [ ] Create `tests/test_pr_review_real.py` gated behind `ORCHESTRA_REAL_LLM=1`:
+        - Full adversarial PR review pipeline with real LLM calls on a sample diff
+        - Use cheap models (Haiku-tier) to minimize cost
+        - Verify reviewers produce domain-specific reviews
+        - Verify critic evaluates coherently
+        - Verify synthesizer produces final review
+        - Verify all artifacts present in run directory
+        - Verify checkpoints are loadable and contain correct state
+    - [ ] Mark TODO complete and commit the changes to git
 
-| Test | Description |
-|------|-------------|
-| Full pipeline execution | start → fan_out → [security, architecture] → fan_in → critic → gate → synthesizer → exit |
-| Parallel reviewers | Both reviewers execute concurrently, produce distinct outputs |
-| Critic loop | Critic returns insufficient → pipeline loops back to reviewers → critic re-evaluates |
-| Critic accepts | Critic returns sufficient → pipeline proceeds to synthesizer |
-| Goal gate on reviewers | Both reviewers have `goal_gate=true` → must succeed before exit |
-| Interactive synthesizer | Synthesizer in interactive mode → QueueInterviewer provides responses → produces final review |
-| Model stylesheet applied | Different models assigned to different roles per stylesheet |
-| Workspace integration | Pipeline creates session branches, agents commit to them |
-| Checkpoint at every node | Every node transition produces a valid checkpoint with workspace snapshot |
-| Resume mid-pipeline | Stop after fan-in → resume → critic and synthesizer execute correctly |
+- [ ] Review and cleanup
+    - [ ] Look at all previous TODOs and changes in git to identify changes
+    - [ ] Identify any code that is no longer used, and remove it
+    - [ ] Identify any unnecessary comments, and remove them
+    - [ ] If there are any obvious code smells or redundant code, add TODOs below to address them
+    - [ ] Mark TODO complete and commit the changes to git
 
-### Observability Tests (CXDB)
-
-| Test | Description |
-|------|-------------|
-| Token usage in turns | Per-node token counts (prompt/completion) present in NodeExecution turn payloads |
-| Tool invocations in turns | Tool calls counted and timed per node, stored in turn payloads |
-| Timing in turns | Wall-clock duration per node and total pipeline in turn payloads |
-| `orchestra status --detail` | Detailed view reads metrics from CXDB turns |
-| CXDB UI visualization | Pipeline execution visible in CXDB UI with custom renderers |
-
-### Cross-Feature Integration Tests
-
-These tests verify that features from all stages compose correctly:
-
-| Test | Description |
-|------|-------------|
-| Conditional + retry + goal gate | Pipeline with branching, retries on failure, and goal gate enforcement — all interact correctly |
-| Parallel + human gate | Parallel branches → fan-in → human gate → routing — human interaction after parallel execution |
-| Parallel + worktrees + resume | Parallel agents with worktrees → pause → resume → worktrees restored → fan-in merges correctly |
-| Agent config + stylesheet + tools | Agent with layered prompts, stylesheet model override, and custom tools — all resolved correctly |
-| Full 10+ node pipeline | Large pipeline with mixed node types executes without errors |
-
-### Real LLM Integration Test (Gated)
-
-**Only runs when `ORCHESTRA_REAL_LLM=1` is set.** Uses cheap models (Haiku-tier).
-
-| Test | Description |
-|------|-------------|
-| PR review end-to-end | Full adversarial PR review pipeline with real LLM calls on a sample diff |
-| Reviewers produce distinct reviews | Security and architecture reviewers focus on their domains |
-| Critic evaluates coherently | Critic identifies gaps or confirms sufficiency |
-| Synthesizer produces final review | Interactive synthesizer produces a coherent combined review |
-| All artifacts present | Run directory contains all prompts, responses, and status files |
-| Checkpoints valid | All checkpoints loadable and contain correct state |
-
-## Manual Testing Guide
-
-### Prerequisites
-- All prior stages complete and passing
-- LLM API key configured
-- A git repository with a recent PR or diff to review
-
-### Test 1: Full PR Review Pipeline
-
-Set up a workspace with a repo that has a recent diff (e.g., create a branch with some changes).
-
-Configure `orchestra.yaml` with the workspace and agents.
-
-Run: `orchestra run pipelines/pr-review.dot`
-
-**Verify:**
-- Pipeline starts, creates session branches
-- Security reviewer and architecture reviewer execute in parallel
-- Events show parallel branch execution
-- Fan-in collects both reviews
-- Adversarial critic evaluates the reviews
-- If critic is unsatisfied, loop back to reviewers (observe the loop)
-- If critic is satisfied, proceed to synthesizer
-- Synthesizer enters interactive mode — prompts appear for your input
-- Type feedback and `/done` to complete
-- Final review is in the run directory
-- Session branch has any code changes
-- `orchestra status` shows the completed session with token usage
-
-### Test 2: Attach to Running Session
-
-Start a long-running pipeline in one terminal:
-```
-orchestra run pipelines/pr-review.dot
-```
-
-In another terminal:
-```
-orchestra attach <session_id>
-```
-
-**Verify:**
-- Event stream appears in real-time in the second terminal
-- When the pipeline reaches an interactive node, the attached terminal can participate
-- Detaching (Ctrl-C) does not affect the running pipeline
-
-### Test 3: Replay from Checkpoint
-
-After running a pipeline, list checkpoints:
-```
-orchestra status <session_id> --checkpoints
-```
-
-Pick a checkpoint from mid-pipeline:
-```
-orchestra replay <session_id> --checkpoint <checkpoint_id>
-```
-
-**Verify:**
-- Pipeline re-executes from the specified checkpoint
-- Git repos are at the correct state for that checkpoint
-- Subsequent nodes execute fresh (not from cache)
-- A new run directory is created for the replay
-
-### Test 4: Tool Handler
-
-Create a pipeline with a tool handler node:
-```dot
-run_tests [shape=parallelogram, label="Run Tests", tool_command="cd test-repo && python -m pytest"]
-```
-
-**Verify:**
-- Tool executes the shell command
-- Stdout captured and available in context as `tool.output`
-- Next node can access the test results
-
-### Test 5: End-to-End Validation
-
-Run the full automated test suite:
-```
-pytest tests/ -v
-```
-
-Run the real LLM integration tests (requires API key):
-```
-ORCHESTRA_REAL_LLM=1 pytest tests/integration/test_pr_review.py -v
-```
-
-**Verify:**
-- All automated tests pass
-- Real LLM integration test produces a coherent PR review
-- No errors or warnings in the output
+- [ ] Identify all specs that need to be run and updated
+    - [ ] Look at all previous TODOs and changes in git to identify changes
+    - [ ] Run the full test suite (`pytest tests/ -v --tb=short`)
+    - [ ] Identify any specs that failed and fix them
+    - [ ] Verify total test count >= 750 (currently 703 + new tests)
+    - [ ] Mark TODO complete and commit the changes to git
 
 ## Success Criteria
 
-- [ ] Tool handler executes shell commands and captures output
-- [ ] Manager loop handler supervises child pipelines with observe/steer/wait cycles
+- [ ] Tool handler executes shell commands and captures output to `tool.output` context key
 - [ ] `orchestra attach` connects to running sessions and forwards interactive I/O
-- [ ] `orchestra replay` restores specific checkpoints including git state
+- [ ] `orchestra replay --checkpoint` restores specific checkpoints including git state
+- [ ] `orchestra status --detail` shows per-node token usage, tool invocations, and timing
 - [ ] Adversarial PR review pipeline runs end-to-end exercising all features:
-  - Parallel fan-out/fan-in
-  - Conditional routing with critic loop
-  - Goal gate enforcement on reviewers
+  - Parallel fan-out/fan-in (security + architecture reviewers)
+  - Adversarial critic with conditional loop
+  - Goal gate enforcement on critic
   - Interactive synthesizer with human collaboration
   - Model stylesheet assigning different models per role
   - Workspace management with session branches and commits
 - [ ] Agent configurations compose correctly: layered prompts + model resolution + tool sets
-- [ ] Observability tracks per-node token usage, tool invocations, and timing in CXDB turn payloads
-- [ ] CXDB UI renderers display pipeline execution traces with structured views per turn type
 - [ ] Custom handler registration works per the extension point
-- [ ] All cross-feature integration tests pass (features from all stages compose correctly)
+- [ ] All cross-feature integration tests pass (5 scenarios)
 - [ ] Real LLM integration test produces a coherent PR review (gated behind env var)
-- [ ] A human can run the full PR review workflow, participate interactively, and inspect all results
-- [ ] All automated tests pass
+- [ ] All automated tests pass (>= 750 tests, 0 failures)
