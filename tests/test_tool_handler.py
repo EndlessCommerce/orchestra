@@ -1,13 +1,18 @@
 import sys
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
+from orchestra.engine.runner import PipelineRunner
+from orchestra.handlers.exit import ExitHandler
+from orchestra.handlers.registry import HandlerRegistry
+from orchestra.handlers.start import StartHandler
 from orchestra.handlers.tool_handler import ToolHandler
 from orchestra.models.context import Context
-from orchestra.models.graph import Node, PipelineGraph
-from orchestra.models.outcome import OutcomeStatus
+from orchestra.models.graph import Edge, Node, PipelineGraph
+from orchestra.models.outcome import Outcome, OutcomeStatus
 
 
 def _make_node(tool_command: str | None = None, timeout: str = "60s", **extra) -> Node:
@@ -115,3 +120,104 @@ class TestToolHandler:
         assert outcome.status == OutcomeStatus.SUCCESS
         # Should run in current directory (no workspace scoping)
         assert len(outcome.context_updates["tool.output"]) > 0
+
+
+class _RecordingEmitter:
+    def __init__(self) -> None:
+        self.events: list[tuple[str, dict[str, Any]]] = []
+
+    def emit(self, event_type: str, **data: Any) -> None:
+        self.events.append((event_type, data))
+
+
+class TestCustomHandlerRegistration:
+    """Test that custom handlers can be registered and dispatched."""
+
+    def test_custom_handler_dispatched(self):
+        """Register custom handler for a custom shape → pipeline dispatches to it."""
+
+        class CustomHandler:
+            def __init__(self) -> None:
+                self.called_nodes: list[str] = []
+
+            def handle(self, node: Node, context: Context, graph: PipelineGraph) -> Outcome:
+                self.called_nodes.append(node.id)
+                return Outcome(status=OutcomeStatus.SUCCESS)
+
+        graph = PipelineGraph(
+            name="custom_handler_test",
+            nodes={
+                "start": Node(id="start", shape="Mdiamond"),
+                "custom": Node(id="custom", shape="custom_shape", prompt="Custom task"),
+                "exit": Node(id="exit", shape="Msquare"),
+            },
+            edges=[
+                Edge(from_node="start", to_node="custom"),
+                Edge(from_node="custom", to_node="exit"),
+            ],
+        )
+
+        emitter = _RecordingEmitter()
+        custom = CustomHandler()
+
+        registry = HandlerRegistry()
+        registry.register("Mdiamond", StartHandler())
+        registry.register("Msquare", ExitHandler())
+        registry.register("custom_shape", custom)
+
+        runner = PipelineRunner(graph, registry, emitter)
+        outcome = runner.run()
+
+        assert outcome.status == OutcomeStatus.SUCCESS
+        assert "custom" in custom.called_nodes
+
+        completed = [e[1]["node_id"] for e in emitter.events if e[0] == "StageCompleted"]
+        assert "custom" in completed
+
+    def test_custom_handler_with_context_updates(self):
+        """Custom handler can update context and downstream nodes see it."""
+
+        class ContextSettingHandler:
+            def handle(self, node: Node, context: Context, graph: PipelineGraph) -> Outcome:
+                return Outcome(
+                    status=OutcomeStatus.SUCCESS,
+                    context_updates={"custom_key": "custom_value"},
+                )
+
+        class ContextReadingHandler:
+            def __init__(self) -> None:
+                self.seen_context: dict[str, Any] = {}
+
+            def handle(self, node: Node, context: Context, graph: PipelineGraph) -> Outcome:
+                self.seen_context = dict(context.snapshot())
+                return Outcome(status=OutcomeStatus.SUCCESS)
+
+        graph = PipelineGraph(
+            name="custom_context_test",
+            nodes={
+                "start": Node(id="start", shape="Mdiamond"),
+                "setter": Node(id="setter", shape="custom_shape", prompt="Set"),
+                "reader": Node(id="reader", shape="reader_shape", prompt="Read"),
+                "exit": Node(id="exit", shape="Msquare"),
+            },
+            edges=[
+                Edge(from_node="start", to_node="setter"),
+                Edge(from_node="setter", to_node="reader"),
+                Edge(from_node="reader", to_node="exit"),
+            ],
+        )
+
+        emitter = _RecordingEmitter()
+        reader = ContextReadingHandler()
+
+        registry = HandlerRegistry()
+        registry.register("Mdiamond", StartHandler())
+        registry.register("Msquare", ExitHandler())
+        registry.register("custom_shape", ContextSettingHandler())
+        registry.register("reader_shape", reader)
+
+        runner = PipelineRunner(graph, registry, emitter)
+        outcome = runner.run()
+
+        assert outcome.status == OutcomeStatus.SUCCESS
+        assert reader.seen_context.get("custom_key") == "custom_value"

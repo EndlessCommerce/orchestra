@@ -150,12 +150,12 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Full 10+ node pipeline: large pipeline with mixed node types executes without errors
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write Custom Handler Registration Test
-    - [ ] Add test to `tests/test_tool_handler.py` or separate file:
+- [x] Write Custom Handler Registration Test
+    - [x] Add test to `tests/test_tool_handler.py` or separate file:
         - Register custom handler via `registry.register("custom_shape", CustomHandler())`
         - Build pipeline with custom_shape node
         - Execute → custom handler is dispatched
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Write Real LLM Integration Test (Gated)
     - [ ] Create `tests/test_pr_review_real.py` gated behind `ORCHESTRA_REAL_LLM=1`:
