@@ -127,8 +127,8 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
     - [x] Create test fixture `tests/fixtures/pr-review-adversarial.dot` (simplified version for testing)
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write PR Review Pipeline Tests (Mocked LLM)
-    - [ ] Create `tests/test_pr_review_pipeline.py` with mocked LLM (SimulationBackend or mock):
+- [x] Write PR Review Pipeline Tests (Mocked LLM)
+    - [x] Create `tests/test_pr_review_pipeline.py` with mocked LLM (SimulationBackend or mock):
         - Full pipeline execution: start → get_diff → fan_out → [security, architecture] → fan_in → critic → gate → synthesizer → exit
         - Parallel reviewers execute concurrently, produce distinct outputs
         - Critic loop: critic returns insufficient → loops back to reviewers → critic re-evaluates
@@ -139,7 +139,7 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Workspace integration: session branches created, agents commit
         - Checkpoint at every node: every node transition produces a valid checkpoint
         - Resume mid-pipeline: stop after fan-in → resume → critic and synthesizer execute correctly
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Write Cross-Feature Integration Tests
     - [ ] Create `tests/test_cross_feature.py` with 5 scenarios:
