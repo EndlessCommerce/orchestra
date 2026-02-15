@@ -1,6 +1,7 @@
 content: |
-  You have received independent reviews from three specialists:
-  security, code quality, and correctness.
+  You have received independent reviews from specialist reviewers.
+
+  The original diff is available in {{ tool.output }}.
 
   Synthesize them into a single, unified PR review:
 

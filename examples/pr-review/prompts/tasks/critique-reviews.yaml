@@ -1,0 +1,26 @@
+content: |
+  You have received specialist reviews of a pull request. The original
+  diff is available in {{ tool.output }}.
+
+  Evaluate the quality and completeness of the reviews:
+
+  1. **Coverage gaps**: Did the reviewers miss any important files, functions,
+     or code paths in the diff? Are there security, correctness, or design
+     issues that were overlooked?
+
+  2. **Reasoning quality**: Are the findings well-justified? Are the severity
+     ratings appropriate? Are the recommendations actionable?
+
+  3. **Contradictions**: Do the reviewers disagree on anything? If so, who
+     has the stronger argument?
+
+  4. **Depth**: Did the reviewers analyze deeply or just skim the surface?
+     Were edge cases and failure modes considered?
+
+  Based on your evaluation, set the `critic_verdict` context key:
+  - Output `critic_verdict: sufficient` if the reviews are thorough enough
+    to proceed to synthesis.
+  - Output `critic_verdict: insufficient` if the reviews need another pass
+    (explain what was missed).
+
+  Be specific about what was missed or what needs improvement.

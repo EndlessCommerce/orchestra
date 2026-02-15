@@ -1,4 +1,4 @@
-backend: direct
+backend: langgraph
 
 providers:
   default: anthropic
@@ -16,18 +16,18 @@ agents:
     task: prompts/tasks/review-security.yaml
     model: smart
 
-  quality-reviewer:
+  architecture-reviewer:
     role: prompts/roles/pr-reviewer.yaml
-    persona: prompts/personas/code-quality-specialist.yaml
+    persona: prompts/personas/architecture-specialist.yaml
     personality: prompts/personalities/critic.yaml
-    task: prompts/tasks/review-quality.yaml
+    task: prompts/tasks/review-architecture.yaml
     model: smart
 
-  correctness-reviewer:
-    role: prompts/roles/pr-reviewer.yaml
-    persona: prompts/personas/correctness-specialist.yaml
+  review-critic:
+    role: prompts/roles/review-critic.yaml
+    persona: prompts/personas/adversarial-critic.yaml
     personality: prompts/personalities/critic.yaml
-    task: prompts/tasks/review-correctness.yaml
+    task: prompts/tasks/critique-reviews.yaml
     model: smart
 
   synthesizer:

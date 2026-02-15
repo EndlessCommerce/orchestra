@@ -1,6 +1,8 @@
 content: |
   Review this pull request from a **security** perspective.
 
+  The diff is available in {{ tool.output }}.
+
   For each finding, provide:
   - **File and line** (if identifiable from the diff)
   - **Severity**: critical / high / medium / low

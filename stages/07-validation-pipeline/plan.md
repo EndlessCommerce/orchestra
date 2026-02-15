@@ -103,8 +103,8 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - `--detail` with no session → shows most recent
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Update Adversarial PR Review Pipeline
-    - [ ] Update `examples/pr-review/pr-review.dot` to match Stage 7 spec:
+- [x] Update Adversarial PR Review Pipeline
+    - [x] Update `examples/pr-review/pr-review.dot` to match Stage 7 spec:
         - Add `get_diff` tool handler node (shape=parallelogram) as first node after start: `tool_command="git diff HEAD~1"`
         - Change reviewers from 3 to 2: security reviewer + architecture reviewer (per Stage 7 spec)
         - Add adversarial `critic` node after fan-in with `goal_gate=true`
@@ -113,19 +113,19 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Add conditional edge: gate → synthesizer when `context.critic_verdict="sufficient"`
         - Make synthesizer interactive: `agent.mode="interactive"`
         - Keep human approval gate and rework loop
-    - [ ] Update `examples/pr-review/orchestra.yaml`
+    - [x] Update `examples/pr-review/orchestra.yaml`
         - Change from `direct` to `langgraph` backend (supports interactive mode)
         - Add architecture-reviewer agent configuration (keep existing quality/correctness configs for reuse)
         - Add critic agent configuration (adversarial persona)
         - Update synthesizer to interactive mode
-    - [ ] Create agent YAML configs for new agents (keep existing prompt files alongside):
+    - [x] Create agent YAML configs for new agents (keep existing prompt files alongside):
         - `prompts/personas/architecture-specialist.yaml` — architecture, design patterns, coupling focus
         - `prompts/personas/adversarial-critic.yaml` — adversarial, finds gaps, demands rigor
         - `prompts/roles/review-critic.yaml` — evaluates review quality, outputs verdict
         - `prompts/tasks/critique-reviews.yaml` — evaluate reviews, set `critic_verdict` context key
-    - [ ] Update existing task prompts to reference `{{ tool.output }}` for the diff content
-    - [ ] Create test fixture `tests/fixtures/pr-review-adversarial.dot` (simplified version for testing)
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Update existing task prompts to reference `{{ tool.output }}` for the diff content
+    - [x] Create test fixture `tests/fixtures/pr-review-adversarial.dot` (simplified version for testing)
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Write PR Review Pipeline Tests (Mocked LLM)
     - [ ] Create `tests/test_pr_review_pipeline.py` with mocked LLM (SimulationBackend or mock):

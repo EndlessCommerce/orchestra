@@ -1,0 +1,40 @@
+digraph pr_review_adversarial {
+    graph [
+        goal="Review a pull request with adversarial critique",
+        label="Adversarial PR Review (Test Fixture)"
+    ]
+
+    node [shape=box]
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare,  label="Done"]
+
+    get_diff [shape=parallelogram, label="Get Diff", tool_command="echo 'mock diff output'"]
+
+    fan_out [shape=component, label="Fan Out", error_policy="continue"]
+    fan_in  [shape=tripleoctagon, label="Collect", join_policy="wait_all"]
+
+    security     [label="Security Review",     agent="security-reviewer"]
+    architecture [label="Architecture Review",  agent="architecture-reviewer"]
+
+    critic [label="Adversarial Critic", agent="review-critic", goal_gate=true]
+
+    gate [shape=diamond, label="Critic Gate"]
+
+    synthesize [label="Synthesize", agent="synthesizer"]
+
+    start -> get_diff -> fan_out
+
+    fan_out -> security
+    fan_out -> architecture
+
+    security     -> fan_in
+    architecture -> fan_in
+
+    fan_in -> critic -> gate
+
+    gate -> fan_out   [condition="context.critic_verdict=insufficient"]
+    gate -> synthesize [condition="context.critic_verdict=sufficient"]
+
+    synthesize -> exit
+}

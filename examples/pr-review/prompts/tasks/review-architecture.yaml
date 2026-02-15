@@ -1,0 +1,22 @@
+content: |
+  Review this pull request from an **architecture** perspective.
+
+  The diff is available in {{ tool.output }}.
+
+  For each finding, provide:
+  - **File and line** (if identifiable from the diff)
+  - **Severity**: high / medium / low
+  - **Category**: e.g. coupling, abstraction leak, API surface, dependency direction, pattern violation
+  - **Description**: what the architectural concern is and its long-term impact
+  - **Recommendation**: specific refactoring or design alternative
+
+  Consider:
+  - Does this change respect existing module boundaries?
+  - Are new dependencies introduced in the right direction?
+  - Is the abstraction level appropriate (not too high, not too low)?
+  - Does it follow established patterns in the codebase?
+  - Will this change make future modifications harder?
+
+  If the PR has no architectural concerns, state that explicitly.
+
+  End with a verdict: APPROVE, REQUEST_CHANGES, or COMMENT.
