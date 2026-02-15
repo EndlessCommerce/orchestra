@@ -70,20 +70,20 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Workspace cwd scoping → command runs in repo directory
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement CLI: `orchestra replay --checkpoint`
-    - [ ] Update `src/orchestra/cli/replay_cmd.py`
+- [x] Implement CLI: `orchestra replay --checkpoint`
+    - [x] Update `src/orchestra/cli/replay_cmd.py`
         - Add `--checkpoint` option (mutually exclusive with `--turn`)
         - When `--checkpoint` given, filter turns for `dev.orchestra.Checkpoint` type
         - Find the matching checkpoint turn by ID
         - Extract `next_node_id`, `workspace_snapshot`, `context_snapshot` from checkpoint data
         - Restore workspace repos from `workspace_snapshot` SHAs (not single `git_sha`)
         - Otherwise reuse existing fork-and-resume logic
-    - [ ] Write tests in `tests/test_replay_checkpoint.py`:
+    - [x] Write tests in `tests/test_replay_checkpoint.py`:
         - Replay from specific checkpoint → restores correct node and context
         - Replay with workspace snapshot → git repos restored to checkpoint SHAs
         - Invalid checkpoint ID → error message
         - `--checkpoint` and `--turn` both provided → error
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Implement CLI: `orchestra status --detail`
     - [ ] Update `src/orchestra/cli/status.py`
