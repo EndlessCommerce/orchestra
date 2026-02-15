@@ -2,14 +2,14 @@
 
 ## Overview
 
-Build the adversarial PR review pipeline as a capstone that exercises all Orchestra features together. Implement the remaining components: tool handler, CLI commands (`attach`, `replay --checkpoint`), `status --detail`, and the full PR review workflow with parallel reviewers, adversarial critique, conditional routing, human interaction, and workspace management. This stage validates that all prior stages compose correctly under a realistic workload.
+Build the adversarial PR review pipeline as a capstone that exercises all Orchestra features together. Implement the remaining components: tool handler, CLI enhancements (`replay --checkpoint`, `status --detail`), and the full PR review workflow with parallel reviewers, adversarial critique, conditional routing, human interaction, and workspace management. This stage validates that all prior stages compose correctly under a realistic workload.
 
 ## What a Human Can Do After This Stage
 
 1. Run a full adversarial PR review: parallel security + architecture reviewers, adversarial critic with conditional looping, interactive synthesizer, workspace-aware
-2. Attach to a running session's event stream or interactive agent
-3. Replay from any checkpoint in any past session
-4. Use the tool handler for non-LLM pipeline nodes (shell commands, API calls)
+2. Replay from any checkpoint in any past session
+3. Use the tool handler for non-LLM pipeline nodes (shell commands, API calls)
+4. Inspect session details with `orchestra status --detail` (per-node token usage, timing, tool invocations)
 5. Run Orchestra's own validation suite as a confidence check
 
 ## Prerequisites
@@ -20,7 +20,7 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
 
 - [x] Review the existing PR review pipeline (`examples/pr-review/pr-review.dot`) — it has parallel fan-out/fan-in, synthesis, human gate, and rework loop but lacks adversarial critic, tool handler node, and conditional looping
 - [x] Review handler registry (`handlers/registry.py`) — no parallelogram or house shape registered
-- [x] Review CLI commands (`cli/main.py`) — attach is missing; replay exists but only has `--turn` flag
+- [x] Review CLI commands (`cli/main.py`) — replay exists but only has `--turn` flag
 - [x] Review status command (`cli/status.py`) — basic table only, no `--detail` flag
 - [x] Review validation rules (`validation/rules.py`) — no rule for parallelogram nodes needing `tool_command`
 - [x] Review event types (`events/types.py`) — 25 event types exist, no `ToolExecuted` event type
@@ -33,11 +33,13 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
 
 - **Manager loop handler**: DEFERRED — not needed for PR pipeline (uses parallel + conditional routing instead)
 - **CXDB UI renderers**: DESCOPED — replaced with `orchestra status --detail` CLI command
-- **Attach mechanism**: CXDB polling for event stream + Unix socket for interactive I/O
+- **Attach command**: DEFERRED — removed from Stage 7 scope to focus capstone on validating composition of existing features
 - **Replay --checkpoint**: Add `--checkpoint` flag alongside existing `--turn` (filters for Checkpoint turns only)
-- **Tool handler security**: No sandbox; scope working directory to workspace repo if configured
+- **Tool handler security**: No sandbox; `shell=True` for flexibility; `tool_command` values should be static (authored by pipeline developer, not derived from LLM-generated context); scope working directory to workspace repo if configured
 - **Observability aggregation**: Read-time aggregation from AgentTurn turns grouped by node_id
 - **PR diff delivery**: Tool handler node as first pipeline node runs `git diff` → context `tool.output`
+- **PR review prompts**: Keep existing prompt files (security, quality, correctness specialists); add new architecture/critic prompts alongside; DOT file controls which agents are active
+- **Tool output storage**: No truncation — full stdout stored in both ToolExecuted event and `tool.output` context key
 
 ## Plan
 
@@ -45,13 +47,14 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
     - [ ] Create `src/orchestra/handlers/tool_handler.py` implementing `NodeHandler` protocol
         - Read `tool_command` from `node.attributes`
         - Execute via `subprocess.run()` with `shell=True`, `capture_output=True`
+        - NOTE: `shell=True` used for flexibility (pipes, redirects, env vars). Document that `tool_command` values should be static pipeline-developer-authored strings, not derived from LLM-generated context values
         - Support `timeout` attribute (parse duration string from node attributes, default 60s)
         - Set `tool.output` context key with stdout
         - Return `Outcome(SUCCESS)` with `context_updates={"tool.output": stdout}`
         - Return `Outcome(FAIL)` with `failure_reason` on non-zero exit, missing command, or timeout
         - Scope `cwd` to workspace repo path if workspace_manager is configured, otherwise pipeline directory
     - [ ] Create `ToolExecuted` event type in `src/orchestra/events/types.py`
-        - Fields: `node_id`, `command`, `exit_code`, `stdout` (truncated), `duration_ms`
+        - Fields: `node_id`, `command`, `exit_code`, `stdout`, `duration_ms`
         - Add to `EVENT_TYPE_MAP`
     - [ ] Add `dev.orchestra.ToolExecution` type to CXDB type bundle in `src/orchestra/storage/type_bundle.py`
     - [ ] Map `ToolExecuted` event to CXDB turn in `src/orchestra/events/observer.py` (CxdbObserver)
@@ -65,34 +68,6 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Output in context → `tool.output` key set correctly
         - No command specified → FAIL with "No tool_command specified"
         - Workspace cwd scoping → command runs in repo directory
-    - [ ] Mark TODO complete and commit the changes to git
-
-- [ ] Implement CLI: `orchestra attach <session_id>`
-    - [ ] Create `src/orchestra/cli/attach.py`
-        - Accept `session_id` argument
-        - Resolve session via `_resolve_session_id` (reuse from resume_cmd)
-        - Poll CXDB for new turns at ~1s interval (`client.get_turns()` with increasing offset)
-        - Format and display turns as they arrive (pipeline events, node starts/completes, agent turns)
-        - Detect interactive node (HumanInteraction turn with question) → connect to Unix socket
-        - Ctrl-C → clean detach (does not affect running pipeline)
-        - Exit when PipelineCompleted or PipelineFailed turn is received
-    - [ ] Create `src/orchestra/cli/attach_socket.py` (Unix socket server/client)
-        - `AttachSocketServer`: opened by InteractiveHandler/WaitHumanHandler when entering interactive mode
-        - Socket path: `/tmp/orchestra/{session_id}.sock`
-        - Protocol: newline-delimited JSON messages (`{"type": "question", ...}` / `{"type": "answer", ...}`)
-        - `AttachSocketClient`: connects from attach command, forwards stdin/stdout
-        - Multiple simultaneous connections supported
-    - [ ] Create `SocketForwardingInterviewer` that wraps the primary Interviewer and broadcasts to connected socket clients
-        - When `ask()` is called, also write question to connected sockets
-        - Read answer from socket if remote client responds, otherwise use local interviewer
-    - [ ] Wire socket server into pipeline runner: open socket at session start, close on completion
-        - Update `src/orchestra/cli/run.py` to create socket server and pass to interviewer wrapper
-    - [ ] Register `attach` command in `src/orchestra/cli/main.py`
-    - [ ] Write tests in `tests/test_attach.py`:
-        - Attach to running session → receives events from CXDB polling
-        - Attach to interactive node → stdin/stdout forwarded via socket
-        - Attach to completed session → immediately shows final status
-        - Detach (Ctrl-C) → does not affect running pipeline
     - [ ] Mark TODO complete and commit the changes to git
 
 - [ ] Implement CLI: `orchestra replay --checkpoint`
@@ -140,10 +115,10 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Keep human approval gate and rework loop
     - [ ] Update `examples/pr-review/orchestra.yaml`
         - Change from `direct` to `langgraph` backend (supports interactive mode)
-        - Replace quality-reviewer + correctness-reviewer with architecture-reviewer
+        - Add architecture-reviewer agent configuration (keep existing quality/correctness configs for reuse)
         - Add critic agent configuration (adversarial persona)
         - Update synthesizer to interactive mode
-    - [ ] Create agent YAML configs for new agents:
+    - [ ] Create agent YAML configs for new agents (keep existing prompt files alongside):
         - `prompts/personas/architecture-specialist.yaml` — architecture, design patterns, coupling focus
         - `prompts/personas/adversarial-critic.yaml` — adversarial, finds gaps, demands rigor
         - `prompts/roles/review-critic.yaml` — evaluates review quality, outputs verdict
@@ -210,7 +185,6 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
 ## Success Criteria
 
 - [ ] Tool handler executes shell commands and captures output to `tool.output` context key
-- [ ] `orchestra attach` connects to running sessions and forwards interactive I/O
 - [ ] `orchestra replay --checkpoint` restores specific checkpoints including git state
 - [ ] `orchestra status --detail` shows per-node token usage, tool invocations, and timing
 - [ ] Adversarial PR review pipeline runs end-to-end exercising all features:
