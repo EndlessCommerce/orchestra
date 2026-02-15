@@ -85,8 +85,8 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - `--checkpoint` and `--turn` both provided → error
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Implement CLI: `orchestra status --detail`
-    - [ ] Update `src/orchestra/cli/status.py`
+- [x] Implement CLI: `orchestra status --detail`
+    - [x] Update `src/orchestra/cli/status.py`
         - Add `--detail` flag and optional `session_id` argument
         - When `--detail` given with session_id:
             - Read all turns for the session from CXDB
@@ -96,12 +96,12 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
             - Count tool invocations from `tool_calls` field in AgentTurn turns
             - Display structured table: Node | Status | Tokens (In/Out) | Tools | Duration
         - When `--detail` given without session_id: show detail for most recent session
-    - [ ] Write tests in `tests/test_status_detail.py`:
+    - [x] Write tests in `tests/test_status_detail.py`:
         - `--detail` shows per-node token usage aggregated from AgentTurn turns
         - `--detail` shows timing from NodeExecution turns
         - `--detail` shows tool invocation counts from AgentTurn turns
         - `--detail` with no session → shows most recent
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Update Adversarial PR Review Pipeline
     - [ ] Update `examples/pr-review/pr-review.dot` to match Stage 7 spec:
