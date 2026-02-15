@@ -157,8 +157,8 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Execute → custom handler is dispatched
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write Real LLM Integration Test (Gated)
-    - [ ] Create `tests/test_pr_review_real.py` gated behind `ORCHESTRA_REAL_LLM=1`:
+- [x] Write Real LLM Integration Test (Gated)
+    - [x] Create `tests/test_pr_review_real.py` gated behind `ORCHESTRA_REAL_LLM=1`:
         - Full adversarial PR review pipeline with real LLM calls on a sample diff
         - Use cheap models (Haiku-tier) to minimize cost
         - Verify reviewers produce domain-specific reviews
@@ -166,7 +166,7 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Verify synthesizer produces final review
         - Verify all artifacts present in run directory
         - Verify checkpoints are loadable and contain correct state
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Review and cleanup
     - [ ] Look at all previous TODOs and changes in git to identify changes
