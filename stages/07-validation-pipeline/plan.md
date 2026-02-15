@@ -141,14 +141,14 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
         - Resume mid-pipeline: stop after fan-in → resume → critic and synthesizer execute correctly
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Write Cross-Feature Integration Tests
-    - [ ] Create `tests/test_cross_feature.py` with 5 scenarios:
+- [x] Write Cross-Feature Integration Tests
+    - [x] Create `tests/test_cross_feature.py` with 5 scenarios:
         - Conditional + retry + goal gate: pipeline with branching, retries on failure, goal gate enforcement
         - Parallel + human gate: parallel branches → fan-in → human gate → routing
         - Parallel + worktrees + resume: parallel agents with worktrees → pause → resume → worktrees restored → fan-in merges
         - Agent config + stylesheet + tools: agent with layered prompts, stylesheet model override, and tools
         - Full 10+ node pipeline: large pipeline with mixed node types executes without errors
-    - [ ] Mark TODO complete and commit the changes to git
+    - [x] Mark TODO complete and commit the changes to git
 
 - [ ] Write Custom Handler Registration Test
     - [ ] Add test to `tests/test_tool_handler.py` or separate file:
