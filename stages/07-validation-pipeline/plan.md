@@ -175,27 +175,27 @@ Build the adversarial PR review pipeline as a capstone that exercises all Orches
     - [x] If there are any obvious code smells or redundant code, add TODOs below to address them
     - [x] Mark TODO complete and commit the changes to git
 
-- [ ] Identify all specs that need to be run and updated
-    - [ ] Look at all previous TODOs and changes in git to identify changes
-    - [ ] Run the full test suite (`pytest tests/ -v --tb=short`)
-    - [ ] Identify any specs that failed and fix them
-    - [ ] Verify total test count >= 750 (currently 703 + new tests)
-    - [ ] Mark TODO complete and commit the changes to git
+- [x] Identify all specs that need to be run and updated
+    - [x] Look at all previous TODOs and changes in git to identify changes
+    - [x] Run the full test suite (`pytest tests/ -v --tb=short`)
+    - [x] Identify any specs that failed and fix them
+    - [x] Verify total test count >= 750 (currently 703 + new tests)
+    - [x] Mark TODO complete and commit the changes to git
 
 ## Success Criteria
 
-- [ ] Tool handler executes shell commands and captures output to `tool.output` context key
-- [ ] `orchestra replay --checkpoint` restores specific checkpoints including git state
-- [ ] `orchestra status --detail` shows per-node token usage, tool invocations, and timing
-- [ ] Adversarial PR review pipeline runs end-to-end exercising all features:
+- [x] Tool handler executes shell commands and captures output to `tool.output` context key
+- [x] `orchestra replay --checkpoint` restores specific checkpoints including git state
+- [x] `orchestra status --detail` shows per-node token usage, tool invocations, and timing
+- [x] Adversarial PR review pipeline runs end-to-end exercising all features:
   - Parallel fan-out/fan-in (security + architecture reviewers)
   - Adversarial critic with conditional loop
   - Goal gate enforcement on critic
   - Interactive synthesizer with human collaboration
   - Model stylesheet assigning different models per role
   - Workspace management with session branches and commits
-- [ ] Agent configurations compose correctly: layered prompts + model resolution + tool sets
-- [ ] Custom handler registration works per the extension point
-- [ ] All cross-feature integration tests pass (5 scenarios)
-- [ ] Real LLM integration test produces a coherent PR review (gated behind env var)
-- [ ] All automated tests pass (>= 750 tests, 0 failures)
+- [x] Agent configurations compose correctly: layered prompts + model resolution + tool sets
+- [x] Custom handler registration works per the extension point
+- [x] All cross-feature integration tests pass (5 scenarios)
+- [x] Real LLM integration test produces a coherent PR review (gated behind env var)
+- [x] All automated tests pass (>= 750 tests, 0 failures)
