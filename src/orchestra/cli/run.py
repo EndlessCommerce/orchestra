@@ -3,6 +3,7 @@ from __future__ import annotations
 import signal
 import uuid
 from pathlib import Path
+from typing import Optional
 
 import blake3
 import typer
@@ -24,8 +25,27 @@ from orchestra.workspace.on_turn import build_on_turn_callback
 from orchestra.workspace.session_branch import WorkspaceError
 
 
+def _parse_vars(raw: list[str]) -> dict[str, str]:
+    """Parse ``key=value`` pairs from CLI arguments.
+
+    Raises :class:`typer.BadParameter` on malformed input.
+    """
+    result: dict[str, str] = {}
+    for item in raw:
+        if "=" not in item:
+            raise typer.BadParameter(f"Expected key=value, got: {item!r}")
+        key, _, value = item.partition("=")
+        if not key:
+            raise typer.BadParameter(f"Empty key in: {item!r}")
+        if not value:
+            raise typer.BadParameter(f"Empty value in: {item!r}")
+        result[key] = value
+    return result
+
+
 def run(
     pipeline: Path,
+    vars: Optional[list[str]] = typer.Argument(None, help="Variables as key=value pairs"),
     auto_approve: bool = typer.Option(False, "--auto-approve", help="Auto-approve all human gates (no stdin required)"),
     single_line: bool = typer.Option(False, "--single-line", help="Use single-line input (Enter submits) instead of multiline"),
 ) -> None:
@@ -164,6 +184,15 @@ def run(
         workspace_manager=workspace_manager,
     )
 
+    # Build initial context from CLI variables
+    from orchestra.models.context import Context
+
+    initial_context = Context()
+    if vars:
+        parsed = _parse_vars(vars)
+        for key, value in parsed.items():
+            initial_context.set(key, value)
+
     # Run pipeline with SIGINT handling
     runner = PipelineRunner(graph, registry, dispatcher, workspace_manager=workspace_manager)
 
@@ -176,6 +205,7 @@ def run(
     signal.signal(signal.SIGINT, _sigint_handler)
     try:
         outcome = runner.run(
+            context=initial_context,
             dot_file_path=dot_file_path,
             graph_hash=graph_hash,
             session_display_id=display_id,

@@ -16,7 +16,7 @@ digraph pr_review {
     exit  [shape=Msquare,  label="Done"]
 
     // ── tool handler: fetch diff ────────────────────────────────
-    get_diff [shape=parallelogram, label="Get Diff", tool_command="git diff HEAD~1"]
+    get_diff [shape=parallelogram, label="Get Diff", tool_command="gh pr diff {{ pr_number }}"]
 
     // ── parallel fan-out / fan-in ─────────────────────────────
     fan_out [shape=component,     label="Fan Out Reviews", error_policy="continue"]

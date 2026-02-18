@@ -4,7 +4,10 @@ import subprocess
 import time
 from typing import TYPE_CHECKING
 
+import jinja2
+
 from orchestra.models.context import Context
+from orchestra.prompts.engine import nest_dotted_keys
 from orchestra.models.graph import Node, PipelineGraph
 from orchestra.models.outcome import Outcome, OutcomeStatus
 
@@ -33,6 +36,11 @@ class ToolHandler:
                 status=OutcomeStatus.FAIL,
                 failure_reason="No tool_command specified",
             )
+
+        # Render Jinja2 template variables in tool_command
+        if "{{" in command:
+            template = jinja2.Template(command, undefined=jinja2.Undefined)
+            command = template.render(**nest_dotted_keys(context.snapshot()))
 
         timeout = self._parse_timeout(node.attributes.get("timeout", "60s"))
         cwd = self._resolve_cwd(graph)

@@ -12,7 +12,7 @@ from orchestra.prompts.loader import load_prompt_layer
 LAYER_ORDER = ["role", "persona", "personality", "task"]
 
 
-def _nest_dotted_keys(flat: dict[str, Any]) -> dict[str, Any]:
+def nest_dotted_keys(flat: dict[str, Any]) -> dict[str, Any]:
     """Convert flat dot-notation keys into nested dicts for Jinja2.
 
     ``{"tool.output": "x", "tool.exit_code": 0, "outcome": "ok"}``
@@ -66,7 +66,7 @@ def compose_prompt(
 
         if layer_name == "task":
             template = jinja2.Template(content, undefined=jinja2.StrictUndefined)
-            content = template.render(**_nest_dotted_keys(context))
+            content = template.render(**nest_dotted_keys(context))
 
         layers.append(content)
 
