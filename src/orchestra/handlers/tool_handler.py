@@ -66,6 +66,10 @@ class ToolHandler:
         duration_ms = int((time.monotonic() - start) * 1000)
         stdout = result.stdout.strip()
 
+        name = node.attributes.get("name", node.id)
+        existing_outputs = context.get(f"tools.{name}.outputs", [])
+        accumulated = existing_outputs + [stdout]
+
         if result.returncode != 0:
             return Outcome(
                 status=OutcomeStatus.FAIL,
@@ -74,6 +78,10 @@ class ToolHandler:
                     "tool.output": stdout,
                     "tool.exit_code": result.returncode,
                     "tool.duration_ms": duration_ms,
+                    f"tools.{name}.output": stdout,
+                    f"tools.{name}.exit_code": result.returncode,
+                    f"tools.{name}.duration_ms": duration_ms,
+                    f"tools.{name}.outputs": accumulated,
                 },
             )
 
@@ -83,6 +91,10 @@ class ToolHandler:
                 "tool.output": stdout,
                 "tool.exit_code": 0,
                 "tool.duration_ms": duration_ms,
+                f"tools.{name}.output": stdout,
+                f"tools.{name}.exit_code": 0,
+                f"tools.{name}.duration_ms": duration_ms,
+                f"tools.{name}.outputs": accumulated,
             },
         )
 

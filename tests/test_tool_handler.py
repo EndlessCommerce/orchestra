@@ -109,6 +109,55 @@ class TestToolHandler:
         assert outcome.status == OutcomeStatus.SUCCESS
         assert outcome.context_updates["tool.output"] == "hello_world"
 
+    def test_named_output_uses_node_id(self):
+        handler = ToolHandler()
+        node = _make_node(tool_command="echo hello")
+        outcome = handler.handle(node, Context(), _make_graph())
+        assert outcome.status == OutcomeStatus.SUCCESS
+        # Backward-compat keys still present
+        assert outcome.context_updates["tool.output"] == "hello"
+        # Named keys use node.id by default
+        assert outcome.context_updates["tools.tool_node.output"] == "hello"
+        assert outcome.context_updates["tools.tool_node.exit_code"] == 0
+        assert isinstance(outcome.context_updates["tools.tool_node.duration_ms"], int)
+        assert outcome.context_updates["tools.tool_node.outputs"] == ["hello"]
+
+    def test_named_output_custom_name(self):
+        handler = ToolHandler()
+        node = _make_node(tool_command="echo diff_data", name="get_diff")
+        outcome = handler.handle(node, Context(), _make_graph())
+        assert outcome.status == OutcomeStatus.SUCCESS
+        assert outcome.context_updates["tools.get_diff.output"] == "diff_data"
+        assert outcome.context_updates["tools.get_diff.exit_code"] == 0
+        assert outcome.context_updates["tools.get_diff.outputs"] == ["diff_data"]
+        # node.id keys should NOT be present (name overrides)
+        assert "tools.tool_node.output" not in outcome.context_updates
+
+    def test_named_output_accumulates(self):
+        handler = ToolHandler()
+        node = _make_node(tool_command="echo iteration1")
+        ctx = Context()
+        # First call
+        outcome1 = handler.handle(node, ctx, _make_graph())
+        assert outcome1.context_updates["tools.tool_node.outputs"] == ["iteration1"]
+        # Simulate the runner applying context_updates
+        for k, v in outcome1.context_updates.items():
+            ctx.set(k, v)
+        # Second call (simulating loop iteration)
+        node2 = _make_node(tool_command="echo iteration2")
+        outcome2 = handler.handle(node2, ctx, _make_graph())
+        assert outcome2.context_updates["tools.tool_node.outputs"] == ["iteration1", "iteration2"]
+        assert outcome2.context_updates["tools.tool_node.output"] == "iteration2"
+
+    def test_named_output_on_failure(self):
+        handler = ToolHandler()
+        node = _make_node(tool_command="echo fail_output && exit 1")
+        outcome = handler.handle(node, Context(), _make_graph())
+        assert outcome.status == OutcomeStatus.FAIL
+        assert outcome.context_updates["tools.tool_node.output"] == "fail_output"
+        assert outcome.context_updates["tools.tool_node.exit_code"] == 1
+        assert outcome.context_updates["tools.tool_node.outputs"] == ["fail_output"]
+
     def test_no_workspace_uses_default_cwd(self):
         handler = ToolHandler()
         node = _make_node(tool_command="pwd")

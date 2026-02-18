@@ -1,6 +1,6 @@
 content: |
   You have received specialist reviews of a pull request. The original
-  diff is available in {{ tool.output }}.
+  diff is available in {{ tools.get_diff.output }}.
 
   Here are the specialist reviews:
 
