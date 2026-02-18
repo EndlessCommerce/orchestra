@@ -1,6 +1,6 @@
 from orchestra.backends.simulation import SimulationBackend
 from orchestra.handlers.codergen import SimulationCodergenHandler
-from orchestra.handlers.codergen_handler import CodergenHandler
+from orchestra.handlers.codergen_handler import CodergenHandler, _extract_context_vars
 from orchestra.models.context import Context
 from orchestra.models.graph import Node, PipelineGraph
 from orchestra.models.outcome import Outcome, OutcomeStatus
@@ -59,6 +59,57 @@ class TestCodergenHandler:
         node = _make_node()
         handler.handle(node, Context(), _make_graph())
         assert backend.last_prompt == "Test prompt"
+
+    def test_extracts_context_vars_from_response(self):
+        response = "Some analysis.\n\n**critic_verdict: insufficient**\n\nMore text."
+        backend = MockBackend(response)
+        handler = CodergenHandler(backend=backend)
+        outcome = handler.handle(_make_node(), Context(), _make_graph())
+        assert outcome.context_updates["critic_verdict"] == "insufficient"
+        assert outcome.context_updates["last_response"] == response
+
+    def test_extracts_plain_context_var(self):
+        response = "Result:\nmy_status: done"
+        backend = MockBackend(response)
+        handler = CodergenHandler(backend=backend)
+        outcome = handler.handle(_make_node(), Context(), _make_graph())
+        assert outcome.context_updates["my_status"] == "done"
+
+    def test_no_false_positive_on_uppercase_keys(self):
+        response = "File: something.py\nStatus: active"
+        backend = MockBackend(response)
+        handler = CodergenHandler(backend=backend)
+        outcome = handler.handle(_make_node(), Context(), _make_graph())
+        assert "File" not in outcome.context_updates
+        assert "Status" not in outcome.context_updates
+
+
+class TestExtractContextVars:
+    def test_plain_key_value(self):
+        assert _extract_context_vars("critic_verdict: sufficient") == {
+            "critic_verdict": "sufficient"
+        }
+
+    def test_bold_markdown(self):
+        assert _extract_context_vars("**critic_verdict: insufficient**") == {
+            "critic_verdict": "insufficient"
+        }
+
+    def test_ignores_uppercase_keys(self):
+        assert _extract_context_vars("File: foo.py") == {}
+
+    def test_ignores_multi_word_values(self):
+        assert _extract_context_vars("key: multiple words here") == {}
+
+    def test_multiple_vars(self):
+        text = "verdict: pass\nseverity: high"
+        assert _extract_context_vars(text) == {"verdict": "pass", "severity": "high"}
+
+    def test_empty_string(self):
+        assert _extract_context_vars("") == {}
+
+    def test_no_match_in_prose(self):
+        assert _extract_context_vars("This is a normal sentence: nothing special.") == {}
 
 
 class TestSimulationBackendCompatibility:

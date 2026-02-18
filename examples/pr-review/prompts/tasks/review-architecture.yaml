@@ -3,6 +3,14 @@ content: |
 
   The diff is available in {{ tool.output }}.
 
+  {% if last_response is defined and last_response %}
+  **IMPORTANT — Previous Review Feedback:**
+  An adversarial critic evaluated an earlier round of reviews and found them
+  insufficient. Address the gaps identified below in your revised review:
+
+  {{ last_response }}
+  {% endif %}
+
   For each finding, provide:
   - **File and line** (if identifiable from the diff)
   - **Severity**: high / medium / low

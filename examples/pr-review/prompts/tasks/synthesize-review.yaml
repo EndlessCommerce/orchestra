@@ -3,6 +3,14 @@ content: |
 
   The original diff is available in {{ tool.output }}.
 
+  Here are the specialist reviews:
+
+  {% for result in parallel.fan_in.selected_results %}
+  ### Review from: {{ result[0] }}
+  {{ result[1].notes }}
+
+  {% endfor %}
+
   Synthesize them into a single, unified PR review:
 
   1. **Summary**: one-paragraph assessment of the PR's overall quality.
