@@ -160,8 +160,18 @@ class ParallelHandler:
 
         completed = await asyncio.gather(*tasks, return_exceptions=True)
 
-        for item in completed:
+        for idx, item in enumerate(completed):
             if isinstance(item, Exception):
+                # Convert branch exceptions to FAIL outcomes so they are
+                # visible in parallel.results instead of being silently lost.
+                branch_id = list(branches.keys())[idx]
+                outcome = Outcome(
+                    status=OutcomeStatus.FAIL,
+                    failure_reason=f"Branch exception: {item}",
+                )
+                if error_policy == ErrorPolicy.IGNORE:
+                    continue
+                results[branch_id] = outcome
                 continue
             branch_id, outcome = item
             if error_policy == ErrorPolicy.IGNORE and outcome.status == OutcomeStatus.FAIL:
