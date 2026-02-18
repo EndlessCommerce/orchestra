@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from orchestra.engine.join_policies import JoinPolicy, evaluate_join
 from orchestra.models.context import Context
+from orchestra.ui.spinner import spinner
 from orchestra.models.graph import Node, PipelineGraph
 from orchestra.models.outcome import Outcome, OutcomeStatus
 
@@ -106,7 +107,8 @@ class FanInHandler:
             for bid, o in candidates
         )
         prompt = f"{node.prompt}\n\nCandidates:\n{candidate_summary}\n\nSelect the best branch ID."
-        result = self._backend.run(node=node, prompt=prompt, context=context)
+        with spinner():
+            result = self._backend.run(node=node, prompt=prompt, context=context)
 
         for bid, outcome in candidates:
             if bid in result.notes:

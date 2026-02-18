@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from orchestra.handlers.prompt_helper import compose_node_prompt
 from orchestra.models.outcome import Outcome, OutcomeStatus
+from orchestra.ui.spinner import spinner
 
 if TYPE_CHECKING:
     from orchestra.backends.protocol import CodergenBackend, OnTurnCallback
@@ -42,7 +43,8 @@ class CodergenHandler:
     def handle(self, node: Node, context: Context, graph: PipelineGraph) -> Outcome:
         prompt = compose_node_prompt(node, context, self._config)
 
-        result = self._backend.run(node, prompt, context, self._on_turn)
+        with spinner():
+            result = self._backend.run(node, prompt, context, self._on_turn)
 
         if isinstance(result, str):
             context_updates = {"last_response": result}
