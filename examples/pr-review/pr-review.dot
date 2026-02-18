@@ -52,8 +52,8 @@ digraph pr_review {
 
     fan_in -> critic -> gate
 
-    gate -> fan_out   [condition="context.critic_verdict=insufficient"]
-    gate -> synthesize [condition="context.critic_verdict=sufficient"]
+    gate -> fan_out   [condition="context.critic_verdict=insufficient", max_visits=3]
+    gate -> synthesize
 
     synthesize -> approval
 

@@ -2,6 +2,28 @@ content: |
   You have received specialist reviews of a pull request. The original
   diff is available in {{ tool.output }}.
 
+  Here are the specialist reviews:
+
+  {% for result in parallel.fan_in.selected_results %}
+  ### Review from: {{ result[0] }}
+  {{ result[1].notes }}
+
+  {% endfor %}
+
+  {% if last_response is defined and last_response %}
+  **IMPORTANT — Your Previous Critique:**
+  You have already evaluated an earlier round of these reviews and found them
+  insufficient. Here is your previous critique:
+
+  {{ last_response }}
+
+  Focus your evaluation on whether the reviewers have addressed the specific
+  gaps you identified above. Do NOT introduce entirely new concerns unless
+  they are critical issues clearly demonstrated in the diff. If the reviewers
+  have made a good-faith effort to address your previous feedback, set the
+  verdict to sufficient.
+  {% endif %}
+
   Evaluate the quality and completeness of the reviews:
 
   1. **Coverage gaps**: Did the reviewers miss any important files, functions,

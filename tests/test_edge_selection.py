@@ -151,6 +151,77 @@ def test_full_priority_chain() -> None:
     assert result4.to_node == "heavy"
 
 
+def test_max_visits_skips_edge_when_target_visited_enough() -> None:
+    edges = [
+        Edge(
+            from_node="gate",
+            to_node="fan_out",
+            condition="context.critic_verdict=insufficient",
+            attributes={"max_visits": 3},
+        ),
+        Edge(from_node="gate", to_node="synthesize"),
+    ]
+    graph = _branching_graph(edges)
+    outcome = Outcome(status=OutcomeStatus.SUCCESS)
+    context = Context()
+    context.set("critic_verdict", "insufficient")
+
+    # Under the limit: conditional edge is taken
+    context.set("node_visits.fan_out", 2)
+    result = select_edge("gate", outcome, context, graph)
+    assert result is not None
+    assert result.to_node == "fan_out"
+
+    # At the limit: conditional edge skipped, falls through to unconditional
+    context.set("node_visits.fan_out", 3)
+    result = select_edge("gate", outcome, context, graph)
+    assert result is not None
+    assert result.to_node == "synthesize"
+
+
+def test_max_visits_not_checked_when_condition_fails() -> None:
+    edges = [
+        Edge(
+            from_node="gate",
+            to_node="fan_out",
+            condition="context.critic_verdict=insufficient",
+            attributes={"max_visits": 3},
+        ),
+        Edge(from_node="gate", to_node="synthesize"),
+    ]
+    graph = _branching_graph(edges)
+    outcome = Outcome(status=OutcomeStatus.SUCCESS)
+    context = Context()
+    context.set("critic_verdict", "sufficient")
+    context.set("node_visits.fan_out", 1)
+
+    # Condition doesn't match, so max_visits is irrelevant — fallback is taken
+    result = select_edge("gate", outcome, context, graph)
+    assert result is not None
+    assert result.to_node == "synthesize"
+
+
+def test_max_visits_zero_blocks_immediately() -> None:
+    edges = [
+        Edge(
+            from_node="a",
+            to_node="b",
+            condition="outcome=success",
+            attributes={"max_visits": 0},
+        ),
+        Edge(from_node="a", to_node="c"),
+    ]
+    graph = _branching_graph(edges)
+    outcome = Outcome(status=OutcomeStatus.SUCCESS)
+    context = Context()
+
+    # Even with no prior visits, max_visits=0 means never take this edge
+    # (node_visits.b defaults to 0 which is >= 0)
+    result = select_edge("a", outcome, context, graph)
+    assert result is not None
+    assert result.to_node == "c"
+
+
 def test_no_outgoing_edges_returns_none() -> None:
     graph = PipelineGraph(
         name="test",

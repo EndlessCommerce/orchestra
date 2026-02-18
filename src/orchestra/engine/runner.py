@@ -217,6 +217,11 @@ class PipelineRunner:
         state.completed_nodes.append(node.id)
         state.visited_outcomes[node.id] = outcome.status
 
+        # Track node visit counts for max_visits edge support.
+        visit_key = f"node_visits.{node.id}"
+        prev_visits = state.context.get(visit_key, 0)
+        state.context.set(visit_key, (prev_visits if isinstance(prev_visits, int) else 0) + 1)
+
         for key, value in outcome.context_updates.items():
             state.context.set(key, value)
         state.context.set("outcome", outcome.status.value)

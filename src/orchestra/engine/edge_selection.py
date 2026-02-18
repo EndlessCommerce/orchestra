@@ -27,6 +27,13 @@ def select_edge(
     for edge in conditional:
         try:
             if evaluate_condition(edge.condition, outcome, context):
+                # Honour max_visits: skip this edge if the target node has
+                # already been visited the maximum number of times.
+                max_visits = edge.attributes.get("max_visits")
+                if max_visits is not None:
+                    target_visits = context.get(f"node_visits.{edge.to_node}", 0)
+                    if isinstance(target_visits, int) and target_visits >= int(max_visits):
+                        continue
                 return edge
         except ConditionParseError:
             continue

@@ -102,6 +102,76 @@ def test_context_propagation() -> None:
     assert "last_stage" in last_cp["context_snapshot"]
 
 
+def test_node_visit_counts_tracked_in_context() -> None:
+    graph = _linear_graph_5()
+    emitter = RecordingEmitter()
+    registry = default_registry()
+
+    runner = PipelineRunner(graph, registry, emitter)
+    outcome = runner.run()
+    assert outcome.status == OutcomeStatus.SUCCESS
+
+    checkpoints = [e for e in emitter.events if e[0] == "CheckpointSaved"]
+    last_snapshot = checkpoints[-1][1]["context_snapshot"]
+    assert last_snapshot["node_visits.start"] == 1
+    assert last_snapshot["node_visits.plan"] == 1
+    assert last_snapshot["node_visits.build"] == 1
+    assert last_snapshot["node_visits.review"] == 1
+
+
+def test_max_visits_limits_conditional_loop() -> None:
+    """A loop with max_visits=2 runs the body twice then falls through."""
+    from orchestra.handlers.registry import HandlerRegistry
+    from orchestra.handlers.start import StartHandler
+    from orchestra.models.context import Context
+    from orchestra.models.outcome import Outcome
+
+    class AlwaysLoopHandler:
+        """Handler that always sets critic_verdict=insufficient."""
+        def handle(self, node, context, graph):
+            return Outcome(
+                status=OutcomeStatus.SUCCESS,
+                context_updates={"critic_verdict": "insufficient"},
+            )
+
+    graph = PipelineGraph(
+        name="test_max_visits_loop",
+        nodes={
+            "start": Node(id="start", shape="Mdiamond"),
+            "worker": Node(id="worker", shape="box"),
+            "gate": Node(id="gate", shape="diamond"),
+            "done": Node(id="done", shape="Msquare"),
+        },
+        edges=[
+            Edge(from_node="start", to_node="worker"),
+            Edge(from_node="worker", to_node="gate"),
+            Edge(
+                from_node="gate",
+                to_node="worker",
+                condition="context.critic_verdict=insufficient",
+                attributes={"max_visits": 2},
+            ),
+            Edge(from_node="gate", to_node="done"),
+        ],
+    )
+
+    registry = HandlerRegistry()
+    registry.register("Mdiamond", StartHandler())
+    registry.register("box", AlwaysLoopHandler())
+    registry.register("diamond", StartHandler())  # no-op conditional handler
+
+    emitter = RecordingEmitter()
+    runner = PipelineRunner(graph, registry, emitter)
+    outcome = runner.run()
+
+    assert outcome.status == OutcomeStatus.SUCCESS
+
+    # Worker should have been visited exactly 2 times (initial + 1 retry)
+    checkpoints = [e for e in emitter.events if e[0] == "CheckpointSaved"]
+    last_snapshot = checkpoints[-1][1]["context_snapshot"]
+    assert last_snapshot["node_visits.worker"] == 2
+
+
 def test_handler_fail_emits_pipeline_failed() -> None:
     from orchestra.handlers.registry import HandlerRegistry
     from orchestra.models.context import Context
