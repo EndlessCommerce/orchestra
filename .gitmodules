@@ -1,0 +1,3 @@
+[submodule "vendor/cxdb"]
+	path = vendor/cxdb
+	url = git@github.com:strongdm/cxdb.git

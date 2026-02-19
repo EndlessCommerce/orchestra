@@ -20,7 +20,7 @@ def doctor() -> None:
         typer.echo(
             "CXDB health: FAILED — cannot connect\n\n"
             "To start CXDB:\n"
-            "  docker run -p 9009:9009 -p 9010:9010 cxdb/cxdb:latest"
+            "  docker compose up -d"
         )
         raise typer.Exit(code=1)
     except CxdbError as e:

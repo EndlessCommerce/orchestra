@@ -1,0 +1,24 @@
+services:
+  cxdb:
+    build:
+      context: vendor/cxdb
+      dockerfile: Dockerfile
+    ports:
+      - "9009:9009"
+      - "9010:9010"
+      - "9080:80"
+    environment:
+      - CXDB_HTTP_BIND=0.0.0.0:9010
+      - CXDB_BIND=0.0.0.0:9009
+      - CXDB_DATA_DIR=/data
+    volumes:
+      - cxdb-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9010/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  cxdb-data:

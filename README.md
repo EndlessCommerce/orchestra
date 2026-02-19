@@ -28,7 +28,7 @@ Orchestra implements the [Attractor specification](attractor/attractor-spec.md) 
 ### Installation
 
 ```bash
-git clone <repo-url>
+git clone --recurse-submodules <repo-url>
 cd orchestra
 
 # Install with uv (recommended)
@@ -40,18 +40,30 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-### Start CXDB
-
-Orchestra requires a running CXDB server for execution state persistence:
+If you already cloned without `--recurse-submodules`:
 
 ```bash
-docker run -p 9009:9009 -p 9010:9010 cxdb/cxdb:latest
+git submodule update --init
+```
+
+### Start CXDB
+
+Orchestra requires a running CXDB server for execution state persistence. The CXDB image is packaged with this repo via Docker Compose:
+
+```bash
+docker compose up -d
 ```
 
 Verify connectivity:
 
 ```bash
 orchestra doctor
+```
+
+To stop CXDB:
+
+```bash
+docker compose down
 ```
 
 ### Run Your First Pipeline
@@ -237,7 +249,7 @@ role:
 
 | Variable | Description |
 |---|---|
-| `CXDB_URL` | Override CXDB endpoint |
+| `ORCHESTRA_CXDB_URL` | Override CXDB endpoint |
 | `ORCHESTRA_REAL_LLM` | Set to `1` to enable real LLM integration tests |
 
 ## Examples
