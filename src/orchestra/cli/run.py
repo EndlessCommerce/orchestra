@@ -47,7 +47,7 @@ def run(
     pipeline: Path,
     vars: Optional[list[str]] = typer.Argument(None, help="Variables as key=value pairs"),
     auto_approve: bool = typer.Option(False, "--auto-approve", help="Auto-approve all human gates (no stdin required)"),
-    single_line: bool = typer.Option(False, "--single-line", help="Use single-line input (Enter submits) instead of multiline"),
+    multi_line: bool = typer.Option(False, "--multi-line", help="Use multiline input (Alt+Enter submits) instead of single-line"),
 ) -> None:
     """Execute a DOT pipeline."""
     if not pipeline.exists():
@@ -127,7 +127,7 @@ def run(
     else:
         from orchestra.interviewer.console import ConsoleInterviewer
 
-        interviewer = ConsoleInterviewer(multiline=not single_line)
+        interviewer = ConsoleInterviewer(multiline=multi_line)
 
     # Set up workspace (if configured) — must happen before backend so tools are available
     workspace_manager = None

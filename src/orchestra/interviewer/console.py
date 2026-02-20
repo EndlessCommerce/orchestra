@@ -9,7 +9,7 @@ from orchestra.interviewer.models import Answer, AnswerValue, Option, Question, 
 
 
 class ConsoleInterviewer:
-    def __init__(self, *, multiline: bool = True) -> None:
+    def __init__(self, *, multiline: bool = False) -> None:
         self._multiline = multiline
 
     def ask(self, question: Question) -> Answer:
@@ -64,8 +64,6 @@ class ConsoleInterviewer:
 
     def _ask_freeform(self, question: Question) -> Answer:
         print(f"[?] {question.text}", flush=True)
-        if self._multiline:
-            print("(Alt+Enter to submit)", flush=True)
         try:
             if question.timeout_seconds is not None:
                 response = self._read_input("> ", question.timeout_seconds)

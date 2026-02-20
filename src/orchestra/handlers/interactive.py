@@ -37,7 +37,7 @@ class InteractiveHandler:
             self._replay_history(node, context, history)
         else:
             self._interviewer.inform(
-                "---------\nInteractive mode — type /done to finish, /reject to abort. (Alt+Enter to submit)\n---------",
+                "---------\nInteractive mode — type /done to finish, /reject to abort.\n---------",
                 stage=node.id,
             )
 
