@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 
@@ -90,8 +91,27 @@ def _find_config_file(start: Path | None = None) -> Path | None:
     return None
 
 
+def _find_dotenv(start: Path | None = None) -> Path | None:
+    current = (start or Path.cwd()).resolve()
+    while True:
+        candidate = current / ".env"
+        if candidate.is_file():
+            return candidate
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    return None
+
+
 def load_config(start: Path | None = None) -> OrchestraConfig:
     config_path = _find_config_file(start)
+
+    # Load .env from config dir (preferred) or by walking up from start
+    env_dir = config_path.parent if config_path else None
+    dotenv_path = _find_dotenv(env_dir or start)
+    if dotenv_path is not None:
+        load_dotenv(dotenv_path, override=False)
 
     if config_path is not None:
         with open(config_path) as f:
